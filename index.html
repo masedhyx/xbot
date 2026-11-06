@@ -17,12 +17,12 @@ svg{display:block;overflow:visible}
 #bl{flex:1;overflow:auto;margin-top:22px}
 .bi{display:flex;align-items:center;gap:14px;width:100%;padding:7px 0;font-size:15px}.bi svg{width:30.1px;height:30.1px;flex:none;margin:0 3.9px}
 .bi{font-weight:500;color:#fff}
-#mn{position:fixed;inset:0;background:#000;display:flex;flex-direction:column;border-left:1px solid #333;transition:transform .35s cubic-bezier(.2,.8,.2,1)}
+#mn{position:fixed;inset:0;background:#000;display:flex;flex-direction:column;transition:transform .35s cubic-bezier(.2,.8,.2,1)}
 body.o #mn{transform:translateX(69vw)}
 header{padding:calc(env(safe-area-inset-top) + 14px) 18px 8px}
 #ms{flex:1;overflow:auto;padding:8px 18px 12px}
 #wl{height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;text-align:center}
-#wl svg{width:96px;height:96px}#wl h2{margin:0;font-weight:600;font-size:24px}#wl p{margin:0;color:#888}
+#wl svg{width:96px;height:96px}#wl h2{margin:0;font-weight:600;font-size:24px}#wl p{margin:0;color:#888;transition:opacity .4s}
 .um{margin:14px 0 14px auto;max-width:82%;width:fit-content;background:#1c1c1e;padding:11px 18px;border-radius:24px;overflow-wrap:anywhere}
 .um img,.bt img{max-width:100%;border-radius:14px;display:block;margin-bottom:6px}
 .bt{margin:6px 0;overflow-wrap:anywhere}.bt pre{background:#111;padding:12px;border-radius:12px;overflow:auto;font-size:14px}.bt code{background:#1a1a1a;padding:1px 5px;border-radius:5px}
@@ -60,7 +60,11 @@ footer{padding:6px 18px calc(env(safe-area-inset-bottom) + 12px)}
 </main>
 <div id="sm" hidden></div>
 <script>
-const WORKER_URL='https://GANTI-NAMA-WORKER.workers.dev';
+/* daftar model */
+const DEF_MODEL='gemini:gemini-3.8-flash',DEF_IMG='gemini-3.1-flash-image';
+const FALLBACK_MODELS=[{id:'gemini:gemini-3.8-flash',label:'gemini-3.8-flash'},{id:'gemini:gemini-3.6-flash',label:'gemini-3.6-flash'},{id:'gemini:gemini-3.5-flash-lite',label:'gemini-3.5-flash-lite'},{id:'gemini:gemini-3.1-flash-lite',label:'gemini-3.1-flash-lite'},{id:'gemini:gemini-2.5-flash',label:'gemini-2.5-flash'},{id:'gemini:gemini-2.5-flash-lite',label:'gemini-2.5-flash-lite'},{id:'groq:openai/gpt-oss-120b',label:'GPT-OSS 120B — paling kuat'},{id:'groq:openai/gpt-oss-20b',label:'GPT-OSS 20B — lebih ringan & cepat'},{id:'groq:qwen/qwen3.8-27b',label:'Qwen 3.8 27B — penalaran & umum'}];
+const FALLBACK_IMG=[{id:'gemini-3.1-flash-image',label:'gemini-3.1-flash-image'}];
+const SERVER_URL='https://xbot.edhymaster70.workers.dev';
 const PW_HASH='42d5eaa7af283ddcd8f11ce357934a5ec7aa4e21f37c029a2ee047ab889d2ae9';
 const COL=['#ff1a1a','#0066ff','#a6ff00','#9b30ff','#ffe000','#ff8000','#ff2d92','#cf7a30','#00e0d0','#00c853'];
 const NM=['Merah','Biru','Hijau Stabilo','Ungu','Kuning','Orange','Pink','Coklat','Tosca','Hijau'];
@@ -71,10 +75,10 @@ const md=s=>esc(s).replace(/```(?:\w*\n)?([\s\S]*?)```/g,'<pre>$1</pre>').replac
 let BID=0;
 const bot=c=>{const k="k"+(++BID);return `<svg viewBox="114.4 21.35 411.4 411.4"><clipPath id="${k}"><circle class="cc" cx="320.1" cy="227.05" r="205.7"/></clipPath><circle class="bd" cx="320.1" cy="227.05" r="205.7" fill="${c}"/><g clip-path="url(#${k})"><path class="e"/><path class="e"/></g></svg>`};
 let cfg;try{cfg=JSON.parse(localStorage.getItem('xbot'))}catch{}
-cfg=Object.assign({url:WORKER_URL,keys:{},model:'',img:'',mode:'auto',bots:NM.map((n,i)=>({name:'Bot '+n,prompt:`Kamu asisten AI yang ${TRAIT[i]}. Jawab dalam bahasa Indonesia.`}))},cfg||{});
+cfg=Object.assign({url:SERVER_URL,keys:{},model:DEF_MODEL,img:DEF_IMG,mode:'auto',bots:NM.map((n,i)=>({name:'Bot '+n,prompt:`Kamu asisten AI yang ${TRAIT[i]}. Jawab dalam bahasa Indonesia.`}))},cfg||{});cfg.url=SERVER_URL;
 const save=()=>{try{localStorage.setItem('xbot',JSON.stringify(cfg))}catch{}};
 const HIDE=[5];/* 5 = orange, disembunyikan */
-let cur=0,open=false,hist=[],img=null,busy=false,ctrl=null,MODELS=[];
+let cur=0,open=false,hist=[],img=null,busy=false,ctrl=null,MODELS=[],IMGS=[];
 
 /* ===== MESIN MATA: gerak disalin dari video (60 fps), diputar berulang ===== */
 /* data keyframe hasil ukur video: [selisih frame*4+bit mata (kiri=2,kanan=1), 15 selisih nilai (0.1px): badan cx,cy,r; mata kiri x1,y1,r1,x2,y2,r2; mata kanan idem] */
@@ -141,7 +145,11 @@ const tick=n=>{for(const b of BOTS){if(!b.svg.isConnected){BOTS.delete(b);contin
 /* ===== PANEL & BOT ===== */
 function renderBots(){$('#bl').innerHTML=cfg.bots.map((b,i)=>HIDE.includes(i)?'':`<button class="bi${i==cur?' on':''}" data-i="${i}">${bot(COL[i])}<span>${esc(b.name)}</span></button>`).join('');
  $('#bl').querySelectorAll('svg').forEach((s,j)=>mk(s,false,j*3100,j))}
-function welcome(){$('#ms').innerHTML=`<div id="wl">${bot("#fff")}<h2>Halo, EdhyX</h2><p>${esc(cfg.bots[cur].name)} siap ngobrol</p></div>`;mk($('#wl svg'),true)}
+const GREET=['Apa yang ingin kamu kerjakan hari ini?','Ada yang bisa dibantu?','Mau mulai dari mana?','Cerita saja, aku dengarkan.','Lagi mikirin apa nih?','Siap membantu kapan saja.','Ada ide yang mau dibahas?','Tanya apa saja, santai.','Hari ini mau bahas apa?','Yuk, kita mulai.','Butuh teman berpikir?','Ada yang mengganjal? Kita bereskan bareng.','Mau bikin sesuatu hari ini?','Ketik saja, nanti kita cari jalannya.','Penasaran soal apa hari ini?','Lagi butuh ide segar?','Mau belajar sesuatu yang baru?','Kasih tahu aku apa yang kamu butuhkan.','Ada tugas yang bisa kubantu?','Tulisan, gambar, atau pertanyaan — semua boleh.','{n} siap ngobrol.','{n} di sini, silakan mulai.','Mau diskusi santai atau serius?','Apa kabar? Ada yang ingin ditanyakan?','Mulai dengan satu kalimat saja.','Lagi cari jawaban apa?','Ayo ngobrol, topiknya terserah kamu.','Ada teks atau foto yang perlu dicek?','Saatnya bertanya hal yang bikin penasaran.','Satu pertanyaan bisa jadi awal yang bagus.'];
+let lastG=-1,gt=null;
+const pickG=()=>{let i;do{i=Math.floor(Math.random()*GREET.length)}while(i==lastG);lastG=i;return GREET[i].replace('{n}',cfg.bots[cur].name)};
+function welcome(){clearInterval(gt);$('#ms').innerHTML=`<div id="wl">${bot("#fff")}<p id="gr">${esc(pickG())}</p></div>`;mk($('#wl svg'),true);
+ gt=setInterval(()=>{const p=$('#gr');if(!p){clearInterval(gt);return}p.style.opacity=0;setTimeout(()=>{const x=$('#gr');if(x){x.textContent=pickG();x.style.opacity=1}},400)},6000)}
 const setOpen=v=>{open=v;document.body.classList.toggle('o',v)};
 $('#mb').onclick=()=>setOpen(!open);
 $('#mn').addEventListener('click',e=>{if(open){e.preventDefault();e.stopPropagation();setOpen(false)}},true);
@@ -172,7 +180,8 @@ async function send(){
   const rd=r.body.getReader(),dc=new TextDecoder();let buf='';
   for(;;){const{done,value}=await rd.read();if(done)break;buf+=dc.decode(value,{stream:true});let i;
    while((i=buf.indexOf('\n'))>=0){const l=buf.slice(0,i);buf=buf.slice(i+1);if(!l)continue;const j=JSON.parse(l);if(j.s)stage(j.s);else fin=j}}
- }catch(e){fin=e.name=='AbortError'?{text:'(dihentikan)'}:{error:'Tidak bisa terhubung ke Worker: '+e.message}}
+  if(buf.trim()){const j=JSON.parse(buf);if(!j.s)fin=j}
+ }catch(e){fin=e.name=='AbortError'?{text:'(dihentikan)'}:{error:'Tidak bisa terhubung ke server: '+e.message}}
  if(fin&&!fin.error){stage('write');
   const box=add(`<div class="bm"><div class="bt"></div></div>`),bt=box.querySelector('.bt'),tx=fin.text||'',step=Math.max(2,Math.ceil(tx.length/160));
   if(fin.image)bt.innerHTML=`<img src="${fin.image}">`;
@@ -192,13 +201,14 @@ $('#ms').onclick=e=>{const a=e.target.closest('[data-a]');if(!a)return;const t=a
 /* ===== PENGATURAN ===== */
 async function sha(s){return[...new Uint8Array(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(s)))].map(x=>x.toString(16).padStart(2,'0')).join('')}
 async function settings(){
- try{MODELS=await(await fetch(cfg.url.replace(/\/$/,'')+'/models')).json()}catch{MODELS=[]}
+ try{MODELS=await(await fetch(cfg.url.replace(/\/$/,'')+'/models')).json();if(!Array.isArray(MODELS)||!MODELS.length)MODELS=FALLBACK_MODELS}catch{MODELS=FALLBACK_MODELS}
+ try{IMGS=await(await fetch(cfg.url.replace(/\/$/,'')+'/image-models')).json();if(!Array.isArray(IMGS)||!IMGS.length)IMGS=FALLBACK_IMG}catch{IMGS=FALLBACK_IMG}
+ const opt=(m,v)=>`<option value="${esc(m.id)}"${m.id==v?' selected':''}>${esc(m.label)}</option>`,grp=(n,p)=>{const l=MODELS.filter(m=>m.id.startsWith(p+':'));return l.length?`<optgroup label="${n}">${l.map(m=>opt(m,cfg.model)).join('')}</optgroup>`:''},hint='font-size:14px;color:#8a8a8a;margin:0 0 8px';
  const K=['groq','gemini','tavily','exa','firecrawl'];
  $('#sm').hidden=false;$('#sm').innerHTML=`<button id="x" style="font-size:17px;color:#6ab0ff">← Kembali</button>
- <h3>Worker URL</h3><input id="s_url" value="${esc(cfg.url)}">
- <h3>API key (disimpan di browser ini saja; kosong = pakai secret Worker)</h3>${K.map(k=>`<input type="password" id="k_${k}" placeholder="${k}" value="${esc(cfg.keys[k]||'')}">`).join('')}
- <h3>Model AI</h3><select id="s_model">${MODELS.map(m=>`<option value="${m.id}"${m.id==cfg.model?' selected':''}>${esc(m.label)}</option>`).join('')||'<option>(Worker belum terhubung)</option>'}</select>
- <h3>Model gambar (Gemini)</h3><input id="s_img" placeholder="gemini-2.5-flash-image" value="${esc(cfg.img)}">
+  <h3>API key (disimpan di browser ini saja; kosong = pakai key bawaan server)</h3>${K.map(k=>`<input type="password" id="k_${k}" placeholder="${k}" value="${esc(cfg.keys[k]||'')}">`).join('')}
+ <h3>Model AI</h3><p style="${hint}">Teks dan foto. Kalau foto dikirim, otomatis diproses Gemini.</p><select id="s_model">${grp('Gemini','gemini')}${grp('Groq','groq')}</select>
+ <h3>Model gambar</h3><p style="${hint}">Dipakai di "/gambar". Model gambar sering butuh akun berbayar.</p><select id="s_img">${IMGS.map(m=>opt(m,cfg.img||DEF_IMG)).join('')}</select>
  <h3>Mode pencarian web</h3><select id="s_mode">${[['auto','Otomatis'],['on','Selalu'],['off','Mati']].map(m=>`<option value="${m[0]}"${m[0]==cfg.mode?' selected':''}>${m[1]}</option>`).join('')}</select>
  <h3>Nama & prompt bot</h3><button id="ub" class="bo" style="width:100%;text-align:left">🔒 Buka dengan sandi</button><div id="bp"></div>
  <button id="sv" class="bo" style="width:100%;margin-top:22px!important;text-align:center;background:#fff!important;color:#000">Simpan</button>`;
@@ -206,7 +216,7 @@ async function settings(){
  $('#ub').onclick=async()=>{const p=prompt('Sandi:');if(p===null)return;if(await sha(p)!=PW_HASH)return alert('Sandi salah');unlocked=true;$('#ub').remove();
   $('#bp').innerHTML=cfg.bots.map((b,i)=>HIDE.includes(i)?'':`<div class="bo"><div style="display:flex;gap:10px;align-items:center"><div style="width:18px;flex:none">${bot(COL[i])}</div><input id="n${i}" value="${esc(b.name)}"></div><textarea id="p${i}">${esc(b.prompt)}</textarea></div>`).join('')};
  $('#x').onclick=()=>$('#sm').hidden=true;
- $('#sv').onclick=()=>{cfg.url=$('#s_url').value.trim();K.forEach(k=>cfg.keys[k]=$('#k_'+k).value.trim());cfg.model=$('#s_model').value;cfg.img=$('#s_img').value.trim();cfg.mode=$('#s_mode').value;
+ $('#sv').onclick=()=>{K.forEach(k=>cfg.keys[k]=$('#k_'+k).value.trim());cfg.model=$('#s_model').value;cfg.img=$('#s_img').value.trim()||DEF_IMG;cfg.mode=$('#s_mode').value;
   if(unlocked)cfg.bots.forEach((b,i)=>{if(HIDE.includes(i))return;b.name=$('#n'+i).value||b.name;b.prompt=$('#p'+i).value});
   save();renderBots();reset();$('#sm').hidden=true;setOpen(false)}}
 $('#st').onclick=settings;
