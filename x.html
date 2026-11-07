@@ -1,6 +1,6 @@
 <!doctype html>
 <html lang="id"><head><meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,minimum-scale=1,user-scalable=no,viewport-fit=cover">
 <meta name="theme-color" content="#000000"><meta name="apple-mobile-web-app-capable" content="yes">
 <title>XBOT</title>
 <link rel="icon" href="icon-192.png"><link rel="apple-touch-icon" href="apple-touch-icon.png"><link rel="manifest" href="manifest.json">
@@ -433,13 +433,26 @@ if(ms){
 @media (prefers-reduced-motion:reduce){.um,.bm{animation:none}}
 </style>
 <!-- TAMBAHAN 3: header/footer mengikuti visual viewport supaya "=" tidak ikut terdorong naik saat keyboard muncul (iOS) -->
-<style>#mn,#pn,#sm{top:var(--vt,0px);bottom:auto;height:var(--vh,100dvh)}</style>
+<style>
+/* gaya Grok: header & logo diam, hanya kolom ketik yang naik halus bersama keyboard */
+html,body{position:fixed;left:0;top:0;width:100%;height:100%}
+#mn{top:var(--vt,0px);bottom:auto;height:var(--H,100dvh)}
+#pn,#sm{top:var(--vt,0px);bottom:auto;height:var(--vh,100dvh)}
+#mn footer{transform:translate3d(0,calc(-1*var(--kb,0px)),0);will-change:transform}
+#ms{margin-bottom:var(--kb,0px)}
+#wl{height:calc(100% + var(--kb,0px));margin-bottom:calc(-1*var(--kb,0px))}
+</style>
 <script>
-(()=>{const v=window.visualViewport;if(!v)return;const r=document.documentElement.style,ms=document.querySelector('#ms');let raf=0;
-const fit=()=>{raf=0;const nb=ms.scrollHeight-ms.scrollTop-ms.clientHeight<80;r.setProperty('--vh',v.height+'px');r.setProperty('--vt',v.offsetTop+'px');if(window.scrollY||window.scrollX)scrollTo(0,0);window.sb&&sb();if(nb)ms.scrollTop=1e9};
-const q=()=>{if(!raf)raf=requestAnimationFrame(fit)};
-v.addEventListener('resize',q);v.addEventListener('scroll',q);fit();
-const tx=document.querySelector('#tx');tx.addEventListener('focus',()=>{setTimeout(()=>{scrollTo(0,0);q()},60);setTimeout(()=>{scrollTo(0,0);q()},350)});tx.addEventListener('blur',()=>setTimeout(()=>{scrollTo(0,0);q()},60));
+(()=>{const v=window.visualViewport;if(!v)return;const r=document.documentElement.style,ms=document.querySelector('#ms');
+let cur=0,tgt=0,from=0,t0=0,raf=0,qr=0;
+const nearB=()=>ms.scrollHeight-ms.scrollTop-ms.clientHeight<80;
+const apply=k=>{const nb=nearB();r.setProperty('--kb',k.toFixed(1)+'px');if(nb)ms.scrollTop=1e9};
+const run=ts=>{if(!t0)t0=ts;const p=Math.min(1,(ts-t0)/300),e=1-Math.pow(1-p,3);cur=from+(tgt-from)*e;apply(cur);raf=p<1?requestAnimationFrame(run):0};
+const go=k=>{if(k===tgt)return;tgt=k;from=cur;t0=0;cancelAnimationFrame(raf);raf=requestAnimationFrame(run)};
+const fit=()=>{qr=0;const H=window.innerHeight;r.setProperty('--H',H+'px');r.setProperty('--vh',v.height+'px');r.setProperty('--vt',v.offsetTop+'px');const k=H-v.height;go(k>60?k:0)};
+const q=()=>{if(!qr)qr=requestAnimationFrame(fit)};
+v.addEventListener('resize',q);v.addEventListener('scroll',q);window.addEventListener('orientationchange',()=>setTimeout(q,300));fit();
+const tx=document.querySelector('#tx');tx.addEventListener('focus',()=>{q();setTimeout(q,150);setTimeout(q,400)});tx.addEventListener('blur',()=>{q();setTimeout(q,150)});
 })();
 </script>
 <!-- TAMBAHAN 4: teks putih murni + warna lebih tajam (hanya CSS, fungsi tidak diubah) -->
@@ -546,6 +559,16 @@ ms.addEventListener('click',e=>{
  const tb=t.tBodies[0],rs=[...tb.rows],v=r=>(r.cells[i]&&r.cells[i].textContent||'').trim(),n=s=>parseFloat(s.replace(/[^\d.,-]/g,'').replace(',','.'));
  rs.sort((a,b)=>{const A=v(a),B=v(b),na=n(A),nb=n(B),r=(/\d/.test(A)&&/\d/.test(B)&&!isNaN(na)&&!isNaN(nb))?na-nb:A.localeCompare(B,'id');return d==='a'?r:-r});
  rs.forEach(r=>tb.append(r))});
+})();
+</script>
+
+<style>html,body{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%;text-size-adjust:100%}#ms,#mn,.tbw,.dg{touch-action:pan-x pan-y}</style>
+<script>
+/* kunci zoom: cegah cubit & ketuk-dua-kali memperbesar layar (iOS Safari) */
+(()=>{const o={passive:false};
+['gesturestart','gesturechange','gestureend'].forEach(e=>document.addEventListener(e,v=>v.preventDefault(),o));
+document.addEventListener('touchmove',v=>{if(v.touches&&v.touches.length>1)v.preventDefault()},o);
+let t=0;document.addEventListener('touchend',v=>{const n=Date.now();if(n-t<350&&!v.target.closest('input,textarea'))v.preventDefault();t=n},o);
 })();
 </script>
 </body></html>
