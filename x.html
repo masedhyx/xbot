@@ -230,6 +230,7 @@ async function send(){
  if(busy){stp=true;ctrl.abort();return}stp=false;
  const t=$('#tx').value.trim();if(!t&&!img)return;
  const im=img,gen=/^\/gambar\s/i.test(t);$('#tx').value='';$('#tx').style.height='auto';img=null;$('#pv').textContent='';
+ if(window.kbClose)kbClose();
  hist.push({role:'user',content:t||'Jelaskan foto ini.'});
  anchor(add(`<div class="um">${im?`<img src="${im}">`:''}${esc(t)}</div>`));
  busy=true;$('#sd').textContent='■';$('#sd').dataset.b=1;ctrl=new AbortController();
@@ -446,7 +447,7 @@ const R=document.documentElement.style,mn=document.querySelector('#mn'),M=mn.sty
 /* gerak = kurva keyboard iOS (diukur dari rekaman Grok & keyboard iPhone: cubic-bezier(.323,.872,.368,.970), ±404ms). LEAD = keyboard iOS baru mulai ±28ms setelah kolom ditekan */
 const DUR=470,LEAD=60,C={};
 const BZ=(()=>{const x1=.3234,y1=.872,x2=.3683,y2=.9696,P=(a,b,c,t)=>3*(1-t)*(1-t)*t*a+3*(1-t)*t*t*b+t*t*t*c;return x=>{if(x<=0)return 0;if(x>=1)return 1;let t=x;for(let i=0;i<8;i++){const d=P(x1,x2,1,t)-x,dv=3*(1-t)*(1-t)*x1+6*(1-t)*t*(x2-x1)+3*t*t*(1-x2);if(Math.abs(d)<1e-5||!dv)break;t-=d/dv}return P(y1,y2,1,t)}})();
-let sdTap=0;let cur=0,tgt=0,from=0,t0=0,raf=0,K=0,open=0,pend=0,pt=0,st=0,sett=0,last=0;
+let sdTap=0,ns=0;let cur=0,tgt=0,from=0,t0=0,raf=0,K=0,open=0,pend=0,pt=0,st=0,sett=0,last=0;
 const land=()=>window.innerWidth>window.innerHeight,ek=()=>'xkb'+(land()?'l':'p');
 const okK=k=>k>150&&k<window.innerHeight*(land()?.8:.44);/* tinggi keyboard masuk akal; angka ngawur diabaikan */
 const getE=()=>{try{const e=+localStorage.getItem(ek())||0;return okK(e)?e:0}catch(e){return 0}};
@@ -458,7 +459,7 @@ const apply=k=>{set(M,'--kb',k.toFixed(1)+'px');set(M,'--ko',K?Math.min(1,k/K).t
 const pin=()=>{const t=v.offsetTop.toFixed(1)+'px';set(M,'--vt',t);set(R,'--vt',t);set(R,'--vh',v.height+'px')};
 let pu=0;const pump=ms2=>{pu=performance.now()+(ms2||1300);if(pump.r)return;const L=()=>{pin();pump.r=performance.now()<pu?requestAnimationFrame(L):0};pump.r=requestAnimationFrame(L)};
 const run=ts=>{pin();const p=Math.min(1,Math.max(0,(ts-t0)/DUR));cur=from+(tgt-from)*BZ(p);apply(cur);raf=p<1?requestAnimationFrame(run):0};
-const go=k=>{if(Math.abs(k-tgt)<.5)return;if(k>0)K=k;st=!ms.querySelector('#wl')&&nearB();const moving=!!raf;tgt=k;from=cur;t0=performance.now()+(moving||k<=0?0:LEAD);cancelAnimationFrame(raf);raf=requestAnimationFrame(run)};
+const go=k=>{if(Math.abs(k-tgt)<.5)return;if(k>0)K=k;st=!ms.querySelector('#wl')&&nearB()&&Date.now()>ns;const moving=!!raf;tgt=k;from=cur;t0=performance.now()+(moving||k<=0?0:LEAD);cancelAnimationFrame(raf);raf=requestAnimationFrame(run)};
 const store=k=>{if(Math.abs(k-getE())>2){try{localStorage.setItem(ek(),String(Math.round(k)))}catch(e){}}};
 const foc=()=>{const a=document.activeElement;return !!(a&&/^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName))};
 /* baca ukuran keyboard SETELAH iOS tenang (angka sementara saat animasi iOS diabaikan), lalu koreksi halus kalau beda */
@@ -490,6 +491,8 @@ sdb.addEventListener('mousedown',e=>e.preventDefault());
 card.addEventListener('touchstart',e=>{if(e.target.closest('button')||document.activeElement===tx)return;e.preventDefault();tx.focus()},{passive:false});
 /* ketuk di mana saja pada kartu ketik = fokus ke kolom ketik */
 card.addEventListener('click',e=>{if(e.target.closest('button'))return;tx.focus()});
+/* tutup keyboard setelah kirim (seperti Grok) */
+window.kbClose=()=>{sdTap=0;ns=Date.now()+900;clearTimeout(ho);ho=0;clearTimeout(pt);pend=0;try{kp.blur()}catch(e){}try{tx.blur()}catch(e){}};
 })();
 </script>
 <!-- TAMBAHAN 4: teks putih murni + warna lebih tajam (hanya CSS, fungsi tidak diubah) -->
@@ -523,7 +526,7 @@ body,.bt,.um,#tx,.mi,.bi,.u,#wl h2{color:#fff;-webkit-font-smoothing:antialiased
 </style>
 <script>
 (()=>{const ms=document.querySelector('#ms'),ft=document.querySelector('footer');
-let AN=null,PB=12,follow=false,raf=0;
+let AN=null,PB=12,follow=false,pinT=false,raf=0;
 const btn=document.createElement('button');btn.id='dn';btn.setAttribute('aria-label','Ke bawah');
 btn.innerHTML='<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>';ft.appendChild(btn);
 const top0=()=>ms.getBoundingClientRect().top;
@@ -534,15 +537,16 @@ const anchorT=()=>AN&&AN.isConnected?Math.max(0,ms.scrollTop+AN.getBoundingClien
 const pad=()=>{let need=12;if(AN&&AN.isConnected)need=Math.max(12,Math.ceil(ms.clientHeight-(endY()-anchorT())));if(need!==PB){PB=need;ms.style.paddingBottom=need===12?'':need+'px'}};
 const tgt=()=>Math.max(0,endY()+12-ms.clientHeight);
 const upd=()=>btn.classList.toggle('on',endY()-(ms.scrollTop+ms.clientHeight)>40);
-const run=()=>{raf=0;pad();if(follow){const d=tgt()-ms.scrollTop;if(d>1){ms.scrollTop+=d<3?d:d*.3;raf=requestAnimationFrame(run)}}upd()};
+const run=()=>{raf=0;pad();if(pinT&&AN&&AN.isConnected){const d=anchorT()-ms.scrollTop;if(Math.abs(d)>1){ms.scrollTop+=Math.abs(d)<3?d:d*.3;raf=requestAnimationFrame(run)}}else if(follow){const d=tgt()-ms.scrollTop;if(d>1){ms.scrollTop+=d<3?d:d*.3;raf=requestAnimationFrame(run)}}upd()};
 const sched=()=>{if(!raf)raf=requestAnimationFrame(run)};
 window.sb=sched;
-window.anchor=n=>{AN=null;follow=true;pad();sched();return n};
-window.sbReset=()=>{AN=null;PB=12;follow=false;ms.style.paddingBottom='';btn.classList.remove('on')};
+window.anchor=n=>{AN=n;pinT=true;follow=false;pad();sched();return n};
+window.sbReset=()=>{AN=null;PB=12;follow=false;pinT=false;ms.style.paddingBottom='';btn.classList.remove('on')};
 ms.addEventListener('scroll',sched,{passive:true});
-ms.addEventListener('touchmove',()=>{follow=false},{passive:true});
-ms.addEventListener('wheel',()=>{follow=false},{passive:true});
-btn.onclick=()=>{if(typeof busy!=='undefined'&&busy){follow=true;sched()}else ms.scrollTo({top:tgt(),behavior:'smooth'})};
+ms.addEventListener('touchmove',()=>{follow=false;pinT=false},{passive:true});
+ms.addEventListener('wheel',()=>{follow=false;pinT=false},{passive:true});
+if(window.ResizeObserver)new ResizeObserver(sched).observe(ms);
+btn.onclick=()=>{pinT=false;if(typeof busy!=='undefined'&&busy){follow=true;sched()}else ms.scrollTo({top:tgt(),behavior:'smooth'})};
 })();
 </script>
 
@@ -553,6 +557,9 @@ btn.onclick=()=>{if(typeof busy!=='undefined'&&busy){follow=true;sched()}else ms
 .bt span[style*="color"]{font-weight:inherit}
 .bt span[style*="#ff5a5a" i]{color:#ff7b7b!important}.bt span[style*="#3ddc84" i]{color:#5fe0a0!important}.bt span[style*="#4da3ff" i]{color:#74b4ff!important}.bt span[style*="#ffd60a" i]{color:#f3d96b!important}.bt span[style*="#ff9f0a" i]{color:#f5a95c!important}.bt span[style*="#bf5af2" i]{color:#c99cf0!important}.bt span[style*="#ff6bb5" i]{color:#f08cc0!important}.bt span[style*="#2ee6d6" i]{color:#6fdcd2!important}.bt span[style*="#d2915a" i]{color:#d9a878!important}
 .bt a{font-weight:inherit}
+/* font jawaban +1.5px */
+.bt{font-size:17px}
+.bt pre,.bt .gxc pre{font-size:13px}
 /* tombol salin/jempol dst: 50% lebih kecil, lebih rapat (area sentuh tetap nyaman) */
 .ac{gap:4px 12px;margin:6px 0 12px 4px}
 .ac button:not(.gxs){width:18px;height:18px}
