@@ -25,7 +25,7 @@ body.o #mn{transform:translateX(69vw)}
 header{padding:env(safe-area-inset-top) 0 4px;flex:none}#mb{display:block;position:relative;width:44px;height:44px;margin-left:16px}#mb svg{position:absolute;left:13.25px;top:17.35px}
 #ms{flex:1;overflow:auto;overflow-x:hidden;overscroll-behavior:contain;padding:8px 18px 12px}
 #wl{height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;text-align:center}
-#wl svg{width:96px;height:96px}#wl h2{margin:0;font-weight:600;font-size:24px}#wl p{margin:0;color:#888;transition:opacity .4s}
+#wl svg:not(.tg){width:96px;height:96px}#wl .tg{position:absolute;left:50%;bottom:-7px;width:min(53vw,260px);height:12px;margin-left:calc(min(53vw,260px)/-2);flex:none}#wl h2{margin:0;font-weight:600;font-size:24px}#wl p{margin:0;color:#888;transition:opacity .4s}
 .um{margin:14px 0 14px auto;max-width:82%;width:fit-content;background:#1c1c1e;padding:11px 18px;border-radius:24px;overflow-wrap:anywhere}
 .um img,.bt img{max-width:100%;border-radius:14px;display:block;margin-bottom:6px}
 .bt{margin:6px 0;overflow-wrap:anywhere}.bt pre{background:#111;padding:12px;border-radius:12px;overflow:auto;font-size:13px}.bt code{background:#1a1a1a;padding:1px 5px;border-radius:5px}
@@ -54,11 +54,11 @@ footer{padding:6px 18px calc(env(safe-area-inset-bottom) + 12px);position:relati
  <div id="ms"><div id="wl"></div></div>
  <footer>
   <div id="pv"></div><div id="gp"></div>
-  <div id="pm" hidden><button id="m_f">Lampirkan foto</button><button id="m_c">Ambil foto</button><button id="m_g"><span>Bagikan GPS</span><i class="dt" hidden></i></button><button id="m_w"><span>Cari di web</span><i class="dt" hidden></i></button><button id="m_i">Buat gambar</button></div>
-  <div id="qc"><button data-t="m_w"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.6 2.4 4 5.5 4 9s-1.4 6.6-4 9c-2.6-2.4-4-5.5-4-9s1.4-6.6 4-9z"/></svg><span>Cari di web</span></button><button data-t="m_i"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="3.5" width="17" height="17" rx="4"/><circle cx="9" cy="9.2" r="1.5"/><path d="M20.5 15.5l-4.8-4.8L6 20.5"/></svg><span>Buat gambar</span></button><button data-t="m_f"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20.5 11.5l-8.2 8.2a5.2 5.2 0 0 1-7.4-7.4l8.5-8.5a3.5 3.5 0 0 1 5 5l-8.5 8.5a1.8 1.8 0 0 1-2.5-2.5l7.8-7.8"/></svg><span>Lampirkan foto</span></button><button data-t="m_g"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s-6.8-5.9-6.8-11.2a6.8 6.8 0 0 1 13.6 0C18.8 15.1 12 21 12 21z"/><circle cx="12" cy="9.8" r="2.4"/></svg><span>Bagikan GPS</span></button></div>
+  <div id="pm" hidden><button id="m_f">Lampirkan file</button><button id="m_c">Ambil foto</button><button id="m_g"><span>Bagikan GPS</span><i class="dt" hidden></i></button><button id="m_w"><span>Cari di web</span><i class="dt" hidden></i></button><button id="m_i">Buat gambar</button></div>
+  <div id="qc"><button data-t="m_w"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.6 2.4 4 5.5 4 9s-1.4 6.6-4 9c-2.6-2.4-4-5.5-4-9s1.4-6.6 4-9z"/></svg><span>Cari di web</span></button><button data-t="m_i"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="3.5" width="17" height="17" rx="4"/><circle cx="9" cy="9.2" r="1.5"/><path d="M20.5 15.5l-4.8-4.8L6 20.5"/></svg><span>Buat gambar</span></button><button data-t="m_f"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20.5 11.5l-8.2 8.2a5.2 5.2 0 0 1-7.4-7.4l8.5-8.5a3.5 3.5 0 0 1 5 5l-8.5 8.5a1.8 1.8 0 0 1-2.5-2.5l7.8-7.8"/></svg><span>Lampirkan file</span></button><button data-t="m_g"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s-6.8-5.9-6.8-11.2a6.8 6.8 0 0 1 13.6 0C18.8 15.1 12 21 12 21z"/><circle cx="12" cy="9.8" r="2.4"/></svg><span>Bagikan GPS</span></button></div>
   <div id="ib"><button id="pl">+</button><textarea id="tx" rows="1" placeholder="Ketik pesan..."></textarea><button id="sd">↑</button></div>
  </footer>
- <input type="file" id="fi" accept="image/*" hidden><input type="file" id="fc" accept="image/*" capture="environment" hidden>
+ <input type="file" id="fi" accept="image/*,video/*,.txt,.md,.csv,.json,.js,.html,.css,.py,.xml,.log" hidden><input type="file" id="fc" accept="image/*" capture="environment" hidden>
 </main>
 <div id="sm" hidden></div>
 <script>
@@ -68,7 +68,7 @@ const FALLBACK_MODELS=[{id:'gemini:gemini-3.8-flash',label:'gemini-3.8-flash'},{
 const FALLBACK_IMG=[{id:'gemini-3.1-flash-image',label:'gemini-3.1-flash-image'}];
 const SERVER_URL='https://xbot.edhymaster70.workers.dev';
 const PW_HASH='42d5eaa7af283ddcd8f11ce357934a5ec7aa4e21f37c029a2ee047ab889d2ae9';
-const COL=['#ff1a1a','#0066ff','#a6ff00','#9b30ff','#ffe000','#ff8000','#ff2d92','#cf7a30','#00e0d0','#00c853'];
+const COL=['#ff1a1a','#0066ff','#a6ff00','#9b30ff','#ffe000','#ff8000','#ff2d92','#cf7a30','#00e0d0','#00c853','#ffffff'];
 const NM=['Merah','Biru','Hijau Stabilo','Ungu','Kuning','Orange','Pink','Coklat','Tosca','Hijau'];
 const TRAIT=['ramah dan santai','tegas dan to the point','tenang dan analitis','ceria dan penuh semangat','lucu dan suka bercanda','bijak dan sabar','manis dan perhatian','santai ala anak tongkrongan','detail dan teliti','serius dan profesional'];
 const $=s=>document.querySelector(s),sleep=ms=>new Promise(r=>setTimeout(r,ms)),rnd=(a,b)=>a+Math.random()*(b-a);
@@ -110,9 +110,10 @@ let BID=0;
 const bot=c=>{const k="k"+(++BID);return `<svg viewBox="114.4 21.35 411.4 411.4"><clipPath id="${k}"><circle class="cc" cx="320.1" cy="227.05" r="205.7"/></clipPath><circle class="bd" cx="320.1" cy="227.05" r="205.7" fill="${c}"/><g clip-path="url(#${k})"><path class="e"/><path class="e"/></g></svg>`};
 let cfg;try{cfg=JSON.parse(localStorage.getItem('xbot'))}catch{}
 cfg=Object.assign({url:SERVER_URL,keys:{},model:DEF_MODEL,img:DEF_IMG,mode:'auto',bots:NM.map((n,i)=>({name:'Bot '+n,prompt:`Kamu asisten AI yang ${TRAIT[i]}. Jawab dalam bahasa Indonesia.`}))},cfg||{});cfg.url=SERVER_URL;
+if(!cfg.bots[10])cfg.bots[10]={name:'edhyx',prompt:'Kamu edhyx, asisten AI yang cerdas, ramah, dan santai. Jawab dalam bahasa Indonesia dengan jelas dan membantu.'};
 const save=()=>{try{localStorage.setItem('xbot',JSON.stringify(cfg))}catch{}};
 const HIDE=[5];/* 5 = orange, disembunyikan */
-let stp=false,cur=0,open=false,hist=[],img=null,busy=false,ctrl=null,MODELS=[],IMGS=[];
+let stp=false,cur=10,open=false,hist=[],img=null,docTxt=null,busy=false,ctrl=null,MODELS=[],IMGS=[];
 
 /* ===== MESIN MATA: gerak disalin dari video (60 fps), diputar berulang ===== */
 /* data keyframe hasil ukur video: [selisih frame*4+bit mata (kiri=2,kanan=1), 15 selisih nilai (0.1px): badan cx,cy,r; mata kiri x1,y1,r1,x2,y2,r2; mata kanan idem] */
@@ -187,12 +188,12 @@ function welcome(){clearInterval(gt);const ph=FW;FW=0;$('#ms').innerHTML=`<div i
 const setOpen=v=>{open=v;document.body.classList.toggle('o',v)};
 $('#mb').onclick=()=>setOpen(!open);
 $('#mn').addEventListener('click',e=>{if(open){e.preventDefault();e.stopPropagation();setOpen(false)}},true);
-function reset(){if(ctrl)ctrl.abort();hist=[];img=null;$('#pv').textContent='';sbReset();welcome()}
+function reset(){if(ctrl)ctrl.abort();hist=[];img=null;docTxt=null;$('#pv').textContent='';sbReset();welcome()}
 $('#nw').onclick=()=>{reset();setOpen(false)};
 $('#bl').onclick=e=>{const b=e.target.closest('.bi');if(!b)return;cur=+b.dataset.i;renderBots();reset();setOpen(false)};
 
 /* ===== CHAT ===== */
-const LBL={think:'sedang berpikir',analyze:'menganalisis',look:'melihat foto',search:'mencari di web',read:'membaca sumber',write:'sedang mengetik',done:'selesai'};
+const LBL={think:'sedang berpikir',analyze:'sedang menganalisis',look:'sedang memahami foto',search:'sedang mencari di web',read:'sedang membaca sumber',write:'sedang menulis',done:'selesai'};
 const add=h=>{const w=$('#wl');if(w)w.remove();const d=document.createElement('div');d.innerHTML=h;const n=d.firstElementChild;$('#ms').appendChild(n);sb();return n};
 /* ===== MENU (+) & GPS ===== */
 let gps=null,gpsOn=false,gpsAddr=null,gpsAt=null;
@@ -220,19 +221,30 @@ $('#m_g').onclick=async()=>{$('#pm').hidden=true;
  if(gpsOn){gpsOn=false;gps=null;gpsAddr=null;gpsAt=null;$('#gp').textContent='';gpsDot();return}
  gpsOn=true;gpsDot();$('#gp').textContent='📍 mencari lokasi...';
  try{await gpsUpdate()}catch(er){gpsOn=false;gpsDot();$('#gp').textContent='⚠️ GPS gagal: '+(er.code==1?'izin lokasi ditolak (aktifkan di Pengaturan browser)':er.code==3?'waktu habis, coba lagi':er.message||'tidak diketahui');setTimeout(()=>{if(!gpsOn)$('#gp').textContent=''},5000)}};
-$('#fi').onchange=e=>{const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=()=>{const i=new Image();i.onload=()=>{const k=Math.min(1,1280/Math.max(i.width,i.height)),c=document.createElement('canvas');c.width=i.width*k;c.height=i.height*k;c.getContext('2d').drawImage(i,0,0,c.width,c.height);img=c.toDataURL('image/jpeg',.85);$('#pv').textContent='📎 foto terlampir'};i.src=r.result};r.readAsDataURL(f);e.target.value=''};
-$('#fc').onchange=$('#fi').onchange;
+const note=m=>{$('#pv').textContent=m};
+const toImg=src=>{const i=new Image();i.onload=()=>{const k=Math.min(1,1280/Math.max(i.width,i.height)),c=document.createElement('canvas');c.width=i.width*k;c.height=i.height*k;c.getContext('2d').drawImage(i,0,0,c.width,c.height);img=c.toDataURL('image/jpeg',.85);docTxt=null;note('📎 foto terlampir')};i.onerror=()=>note('⚠️ foto tidak bisa dibaca');i.src=src};
+const FILEFN=e=>{const f=e.target.files[0];e.target.value='';if(!f)return;
+ if(/^video\//.test(f.type)){note('⏳ membaca video...');const v=document.createElement('video'),u=URL.createObjectURL(f);v.muted=true;v.playsInline=true;v.preload='auto';
+  v.onloadeddata=()=>{try{v.currentTime=Math.min(1,(v.duration||2)/2)}catch{v.onseeked()}};
+  v.onseeked=()=>{try{const k=Math.min(1,1280/Math.max(v.videoWidth,v.videoHeight)),c=document.createElement('canvas');c.width=v.videoWidth*k;c.height=v.videoHeight*k;c.getContext('2d').drawImage(v,0,0,c.width,c.height);img=c.toDataURL('image/jpeg',.85);docTxt=null;note('📎 video terlampir (dibaca dari 1 cuplikan gambar)')}catch{note('⚠️ video tidak bisa dibaca')}URL.revokeObjectURL(u)};
+  v.onerror=()=>{note('⚠️ video tidak bisa dibaca');URL.revokeObjectURL(u)};v.src=u;return}
+ if(/^image\//.test(f.type)){const r=new FileReader();r.onload=()=>toImg(r.result);r.readAsDataURL(f);return}
+ if(/^text\//.test(f.type)||/\.(txt|md|csv|json|js|html|css|py|xml|log)$/i.test(f.name)){const r=new FileReader();r.onload=()=>{docTxt={name:f.name,text:String(r.result).slice(0,30000)};img=null;note('📎 file terlampir: '+f.name)};r.readAsText(f);return}
+ note('⚠️ jenis file ini belum didukung');setTimeout(()=>{if($('#pv').textContent.startsWith('⚠️'))note('')},3000)};
+$('#fi').onchange=FILEFN;
+$('#fc').onchange=FILEFN;
 $('#tx').oninput=e=>{e.target.style.height='auto';e.target.style.height=e.target.scrollHeight+'px'};
 $('#sd').onclick=send;
 const nowStr=()=>{const tz=Intl.DateTimeFormat().resolvedOptions().timeZone;return new Intl.DateTimeFormat('id-ID',{dateStyle:'full',timeStyle:'long',timeZone:tz}).format(new Date())+' ('+tz+')'};
-const sysx=()=>`\n\n[Info perangkat pengguna] Waktu sekarang di perangkat pengguna: ${nowStr()}. Pakai ini (jangan menebak) untuk pertanyaan tentang tanggal, hari, atau jam.\n[Format] Jangan memberi warna pada teks kecuali pengguna secara eksplisit memintanya; jawaban biasa ditulis polos tanpa warna. Kalau diminta, tulis [c=warna]teks[/c] (merah, hijau, biru, kuning, oranye, ungu, pink, tosca, coklat, abu, putih, atau hex).\n[Tabel] Untuk tabel pakai tabel markdown standar (baris header, baris |---|---|, lalu isi). Jangan taruh tabel di dalam blok kode.\n[Diagram] Untuk diagram, alur, proses, atau hierarki JANGAN pakai ASCII art. Tulis blok kode berlabel diagram (\`\`\`diagram) berisi flowchart mermaid sederhana, satu hubungan per baris, contoh:\nA[Data] --> B[Pelatihan Model]\nB --> C[Evaluasi]\nC --> D[Deployment]\nlalu tutup dengan \`\`\`. Label singkat.\n[Sumber] Jangan menulis "Sumber: [n]" atau penanda angka seperti [1] di dalam jawaban; daftar sumber ditampilkan terpisah oleh aplikasi.`;
+const CRT='\n\n[Pembuat] Jika ada yang bertanya siapa pembuatmu / yang membuatmu / penciptamu / developer-mu, jawab bahwa kamu dibuat oleh Marta Edi Sutrisno.';
+const sysx=()=>CRT+`\n\n[Info perangkat pengguna] Waktu sekarang di perangkat pengguna: ${nowStr()}. Pakai ini (jangan menebak) untuk pertanyaan tentang tanggal, hari, atau jam.\n[Format] Jangan memberi warna pada teks kecuali pengguna secara eksplisit memintanya; jawaban biasa ditulis polos tanpa warna. Kalau diminta, tulis [c=warna]teks[/c] (merah, hijau, biru, kuning, oranye, ungu, pink, tosca, coklat, abu, putih, atau hex).\n[Tabel] Untuk tabel pakai tabel markdown standar (baris header, baris |---|---|, lalu isi). Jangan taruh tabel di dalam blok kode.\n[Diagram] Untuk diagram, alur, proses, atau hierarki JANGAN pakai ASCII art. Tulis blok kode berlabel diagram (\`\`\`diagram) berisi flowchart mermaid sederhana, satu hubungan per baris, contoh:\nA[Data] --> B[Pelatihan Model]\nB --> C[Evaluasi]\nC --> D[Deployment]\nlalu tutup dengan \`\`\`. Label singkat.\n[Sumber] Jangan menulis "Sumber: [n]" atau penanda angka seperti [1] di dalam jawaban; daftar sumber ditampilkan terpisah oleh aplikasi.`;
 async function send(){
  if(busy){stp=true;ctrl.abort();return}stp=false;
- const t=$('#tx').value.trim();if(!t&&!img)return;
- const im=img,gen=/^\/gambar\s/i.test(t);$('#tx').value='';$('#tx').style.height='auto';img=null;$('#pv').textContent='';
+ const t=$('#tx').value.trim();if(!t&&!img&&!docTxt)return;
+ const dt=docTxt;docTxt=null;const im=img,gen=/^\/gambar\s/i.test(t);$('#tx').value='';$('#tx').style.height='auto';img=null;$('#pv').textContent='';
  if(window.kbClose)kbClose();
- hist.push({role:'user',content:t||'Jelaskan foto ini.'});
- anchor(add(`<div class="um">${im?`<img src="${im}">`:''}${esc(t)}</div>`));
+ hist.push({role:'user',content:dt?`[File "${dt.name}"]\n${dt.text}\n\n${t||'Jelaskan isi file ini.'}`:(t||'Jelaskan foto ini.')});
+ anchor(add(`<div class="um">${im?`<img src="${im}">`:''}${dt?`<div style="opacity:.75">📄 ${esc(dt.name)}</div>`:''}${esc(t)}</div>`));
  busy=true;$('#sd').textContent='■';$('#sd').dataset.b=1;ctrl=new AbortController();
  const b=cfg.bots[cur],st=add(`<div class="stt">${bot(COL[cur])}<span></span></div>`),eb=mk(st.querySelector('svg'),true,0,undefined,true);
  const stage=s=>{eb.set(s);st.querySelector('span').textContent=b.name+' '+LBL[s]+'...'};stage(im?'look':'think');
@@ -285,13 +297,15 @@ async function settings(){
  <h3>Nama & prompt bot</h3><button id="ub" class="bo" style="width:100%;text-align:left">🔒 Buka dengan sandi</button><div id="bp"></div>
  <button id="sv" class="bo" style="width:100%;margin-top:22px!important;text-align:center;background:#fff!important;color:#000">Simpan</button>`;
  let unlocked=false;
- $('#ub').onclick=async()=>{const p=prompt('Sandi:');if(p===null)return;if(await sha(p)!=PW_HASH)return alert('Sandi salah');unlocked=true;$('#ub').remove();
+ $('#ub').onclick=async()=>{if(!AUTH){const p=prompt('Sandi:');if(p===null)return;if(await sha(p)!=PW_HASH)return alert('Sandi salah')}unlocked=true;$('#ub').remove();
   $('#bp').innerHTML=cfg.bots.map((b,i)=>HIDE.includes(i)?'':`<div class="bo"><div style="display:flex;gap:10px;align-items:center"><div style="width:18px;flex:none">${bot(COL[i])}</div><input id="n${i}" value="${esc(b.name)}"></div><textarea id="p${i}">${esc(b.prompt)}</textarea></div>`).join('')};
+ if(AUTH)$('#ub').click();
  $('#x').onclick=()=>$('#sm').hidden=true;
  $('#sv').onclick=()=>{K.forEach(k=>cfg.keys[k]=$('#k_'+k).value.trim());cfg.model=$('#s_model').value;cfg.img=$('#s_img').value.trim()||DEF_IMG;cfg.mode=$('#s_mode').value;
   if(unlocked)cfg.bots.forEach((b,i)=>{if(HIDE.includes(i))return;b.name=$('#n'+i).value||b.name;b.prompt=$('#p'+i).value});
   save();renderBots();reset();$('#sm').hidden=true;setOpen(false)}}
-$('#st').onclick=settings;
+let AUTH=false;
+$('#st').onclick=async()=>{if(!AUTH){const p=prompt('Sandi pengaturan:');if(p===null)return;if(await sha(p)!=PW_HASH){alert('Sandi salah');return}AUTH=true}settings()};
 renderBots();welcome();
 </script><!-- TAMBAHAN (di akhir file; kode lama tidak diubah): GPS disembunyikan, tombol simpel, sumber ala Claude, kartu kode, link, warna kata penting -->
 <style>
@@ -558,8 +572,12 @@ btn.onclick=()=>{pinT=false;if(typeof busy!=='undefined'&&busy){follow=true;sche
 .bt span[style*="#ff5a5a" i]{color:#ff7b7b!important}.bt span[style*="#3ddc84" i]{color:#5fe0a0!important}.bt span[style*="#4da3ff" i]{color:#74b4ff!important}.bt span[style*="#ffd60a" i]{color:#f3d96b!important}.bt span[style*="#ff9f0a" i]{color:#f5a95c!important}.bt span[style*="#bf5af2" i]{color:#c99cf0!important}.bt span[style*="#ff6bb5" i]{color:#f08cc0!important}.bt span[style*="#2ee6d6" i]{color:#6fdcd2!important}.bt span[style*="#d2915a" i]{color:#d9a878!important}
 .bt a{font-weight:inherit}
 /* font jawaban +1.5px */
-.bt{font-size:17px}
+.bt,.um{font-size:16px!important}
+.bt .tbc table{font-size:16px!important}
+#mn #tx{font-size:16px!important}
 .bt pre,.bt .gxc pre{font-size:13px}
+.stt{font-size:13.5px}.stt svg{width:20px!important;height:20px!important}
+#bl{display:flex;flex-direction:column}.bi[data-i="10"]{order:-1}
 /* tombol salin/jempol dst: 50% lebih kecil, lebih rapat (area sentuh tetap nyaman) */
 .ac{gap:4px 12px;margin:6px 0 12px 4px}
 .ac button:not(.gxs){width:18px;height:18px}
@@ -739,7 +757,7 @@ async function ask(f,t,seed){
  const c=new AbortController(),to=setTimeout(()=>c.abort(),seed?22000:15000);
  try{
   const b=cfg.bots[f],O=ids().filter(i=>i!==f).map(nm).join(', '),ctx=LOG.slice(-6).map(l=>nm(l.f)+': '+l.x).join('\n');
-  const sys=b.prompt+`\n\nKamu adalah ${nm(f)}, sedang ngobrol santai di grup bersama bot lain (${O}). Tulis SATU pesan pendek berbahasa Indonesia, maksimal 85 karakter, tanpa markdown, tanpa daftar, tanpa nomor sumber.`+(seed?' Buka topik baru: satu tren, berita, atau ide terbaru yang menarik hari ini.':` Balas pesan terakhir dan awali dengan @${nm(t)}. Boleh setuju, membantah halus, atau menambah tren/ide terbaru.`);
+  const sys=b.prompt+CRT+`\n\nKamu adalah ${nm(f)}, sedang ngobrol santai di grup bersama bot lain (${O}). Tulis SATU pesan pendek berbahasa Indonesia, maksimal 85 karakter, tanpa markdown, tanpa daftar, tanpa nomor sumber.`+(seed?' Buka topik baru: satu tren, berita, atau ide terbaru yang menarik hari ini.':` Balas pesan terakhir dan awali dengan @${nm(t)}. Boleh setuju, membantah halus, atau menambah tren/ide terbaru.`);
   const r=await fetch(cfg.url.replace(/\/$/,'')+'/chat',{method:'POST',headers:{'Content-Type':'application/json'},signal:c.signal,body:JSON.stringify({messages:[{role:'user',content:(ctx?'Obrolan sejauh ini:\n'+ctx+'\n\n':'')+'Tulis pesanmu sekarang.'}],image:null,image_gen:false,system:sys,now:new Date().toISOString(),tz:Intl.DateTimeFormat().resolvedOptions().timeZone,model:cfg.model,imgModel:cfg.img,mode:seed?'on':'off',keys:cfg.keys})});
   if(!r.ok)throw 0;let fin;for(const l of(await r.text()).split('\n')){if(!l.trim())continue;try{const j=JSON.parse(l);if(!j.s)fin=j}catch{}}
   if(!fin||fin.error||!fin.text)throw 0;fails=0;return clean(fin.text,f,t,seed)
