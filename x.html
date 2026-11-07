@@ -57,6 +57,7 @@ footer{padding:6px 18px calc(env(safe-area-inset-bottom) + 12px);position:relati
  <footer>
   <div id="pv"></div><div id="gp"></div>
   <div id="pm" hidden><button id="m_f">Lampirkan foto</button><button id="m_c">Ambil foto</button><button id="m_g"><span>Bagikan GPS</span><i class="dt" hidden></i></button><button id="m_w"><span>Cari di web</span><i class="dt" hidden></i></button><button id="m_i">Buat gambar</button></div>
+  <div id="qc"><button data-t="m_w"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.6 2.4 4 5.5 4 9s-1.4 6.6-4 9c-2.6-2.4-4-5.5-4-9s1.4-6.6 4-9z"/></svg><span>Cari di web</span></button><button data-t="m_i"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="3.5" width="17" height="17" rx="4"/><circle cx="9" cy="9.2" r="1.5"/><path d="M20.5 15.5l-4.8-4.8L6 20.5"/></svg><span>Buat gambar</span></button><button data-t="m_f"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20.5 11.5l-8.2 8.2a5.2 5.2 0 0 1-7.4-7.4l8.5-8.5a3.5 3.5 0 0 1 5 5l-8.5 8.5a1.8 1.8 0 0 1-2.5-2.5l7.8-7.8"/></svg><span>Lampirkan foto</span></button><button data-t="m_g"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s-6.8-5.9-6.8-11.2a6.8 6.8 0 0 1 13.6 0C18.8 15.1 12 21 12 21z"/><circle cx="12" cy="9.8" r="2.4"/></svg><span>Bagikan GPS</span></button></div>
   <div id="ib"><button id="pl">+</button><textarea id="tx" rows="1" placeholder="Ketik pesan..."></textarea><button id="sd">↑</button></div>
   <div id="ft">officialbroadcaster | martaedhyx</div>
  </footer>
@@ -432,27 +433,47 @@ if(ms){
 .um,.bm{animation:gxmi .2s cubic-bezier(.25,.46,.45,.94) backwards}
 @media (prefers-reduced-motion:reduce){.um,.bm{animation:none}}
 </style>
-<!-- TAMBAHAN 3: header/footer mengikuti visual viewport supaya "=" tidak ikut terdorong naik saat keyboard muncul (iOS) -->
+<!-- TAMBAHAN 3 (versi baru): header diam, kolom ketik + chip naik halus bersama keyboard (iOS). Naik langsung saat kolom ditekan (tidak menunggu iOS melapor), lalu disesuaikan dengan ukuran keyboard sebenarnya -->
 <style>
-/* gaya Grok: header & logo diam, hanya kolom ketik yang naik halus bersama keyboard */
 html,body{position:fixed;left:0;top:0;width:100%;height:100%}
-#mn{top:var(--vt,0px);bottom:auto;height:var(--H,100dvh)}
+#mn{top:0;bottom:auto;height:var(--H,100dvh);translate:0 var(--vt,0px)}
 #pn,#sm{top:var(--vt,0px);bottom:auto;height:var(--vh,100dvh)}
-#mn footer{transform:translate3d(0,calc(-1*var(--kb,0px)),0);will-change:transform}
+#mn footer{transform:translate3d(0,calc(var(--kb,0px)*-1 + env(safe-area-inset-bottom,0px)*var(--ko,0)),0);will-change:transform}
 #ms{margin-bottom:var(--kb,0px)}
-#wl{height:calc(100% + var(--kb,0px));margin-bottom:calc(-1*var(--kb,0px))}
 </style>
 <script>
-(()=>{const v=window.visualViewport;if(!v)return;const r=document.documentElement.style,ms=document.querySelector('#ms');
-let cur=0,tgt=0,from=0,t0=0,raf=0,qr=0;
+(()=>{const v=window.visualViewport;if(!v)return;
+const R=document.documentElement.style,mn=document.querySelector('#mn'),M=mn.style,ms=document.querySelector('#ms'),tx=document.querySelector('#tx'),card=document.querySelector('#ib');
+/* gerak = kurva keyboard iOS (diukur dari rekaman Grok & keyboard iPhone: cubic-bezier(.323,.872,.368,.970), ±404ms). LEAD = keyboard iOS baru mulai ±28ms setelah kolom ditekan */
+const DUR=404,LEAD=28,C={};
+const BZ=(()=>{const x1=.3234,y1=.872,x2=.3683,y2=.9696,P=(a,b,c,t)=>3*(1-t)*(1-t)*t*a+3*(1-t)*t*t*b+t*t*t*c;return x=>{if(x<=0)return 0;if(x>=1)return 1;let t=x;for(let i=0;i<8;i++){const d=P(x1,x2,1,t)-x,dv=3*(1-t)*(1-t)*x1+6*(1-t)*t*(x2-x1)+3*t*t*(1-x2);if(Math.abs(d)<1e-5||!dv)break;t-=d/dv}return P(y1,y2,1,t)}})();
+let cur=0,tgt=0,from=0,t0=0,raf=0,K=0,open=0,pend=0,pt=0,st=0,sett=0,last=0;
+const land=()=>window.innerWidth>window.innerHeight,ek=()=>'xkb'+(land()?'l':'p');
+const okK=k=>k>150&&k<window.innerHeight*(land()?.8:.5);/* tinggi keyboard masuk akal; angka ngawur diabaikan */
+const getE=()=>{try{const e=+localStorage.getItem(ek())||0;return okK(e)?e:0}catch(e){return 0}};
+const guess=()=>{const e=getE();return e>100?e:Math.round(window.innerHeight*(land()?.52:.385))};
+const set=(s,n,val)=>{const k=n+(s===R?'r':'m');if(C[k]===val)return;C[k]=val;s.setProperty(n,val)};
 const nearB=()=>ms.scrollHeight-ms.scrollTop-ms.clientHeight<80;
-const apply=k=>{const nb=nearB();r.setProperty('--kb',k.toFixed(1)+'px');if(nb)ms.scrollTop=1e9};
-const run=ts=>{if(!t0)t0=ts;const p=Math.min(1,(ts-t0)/300),e=1-Math.pow(1-p,3);cur=from+(tgt-from)*e;apply(cur);raf=p<1?requestAnimationFrame(run):0};
-const go=k=>{if(k===tgt)return;tgt=k;from=cur;t0=0;cancelAnimationFrame(raf);raf=requestAnimationFrame(run)};
-const fit=()=>{qr=0;const H=window.innerHeight;r.setProperty('--H',H+'px');r.setProperty('--vh',v.height+'px');r.setProperty('--vt',v.offsetTop+'px');const k=H-v.height;go(k>60?k:0)};
-const q=()=>{if(!qr)qr=requestAnimationFrame(fit)};
-v.addEventListener('resize',q);v.addEventListener('scroll',q);window.addEventListener('orientationchange',()=>setTimeout(q,300));fit();
-const tx=document.querySelector('#tx');tx.addEventListener('focus',()=>{q();setTimeout(q,150);setTimeout(q,400)});tx.addEventListener('blur',()=>{q();setTimeout(q,150)});
+/* hanya satu hal yang berubah tiap frame: --kb (dan --ko). Cek "dekat dasar" dihitung sekali di awal gerak, bukan tiap frame */
+const apply=k=>{set(M,'--kb',k.toFixed(1)+'px');set(M,'--ko',K?Math.min(1,k/K).toFixed(3):'0');if(st)ms.scrollTop=1e9};
+const run=ts=>{const p=Math.min(1,Math.max(0,(ts-t0)/DUR));cur=from+(tgt-from)*BZ(p);apply(cur);raf=p<1?requestAnimationFrame(run):0};
+const go=k=>{if(Math.abs(k-tgt)<.5)return;if(k>0)K=k;st=!ms.querySelector('#wl')&&nearB();const moving=!!raf;tgt=k;from=cur;t0=performance.now()+(moving||k<=0?0:LEAD);cancelAnimationFrame(raf);raf=requestAnimationFrame(run)};
+const store=k=>{if(Math.abs(k-getE())>2){try{localStorage.setItem(ek(),String(Math.round(k)))}catch(e){}}};
+const foc=()=>{const a=document.activeElement;return !!(a&&/^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName))};
+/* baca ukuran keyboard SETELAH iOS tenang (angka sementara saat animasi iOS diabaikan), lalu koreksi halus kalau beda */
+const settle=()=>{const k=window.innerHeight-v.height;
+ if(k>60){if(!okK(k)||!foc())return;
+  /* angka dipakai hanya kalau dua bacaan berturut-turut sama (iOS kadang melapor angka sementara) */
+  if(Math.abs(k-last)>2){last=k;clearTimeout(sett);sett=setTimeout(settle,160);return}
+  open=1;pend=0;store(k);if(Math.abs(k-tgt)>3)go(k)}
+ else{open=0;if(!pend)go(0)}};
+const fit=()=>{const H=window.innerHeight,top=v.offsetTop;set(M,'--H',H+'px');set(M,'--vt',top.toFixed(1)+'px');set(R,'--vh',v.height+'px');set(R,'--vt',top.toFixed(1)+'px');last=0;clearTimeout(sett);sett=setTimeout(settle,160)};
+v.addEventListener('resize',fit);v.addEventListener('scroll',fit);window.addEventListener('orientationchange',()=>setTimeout(fit,300));fit();
+/* naik langsung saat kolom ketik ditekan; kalau keyboard ternyata tidak muncul (keyboard fisik), turun lagi */
+tx.addEventListener('focus',()=>{clearTimeout(pt);if(open){settle();return}pend=1;go(guess());pt=setTimeout(()=>{pend=0;settle()},900)});
+tx.addEventListener('blur',()=>{clearTimeout(pt);pend=0;setTimeout(()=>{if(foc())return;open=0;go(0)},40)});
+/* ketuk di mana saja pada kartu ketik = fokus ke kolom ketik */
+card.addEventListener('click',e=>{if(e.target.closest('button'))return;tx.focus()});
 })();
 </script>
 <!-- TAMBAHAN 4: teks putih murni + warna lebih tajam (hanya CSS, fungsi tidak diubah) -->
@@ -568,7 +589,36 @@ ms.addEventListener('click',e=>{
 (()=>{const o={passive:false};
 ['gesturestart','gesturechange','gestureend'].forEach(e=>document.addEventListener(e,v=>v.preventDefault(),o));
 document.addEventListener('touchmove',v=>{if(v.touches&&v.touches.length>1)v.preventDefault()},o);
-let t=0;document.addEventListener('touchend',v=>{const n=Date.now();if(n-t<350&&!v.target.closest('input,textarea'))v.preventDefault();t=n},o);
+let t=0;document.addEventListener('touchend',v=>{const n=Date.now();if(n-t<350&&!v.target.closest('input,textarea,button,a,select,label,[data-a],[data-k],[data-t],.sc,.gxr,.bi,.mi'))v.preventDefault();t=n},o);
 })();
+</script>
+
+<!-- TAMBAHAN 6: tampilan ala Grok (kartu ketik dua baris, chip aksi cepat, animasi halus). Fungsi lama tidak diubah -->
+<style>
+#mn footer{background:#000;padding:8px 12px calc(env(safe-area-inset-bottom,0px) + 10px)}
+#pm{left:12px;transform-origin:left bottom;animation:pmi .16s cubic-bezier(.2,.8,.2,1)}
+@keyframes pmi{from{opacity:0;transform:translateY(8px) scale(.96)}}
+#qc{display:flex;gap:10px;overflow-x:auto;overflow-y:hidden;margin:0 -12px;padding:0 12px 10px;max-height:64px;-webkit-overflow-scrolling:touch;transition:max-height .28s cubic-bezier(.2,.8,.2,1),opacity .2s ease,padding .28s cubic-bezier(.2,.8,.2,1)}
+#qc::-webkit-scrollbar{display:none}
+#qc button{flex:none;display:inline-flex;align-items:center;gap:10px;height:48px;padding:0 20px 0 16px;border-radius:24px;background:#181818;color:#f2f2f2;font-size:16px;font-weight:500;white-space:nowrap;transition:transform .14s ease,background .2s ease,box-shadow .2s ease}
+#qc svg{width:22px;height:22px;flex:none;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;color:#9a9a9f}
+#qc [data-t=m_w] svg{color:#17c3e6}
+#qc button:active{transform:scale(.95);opacity:1;background:#222}
+#mn:not(:has(#wl)) #qc{max-height:0;opacity:0;padding-top:0;padding-bottom:0;pointer-events:none}
+#mn:has(#m_w .dt:not([hidden])) #qc [data-t=m_w],#mn:has(#m_g .dt:not([hidden])) #qc [data-t=m_g]{background:#12282e;box-shadow:inset 0 0 0 1px rgba(23,195,230,.55)}
+#mn #ib{display:grid;grid-template-columns:auto 1fr auto;grid-template-areas:"tx tx tx" "pl . sd";gap:8px;align-items:center;padding:14px 12px 12px 14px;background:#1e1e20;border:1px solid #2e2e30;border-radius:30px;box-shadow:inset 0 1px 0 rgba(255,255,255,.05)}
+#mn #tx{grid-area:tx;font-size:17px;line-height:1.4;padding:2px 4px;min-height:28px;max-height:140px;caret-color:#3a96ff}
+#tx::placeholder{color:#8e8e93;opacity:1}
+#mn #pl{grid-area:pl;width:34px;height:34px;font-size:22px;font-weight:300;line-height:1;border:1px solid #38383b;background:none;color:#fff}
+#mn #sd{grid-area:sd;width:34px;height:34px;font-size:19px;font-weight:700;line-height:1;background:#fff;color:#000}
+/* tombol = diam di tempat: saat menu terbuka halaman meluncur ke kanan, tombol diberi gerak lawan dengan waktu dan kurva yang sama */
+#mb{transition:transform .35s cubic-bezier(.2,.8,.2,1)}
+body.o #mb{transform:translateX(-69vw)}
+#pl,#sd{transition:transform .14s ease}
+#pl:active,#sd:active{transform:scale(.9);opacity:1}
+</style>
+<script>
+/* chip aksi cepat: memicu tombol menu (+) yang sudah ada */
+(()=>{const q=document.querySelector('#qc');if(!q)return;q.addEventListener('click',e=>{const b=e.target.closest('button[data-t]');if(!b)return;const t=document.getElementById(b.dataset.t);if(t)t.click()})})();
 </script>
 </body></html>
