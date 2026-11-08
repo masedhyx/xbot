@@ -160,6 +160,44 @@ const SFX={
  write:e=>{const x=12*Math.sin(e*2.3)+5*Math.sin(e*7),y=3*Math.sin(e*5);return{b:[0,16],L:cap(258+x,266+y,22,8,23),R:cap(381+x,266+y,22,-8,23)}},
  done:EFX[5]
 };
+/* ===== v27: 31 efek mata tambahan (hanya geser/miring/putar/skala seragam kecil + gerak badan; bentuk tidak diubah) ===== */
+const EY=(b,o={})=>{const s=o.s||1,sL=o.sL||s,sR=o.sR||s,L=o.L||[0,0],R=o.R||[0,0],al=o.a||0,ar=o.ar===undefined?-al:o.ar,dx=o.dx||0,dy=o.dy||0;
+ return{b,L:cap(255.1+b[0]+dx+L[0],227.6+b[1]+dy+L[1],32.6*sL,al,25*sL),R:cap(383.9+b[0]+dx+R[0],227.2+b[1]+dy+R[1],32.6*sR,ar,25*sR)}};
+const trcE=(P,e,T)=>{const n=P.length,t=(e/T)%n,i=Math.floor(t),f=sm(t-i),a=P[i],b=P[(i+1)%n];return[lp(a[0],b[0],f),lp(a[1],b[1],f)]};
+const FXN={
+ setuju:e=>EY([0,7*Math.sin(e*4.5)],{dy:4}),
+ tidak:e=>{const x=10*Math.sin(e*6);return EY([x,0],{dx:x*.3,a:10})},
+ tawa:e=>EY([2*Math.sin(e*31),-9*Math.abs(Math.sin(e*7))],{a:-8}),
+ kesal:e=>EY([0,0],{dx:-16+3*Math.sin(e*2),a:18}),
+ kompromi:e=>EY([8+4*Math.sin(e*1.5),0],{dx:18,a:-6}),
+ aha:e=>{const p=e%2.4,k=Math.exp(-p*4);return EY([0,-10*k*Math.abs(Math.cos(p*10))],{dy:-6*k,s:1+.08*k})},
+ penasaran:e=>EY([6+2*Math.sin(e*1.2),0],{L:[0,3],R:[0,-12]}),
+ bicara:e=>{const v=Math.abs(Math.sin(e*9))*Math.abs(Math.sin(e*3.1+1));return EY([0,-4*v],{dx:3*Math.sin(e*2.3)})},
+ tunggu:e=>EY([8,-3],{dx:26+6*Math.sin(e*.8),dy:-26}),
+ tabel:e=>{const p=trcE([[-30,-14],[30,-14],[30,16],[-30,16]],e,.55);return EY([0,0],{dx:p[0],dy:p[1]})},
+ diagram:e=>{const p=trcE([[-22,-20],[22,-20],[22,0],[-22,0],[-22,20],[22,20]],e,.6);return EY([0,0],{dx:p[0],dy:p[1]})},
+ berkas:e=>{const q=e%3.2,u=sm(q/.7)*(1-sm((q-2.4)/.6));return EY([0,0],{dx:-24*u,dy:-4*u,s:1+.07*u})},
+ ragu:e=>{const s=Math.sin(e*3);return EY([3*Math.sin(e*1.5),0],{L:[0,-10*s],R:[0,10*s]})},
+ ketik:e=>EY([0,0],{dx:-24+48*((e*1.8)%1),dy:14}),
+ idle:e=>{const x=10*Math.sin(e*.7)+6*Math.sin(e*1.9),y=5*Math.sin(e*.5+1);return EY([x*.2,0],{dx:x,dy:y})},
+ wow:e=>{const k=.5+.5*Math.sin(e*5);return EY([0,-8-4*k],{dy:-8,s:1+.06*k})},
+ curiga:e=>EY([-6,0],{dx:22+3*Math.sin(e*1.3),dy:2,a:14}),
+ diam:e=>{const p=e%3.2,x=p<.4?lp(0,-26,sm(p/.15)):p<.9?lp(-26,26,sm((p-.4)/.12)):p<1.4?lp(26,-26,sm((p-.9)/.12)):p<2.4?-26:lp(-26,0,sm((p-2.4)/.5));return EY([-x*.1,0],{dx:x})},
+ ide:e=>{const p=e%3.4,q=p-1.4,up=sm(p/.5)*(1-sm(q/.2)),pop=q>0?Math.exp(-q*4):0;return EY([0,q>0?-12*pop*Math.abs(Math.cos(q*10)):0],{dx:-12*up,dy:-22*up,s:1+.08*pop})},
+ haru:e=>EY([3*Math.sin(e*1.2),3+2*Math.sin(e*2.4)],{dy:4+1.5*Math.sin(e*8),a:-11}),
+ ngambek:e=>EY([6*Math.sin(e*.9),14],{dx:-10,dy:8,a:12}),
+ pede:e=>EY([10*Math.sin(e*.6),-6],{dx:6*Math.sin(e*.6),dy:9,a:6}),
+ grogi:e=>{const p=e%4,d=sm(p/2.6)*(1-sm((p-2.8)/.15));return EY([0,22*d],{dy:10*d})},
+ kaget:e=>{const p=e%3.2,j=p<.18?sm(p/.18):Math.exp(-(p-.18)*3);return EY([2*Math.sin(p*60)*j,-16*j],{dy:-6*j,s:1+.08*j})},
+ takut:e=>EY([3*Math.sin(e*42),1.5*Math.sin(e*37)],{dx:8*Math.sin(e*2.1),dy:4,a:-10}),
+ fokus:e=>{const k=.5+.5*Math.sin(e*2);return EY([0,0],{L:[10,0],R:[-10,0],s:1.03+.02*k})},
+ scan:e=>{const x=34*Math.sin(e*1.6);return EY([-x*.15,0],{dx:x,dy:-2})},
+ menari:e=>{const b=Math.abs(Math.sin(e*5.5)),w=Math.sin(e*2.75);return EY([6*w,-10*b],{dy:-2*b,a:9*w})},
+ pusing:e=>{const x=14*Math.cos(e*4),y=14*Math.sin(e*4);return EY([x*.3,y*.3],{dx:x,dy:y})},
+ genit:e=>{const p=e%3.2,w=sm((p-.6)/.25)*(1-sm((p-1.4)/.25));return EY([4*w,0],{R:[4*w,10*w],ar:-80*w})},
+ teliti:e=>{const x=10*Math.sin(e*1.1);return EY([x*.3,0],{dx:x,sL:.96,sR:1.08,R:[0,-6]})}
+};
+Object.assign(SFX,FXN);
 function fxMix(P,f,w){
  for(const s of[3,9]){if(P[s+1]>P[s+4])for(let k=0;k<3;k++){const t=P[s+k];P[s+k]=P[s+3+k];P[s+3+k]=t}}
  const lc=(a,b)=>a+(b-a)*(f.arc?Math.min(1,w*2):w);
@@ -171,11 +209,11 @@ function fxArc(E,P){for(let k=0;k<2;k++){const s=E[k].style;if(P.arc){E[k].setAt
 function fxPose(ms,j,P){const T=ms/1000,C=Math.floor(T/FXC),e=T-C*FXC-FXD,len=FXC-FXD;if(e<0)return;
  const w=Math.min(sm(e/FXE),sm((len-e)/FXE));if(w<=0)return;
  fxMix(P,EFX[(C+j)%EFX.length](e),w)}
-function mk(svg,always,ph=0,ex,st){const bd=svg.querySelector('.bd'),cc=svg.querySelector('.cc'),E=svg.querySelectorAll('.e'),t0=performance.now()-ph;let stg=null,ts=0,last=null,snap=null;
- const b={svg,always,draw(now){pose(now-t0,PS);if(ex!==undefined){PS.arc=null;fxPose(now-t0,ex,PS)}else if(stg){PS.arc=null;const e=(now-ts)/1000;if(snap)for(let k=0;k<15;k++)PS[k]=snap[k];PS.v=3;fxMix(PS,stg(e),sm(e/FXE))}const x=PS[0].toFixed(1),y=PS[1].toFixed(1),r=PS[2].toFixed(1);
+function mk(svg,always,ph=0,ex,st){const bd=svg.querySelector('.bd'),cc=svg.querySelector('.cc'),E=svg.querySelectorAll('.e'),t0=performance.now()-ph;let stg=null,ts=0,last=null,snap=null,pf=null,pt=0,pe=0;
+ const b={svg,always,draw(now){pose(now-t0,PS);if(stg||pf){PS.arc=null;if(stg){const e=(now-ts)/1000;if(snap)for(let k=0;k<15;k++)PS[k]=snap[k];PS.v=3;if(pf){const u=(now-pt)/(FXE*1000);if(u>=1)pf=null;else fxMix(PS,pf(pe+(now-pt)/1000),1)}fxMix(PS,stg(e),sm(e/FXE))}else{const u=(now-pt)/(FXE*1000);if(u>=1)pf=null;else fxMix(PS,pf(pe+(now-pt)/1000),1-sm(u))}}else if(ex!==undefined){PS.arc=null;fxPose(now-t0,ex,PS)}const x=PS[0].toFixed(1),y=PS[1].toFixed(1),r=PS[2].toFixed(1);
   for(const el of[bd,cc]){el.setAttribute('cx',x);el.setAttribute('cy',y);el.setAttribute('r',r)}
   E[0].setAttribute('d',PS.v&2?hull(PS[3],PS[4],PS[5],PS[6],PS[7],PS[8]):'');E[1].setAttribute('d',PS.v&1?hull(PS[9],PS[10],PS[11],PS[12],PS[13],PS[14]):'');if(ex!==undefined||stg)fxArc(E,PS);if(st)last=PS.slice(0,15)}};
- BOTS.add(b);b.draw(performance.now());return{set(s){stg=SFX[s]||null;ts=performance.now();snap=last?last.slice():null}}}
+ BOTS.add(b);b.draw(performance.now());return{set(s){const n=performance.now();if(stg){pf=stg;pt=n;pe=(n-ts)/1000}stg=SFX[s]||null;ts=n;snap=last?last.slice():null}}}
 const tick=n=>{for(const b of BOTS){if(!b.svg.isConnected){BOTS.delete(b);continue}if(b.always||open)b.draw(n)}requestAnimationFrame(tick)};requestAnimationFrame(tick);
 
 /* ===== PANEL & BOT ===== */
@@ -431,6 +469,7 @@ if(ms){
   else if(k==='l'||k==='d'){const on=!b.classList.contains('on');b.parentNode.querySelectorAll('[data-a=l],[data-a=d]').forEach(x=>x.classList.remove('on'));b.classList.toggle('on',on)}
   else if(k==='s'){setTimeout(()=>{b.classList.add('on');const t=setInterval(()=>{if(!(window.speechSynthesis&&speechSynthesis.speaking)){b.classList.remove('on');clearInterval(t)}},500)},300)}
  })}
+window.GX={enh,drawDg};
 })();
 </script>
 <!-- TAMBAHAN 2 (gaya warna ala X + animasi pesan halus). Hanya CSS; ukuran font dan fungsi tidak diubah. -->
@@ -796,7 +835,7 @@ const relTxt=(a,b)=>{const v=rel(a,b);return v<=-2?'lagi kesal sama '+nm(b):v<0?
 const decay=()=>{for(const k in REL){REL[k]*=.85;if(Math.abs(REL[k])<.15)delete REL[k]}};
 const afterRel=(f,t,k)=>{if(t<0)return;const a=rel(f,t),b=rel(t,f);
  if(k==='kesal'){setRel(f,t,a-1.5);setRel(t,f,b-1)}else if(k==='balaskesal'){setRel(f,t,a-.5);setRel(t,f,b+.2)}
- else if(k==='baikan'||k==='kompak'){setRel(f,t,Math.max(a,0)+1);setRel(t,f,Math.max(b,0)+1)}else if(k==='bercanda')setRel(f,t,a+.3)};
+ else if(k==='baikan'||k==='kompak'||k==='kompromi'){setRel(f,t,Math.max(a,0)+1);setRel(t,f,Math.max(b,0)+1)}else if(k==='bercanda')setRel(f,t,a+.3);else if(k==='beda')setRel(f,t,a-.3)};
 const VIBE={tenang:{fun:.6,spat:.3,gap:1.3},seru:{fun:1,spat:1,gap:1},ramai:{fun:1.5,spat:1.8,gap:.8}};
 const INT={
  info:()=>'Buka topik dengan satu info/berita/tren TERBARU hari ini (pakai hasil pencarian web): sebut intinya, lalu komentar singkat khasmu.',
@@ -842,9 +881,9 @@ const st=i=>S[i]||(S[i]={t:'',tc:-1,s:null,f:-1,c:''});
 const fmt=(x,n,tc)=>{const m=tc>=0?Math.min(n,('@'+nm(tc)).length):0,hit=m&&x.startsWith(('@'+nm(tc)).slice(0,m));return(hit?`<b class="mn" style="color:${COL[tc]}">${esc(x.slice(0,m))}</b>`+esc(x.slice(m,n)):esc(x.slice(0,n)))+`<span class="gh">${esc(x.slice(n))}</span>`};
 const draw=(i,h,hf)=>{const e=document.querySelector(`.bi[data-i="${i}"] .ct`);if(e){e.innerHTML=h;e.parentElement.classList.toggle('hf',!!hf)}};
 const show=i=>{const s=st(i);draw(i,s.s?`<span class="sx">sedang ${s.s}${s.f>=0?' '+mention(s.f):''}<span class="dts"><b></b><b></b><b></b></span></span>`:fmt(s.t,s.t.length,s.tc)+s.c,s.c&&!s.s)};
-const setS=(i,l,f=-1)=>{const s=st(i);s.s=l;s.f=f;show(i)},clr=i=>{st(i).s=null;show(i)};
+const setS=(i,l,f=-1)=>{const s=st(i);s.s=l;s.f=f;show(i);liveSet(i,l,f)},clr=i=>{st(i).s=null;show(i);liveSet(i,null)};
 const typeIn=(i,x,g)=>new Promise(res=>{let n=0;const k=Math.max(1,Math.ceil(x.length/45)),tc=st(i).tc,iv=setInterval(()=>{if(g!==gen){clearInterval(iv);return res()}n=Math.min(x.length,n+k);draw(i,fmt(x,n,tc));if(n>=x.length){clearInterval(iv);res()}},32)});
-async function bubble(f,m,g){const s=st(f);s.s=null;s.t=m.x;s.tc=m.t;s.c='';await typeIn(f,m.x,g);if(g!==gen)return false;s.c=chipsP(m.files);show(f);return true}
+async function bubble(f,m,g){const s=st(f);s.s=null;liveSet(f,null);s.t=m.x;s.tc=m.t;s.c='';await typeIn(f,m.x,g);if(g!==gen)return false;s.c=chipsP(m.files);show(f);return true}
 
 /* ===== PANGGILAN SERVER ===== */
 async function call(i,o){
@@ -856,9 +895,9 @@ async function call(i,o){
   if(!fin||fin.error||(!fin.text&&!fin.image))throw 0;return fin
  }catch(e){return null}finally{clearTimeout(to);ACT.delete(c)}}
 const base=f=>cfg.bots[f].prompt+CRT+roleTxt(f)+memTxt(f)+`\n\n[Waktu] Sekarang ${nowTx()}. Pakai ini (jangan menebak) untuk soal tanggal/jam, dan sesuaikan suasana (mis. makan siang, ngantuk malam hari).`+workTx()+filesTx();
-const ctx=()=>LOG.filter(l=>l.f!==-2).slice(-8).map(l=>who(l.f)+': '+clip(l.full||'(berkas)',160)).join('\n');
+const ctx=()=>LOG.filter(l=>l.f!==-2).slice(-10).map(l=>who(l.f)+': '+clip(plainOf(l.full||'(berkas)'),240)).join('\n');
 const sysA=(f,t,k)=>{const O=ids().filter(i=>i!==f).map(i=>`${nm(i)} (${roleName(i)})`).join(', ');
- return base(f)+`\n\n[Situasi] Kamu ${nm(f)}, sedang ngobrol di grup bersama bot lain: ${O}. Kalian saling kenal, punya pekerjaan masing-masing, bebas membahas apa saja, dan boleh bercanda, adu pendapat, kesal ringan, atau kompak seperti teman sungguhan. Suasana hatimu: ${mood(f)}.${t>=0?' Hubunganmu sekarang: '+relTxt(f,t)+'.':''}\n[Tugas] ${INT[k](t,f)}\n[Format] Tulis SATU pesan chat pendek bahasa Indonesia yang natural (maks ${k==='user'?240:100} karakter), tanpa markdown/daftar/nomor sumber, boleh singkatan santai dan satu emoji sesekali. Jangan mengulang kalimat yang sudah ada di obrolan. Tak perlu menyebut dirimu AI. Tanpa kata kasar, tanpa menghina pribadi/SARA.`+(['kerja','berkas','user'].includes(k)?' Boleh berbagi berkas: [bagikan:nama berkas] untuk berkas yang sudah ada, atau [file:nama.ext]isi singkat[/file] bila kamu membuat catatan/kode kecil.':'')+(k==='user'?memAsk(f):'')};
+ return base(f)+`\n\n[Situasi] Kamu ${nm(f)}, sedang ngobrol di grup bersama bot lain: ${O}. Kalian saling kenal, punya pekerjaan masing-masing, bebas membahas apa saja, dan boleh bercanda, adu pendapat, kesal ringan, atau kompak seperti teman sungguhan. Suasana hatimu: ${mood(f)}.${t>=0?' Hubunganmu sekarang: '+relTxt(f,t)+'.':''}\n[Tugas] ${INT[k](t,f)}\n[Cara berpikir] Berpikirlah dan bersikap seperti manusia yang cerdas: punya pendapat sendiri, rasa penasaran, selera humor, dan pengalaman versi karaktermu. Ingat dan rujuk apa yang tadi dibahas, jangan selalu setuju, boleh berubah pikiran bila argumen lawan kuat, boleh kompromi, bedakan fakta dari opini (tidak tahu → bilang tidak tahu atau tanya balik). Variasikan: kadang nyeletuk pendek, kadang berbagi info atau analisis yang bernilai.\n[Format] Tulis SATU pesan chat bahasa Indonesia yang natural seperti manusia di grup, gaya sama seperti jawabanmu di chat utama. Obrolan santai cukup 1-2 kalimat; untuk info, ide, argumen, atau penjelasan boleh lebih panjang (maks ${LENS[k]||120} karakter). Hanya bila benar-benar membantu (jarang) boleh pakai: kata penting berwarna [c=warna]kata[/c] (merah, hijau, biru, kuning, oranye, ungu, pink, tosca), **tebal**, tabel markdown kecil, atau diagram alur dalam blok \`\`\`diagram berisi baris seperti A[Label] --> B[Label]. Tanpa daftar bernomor panjang dan tanpa nomor sumber [1]. Boleh singkatan santai dan satu emoji sesekali. Jangan mengulang kalimat yang sudah ada di obrolan. Tak perlu menyebut dirimu AI. Tanpa kata kasar, tanpa menghina pribadi/SARA.`+(['kerja','berkas','user'].includes(k)?' Boleh berbagi berkas: [bagikan:nama berkas] untuk berkas yang sudah ada, atau [file:nama.ext]isi singkat[/file] bila kamu membuat catatan/kode kecil.':'')+(k==='user'?memAsk(f):'')};
 
 /* ===== OBROLAN BEBAS (ambient) ===== */
 const lastMsg=()=>{for(let i=LOG.length-1;i>=0;i--)if(LOG[i].f!==-2)return LOG[i];return null};
@@ -870,18 +909,55 @@ function plan(){
  if(UQ){const um=LOG.slice().reverse().find(m=>m.f===-1&&m.k==='user'&&!m.ans);if(um){um.ans=1;return{f:routeUser(um.full,um.t),t:-1,intent:'user'}}UQ=0}
  const files=FS.some(a=>a.shared<2),V=VIBE[P.vibe]||VIBE.seru;
  if(last.t>=0&&I.includes(last.t)&&(last.k==='kesal')&&Math.random()<.85)return{f:last.t,t:last.f,intent:pick(['balaskesal','balaskesal','baikan'])};
+ if(last.t>=0&&I.includes(last.t)&&last.k==='beda'&&Math.random()<.9){const d=last.d||1;return{f:last.t,t:last.f,intent:d>=3?'kompromi':pick(['beda','kompromi','beda'])}}
  const f=last.f>=0&&last.t>=0&&I.includes(last.t)&&Math.random()<.7?last.t:pick(I.filter(i=>i!==last.f)),t=last.f>=0&&Math.random()<.75?last.f:pick(I.filter(i=>i!==f)),r=rel(f,t);
- let k=wpick({obrolan:24,receh:16*V.fun,bercanda:16*V.fun,kerja:14,kompak:10,kesal:(4+(r<0?-r*4:0))*V.spat,info:3,berkas:files?9:0,baikan:r<=-1?16:0});
- return{f,t:(k==='receh'&&Math.random()<.6)||k==='info'?-1:t,intent:k}}
+ let k=wpick({obrolan:16,receh:10*V.fun,bercanda:12*V.fun,kerja:10,kompak:8,kesal:(4+(r<0?-r*4:0))*V.spat,info:6,beda:12*V.spat,ide:9,tanya:7,visual:4,berkas:files?9:0,baikan:r<=-1?16:0});
+ return{f,t:(k==='receh'&&Math.random()<.6)||k==='info'||k==='ide'||k==='visual'?-1:t,intent:k}}
 async function amb(f,t,k){
  if(Date.now()<mute||!cfg.url)return null;
- const c=ctx(),r=await call(f,{sys:sysA(f,t,k),user:(c?'Obrolan sejauh ini:\n'+c+'\n\n':'')+'Tulis pesanmu sekarang.',mode:k==='info'?'on':k==='user'?'auto':'off',to:k==='info'?22000:k==='user'?25000:15000});
+ const c=ctx(),r=await call(f,{sys:sysA(f,t,k),user:(c?'Obrolan sejauh ini:\n'+c+'\n\n':'')+'Tulis pesanmu sekarang.',mode:k==='info'?'on':(k==='user'||k==='beda'||k==='ide')?'auto':'off',to:k==='info'?22000:k==='user'?25000:(k==='beda'||k==='ide'||k==='visual')?20000:15000});
  if(!r){if(++fails>=3){mute=Date.now()+300000;fails=0}return null}fails=0;return r}
 function build(f,t,k,r){const U=k==='user',tg=tags(eat(f,r.text||'',U?1:0),f);
- const tt=U||t<0||k==='info'?-1:t,full=clean(tg.text,f,tt,tt<0,U?240:110);
+ const tt=U||t<0||k==='info'?-1:t,full=cleanR(tg.text,f,tt,tt<0,LENS[k]||150);
  if(k==='berkas'&&!tg.files.length){const a=FS.find(a=>a.shared<2)||FS[FS.length-1];if(a){a.shared++;tg.files.push(a)}}
  if(!full&&!tg.files.length)return null;
- return mkMsg(f,tt,full||'Ini berkasnya.',{k,files:tg.files,src:r.sources})}
+ const m=mkMsg(f,tt,full||'Ini berkasnya.',{k,files:tg.files,src:r.sources}),pl=lastMsg();m.x=pv(m.full);m.d=k==='beda'&&pl&&pl.k==='beda'?(pl.d||1)+1:1;return m}
+/* ===== v26: Ruang Bot — avatar bot bermata, status hidup, obrolan lebih cerdas & berformat, suara ===== */
+const LENS={user:700,info:480,ide:480,beda:420,kompromi:380,kerja:420,visual:700,tanya:260};
+const cleanR=(raw,f,t,seed,n)=>{const E=escRe;let x=CITS(String(raw||'')).replace(/\[\d+\]/g,'').trim().replace(/^["“”]+|["“”]+$/g,'');
+ x=x.replace(new RegExp('^'+E(nm(f))+'\\s*:\\s*','i'),'').replace(new RegExp('^@(?:'+cfg.bots.map(b=>E(b.name)).join('|')+')\\b[\\s,:]*','i'),'').replace(/^@\S+\s*/,'');
+ if(!seed&&t>=0)x='@'+nm(t)+' '+x;
+ if(x.length>n){let c=x.slice(0,n);const p=Math.max(c.lastIndexOf('\n\n'),c.search(/[.!?…](?=[^.!?…]*$)/)),q=c.lastIndexOf(' ');c=c.slice(0,p>n*.5?p+1:q>n*.4?q:n);if((c.match(/```/g)||[]).length%2)c+='\n```';c=c.trim();x=c+(/[.!?…`]$/.test(c)?'':'…')}
+ return x};
+const pv=s=>clip(plainOf(plain(String(s).replace(/```(?:diagram|mermaid|flowchart)[\s\S]*?(?:```|$)/gi,' (diagram) ').replace(/^\s*#{1,6}\s*/gm,'')).replace(/\|/g,' ')),110);
+INT.info=()=>'Buka topik dengan satu info/berita/tren/temuan TERBARU hari ini (pakai hasil pencarian web, sebut sumbernya dengan kata-kata alami tanpa nomor): intinya 1-3 kalimat, lalu opini atau analisis khasmu, dan boleh lempar pertanyaan ke bot lain.';
+INT.beda=t=>`Kamu TIDAK setuju dengan @${nm(t)} (awali dengan @${nm(t)}). Sanggah pendapat/idenya dengan alasan yang masuk akal (logika, data, pengalaman, risiko), sopan tapi tegas seperti orang yang yakin. Jangan sekadar bilang tidak setuju: beri satu argumen konkret.`;
+INT.kompromi=t=>`Kamu sedang berbeda pendapat dengan @${nm(t)}. Awali dengan @${nm(t)}, akui sisi benar dari pendapatnya, lalu tawarkan jalan tengah yang adil atau gabungan dua pandangan.`;
+INT.ide=()=>'Lempar satu IDE atau gagasan menarik yang kepikiran olehmu (proyek kecil, cara kerja lebih cerdas, eksperimen, fitur, atau analisis tren) beserta alasannya, dan ajak bot lain menanggapi.';
+INT.tanya=t=>`Ajukan satu pertanyaan cerdas yang bikin penasaran ke @${nm(t)} (awali dengan @${nm(t)}), sesuai spesialisasinya.`;
+INT.visual=()=>'Jelaskan atau rangkum satu hal dari obrolan terakhir (atau topik menarik) secara visual: tabel perbandingan kecil (2-4 baris) ATAU diagram alur singkat (3-5 node), plus satu kalimat pengantar. Pakai format tabel/diagram persis seperti di [Format].';
+Object.assign(LOC,{ide:['Kepikiran nih: gimana kalau tiap selesai kerja kita review 5 menit aja?','Ide iseng: sehari tanpa notifikasi, siapa berani? 😄'],visual:['Menurutku semua ini bisa diringkas jadi satu alur sederhana, nanti kubikin ya'],tanya:['@{t} kalau kamu di posisiku, pilih cepat atau rapi dulu?'],beda:['@{t} aku kurang setuju, risikonya lebih besar dari yang kamu kira','@{t} hmm, aku lihatnya beda: dicoba kecil dulu baru gas'],kompromi:['@{t} oke, kita ketemu di tengah: setengah idemu, setengah idekku 🤝']});
+const T0=performance.now(),LV=new Map(),IO=new IntersectionObserver(es=>es.forEach(x=>{const b=x.target._b;if(!b)return;x.isIntersecting?BOTS.add(b):BOTS.delete(b)}));
+const pk=a=>Array.isArray(a)?a[Math.floor(Math.random()*a.length)]:a;
+const STG={'mencari sumber':[['search','search','scan'],'mencari data di web'],'membaca pesanmu':[['read','fokus'],'membaca pesanmu'],'membaca pesan':[['read','read','curiga'],'membaca pesan'],'menganalisis':[['analyze','analyze','teliti','fokus'],'menganalisis'],'mengetik':['ketik','menulis'],'berpikir':[['think','think','ragu'],'berpikir'],'menyusun argumen':[['think','fokus'],'menyusun argumen'],'mengerjakan bagiannya':[['ketik','fokus'],'mengerjakan bagiannya'],'membuat gambar':[['look','teliti'],'membuat gambar'],'melihat berkas':[['berkas','teliti'],'melihat berkas'],'menimbang kesimpulan':[['teliti','think'],'menimbang kesimpulan'],'menyatukan hasil tim':[['scan','ketik'],'menyatukan hasil tim'],'menyusun tabel':['tabel','menyusun tabel'],'menyusun diagram':['diagram','menyusun diagram'],'menunggu server':[['tunggu','tunggu','pusing'],'menunggu jawaban server']};
+const EMO={beda:['tidak','curiga','pede'],kompromi:['kompromi','haru'],kompak:['setuju','menari','haru'],bercanda:['tawa','genit','menari'],receh:['tawa','menari','wow'],kesal:['kesal','ngambek'],balaskesal:['ngambek','curiga','diam','kaget'],baikan:['kompromi','haru','genit'],info:['aha','wow'],ide:['ide','pede','wow'],tanya:['penasaran','curiga'],visual:['wow','pede'],kerja:['fokus','teliti'],berkas:['berkas','kaget','teliti'],obrolan:['setuju','penasaran','curiga','pede','idle'],user:['setuju','fokus'],task:['fokus','teliti','pede'],err:['ragu','takut']};
+const emoFx=m=>{if(m.f<0)return'';if((m.k==='receh'||m.k==='obrolan')&&mood(m.f)==='ngantuk'&&Math.random()<.5)return'grogi';return pk(EMO[m.k]||EMO.obrolan)};
+function avMk(svg,i,live){const j=Math.max(0,ids().indexOf(i)),ph=performance.now()-T0+j*3100,h=live?mk(svg,true,ph,undefined,true):mk(svg,true,ph,j);svg._b=[...BOTS].find(x=>x.svg===svg);IO.observe(svg);return h}
+function mountAv(d,i,m){const a=d.querySelector('.ld');if(!a||i<0)return;a.innerHTML=bot(COL[i]);const h=avMk(a.firstChild,i,0);if(m){m._h=h;if(Date.now()-m.ts<2000){const k=emoFx(m);if(k){h.set(k);setTimeout(()=>{if(m._h===h&&!m._sp)h.set('')},4800)}}}}
+function liveSet(i,l,f){const L=document.getElementById('rl');if(!L)return;let r=LV.get(i);
+ if(!l){if(r){const v=r.el.querySelector('svg');v&&IO.unobserve(v);r.el.remove();LV.delete(i)}return}
+ const[kk,tx]=STG[l]||['think',l];const k=r&&r.l===l?r.k:pk(kk);
+ if(!r){const el=document.createElement('div');el.className='lm lv';el.innerHTML=`<span class="ld">${bot(COL[i])}</span><div class="lb"><div class="ln"><em>${esc(roleName(i))}</em></div><div class="lt"></div></div>`;r={el,h:avMk(el.querySelector('svg'),i,1),k:''};LV.set(i,r);const near=L.scrollHeight-L.scrollTop-L.clientHeight<140;L.appendChild(el);if(near)L.scrollTop=L.scrollHeight}
+ r.l=l;if(r.k!==k){r.k=k;r.h.set(k)}
+ r.el.querySelector('.lt').innerHTML=`sedang ${esc(tx)}${f>=0?' '+mention(f):''}<span class="dts"><b></b><b></b><b></b></span>`}
+const enhL=el=>requestAnimationFrame(()=>{if(!el.isConnected||!rsOpen()||!window.GX)return;try{GX.enh(el)}catch(e){}});
+const prune=l=>{const a=l.querySelectorAll('.lm:not(.lv)');if(a.length>90){const v=a[0].querySelector('svg');v&&IO.unobserve(v);a[0].remove()}};
+const VPI=[1,.75,1.3,.9,1.5,.65,1.2,.85,1.1,1.4],VRT=[1,.95,1.1,1,1.15,.9,1.05,.95,1.1,1];
+const VOICE={on:0,ok:'speechSynthesis' in window,
+ tx:s=>plainOf(plain(String(s).replace(/```[\s\S]*?```/g,' ').replace(/^\s*\|.*$/gm,' ')).replace(/[@#*_`>|]/g,' ').replace(/[\u{1F000}-\u{1FAFF}\u{2600}-\u{27BF}\uFE0F]/gu,'')).slice(0,320),
+ say(m){return new Promise(res=>{if(!VOICE.on||!VOICE.ok||m.f<0)return res();const t=VOICE.tx(m.full);if(!t)return res();
+  try{const u=new SpeechSynthesisUtterance(t),j=Math.max(0,ids().indexOf(m.f)),v=speechSynthesis.getVoices().find(x=>/^id[-_]/i.test(x.lang));u.lang='id-ID';if(v)u.voice=v;u.pitch=VPI[j%10];u.rate=VRT[j%10];
+   let d=0,to;const fin=()=>{if(!d){d=1;clearTimeout(to);m._sp=0;if(m._h)m._h.set('');res()}};u.onend=u.onerror=fin;to=setTimeout(fin,25000);m._sp=1;if(m._h)m._h.set('bicara');speechSynthesis.speak(u)}catch(e){res()}})}};
 const GAP={'4.5-8':[4500,8000],'15-25':[15000,25000],'30-60':[30000,60000]};
 const sched=fast=>{clearTimeout(tmr);const g=GAP[P.gap]||GAP['4.5-8'],v=(VIBE[P.vibe]||VIBE.seru).gap;let d=rnd(g[0],g[1])*v;const q=Math.random();if(fast)d=rnd(900,1600);else if(q<.18)d=Math.max(1800,d*.35);else if(q>.92)d*=2.2;tmr=setTimeout(turn,d)};
 async function turn(){
@@ -889,14 +965,14 @@ async function turn(){
  if(!uq&&(P.on===false||(P.max&&sent>=P.max)))return;busy=1;
  try{
   const{f,t,intent}=plan(),p=amb(f,t,intent),lm=lastMsg();
-  if(intent==='info'){setS(f,'mencari sumber');await wait(1500)}else if(intent==='user'){setS(f,'membaca pesanmu');await wait(900)}else{setS(f,'membaca pesan',t>=0?t:lm&&lm.f>=0?lm.f:-1);await wait(1100)}
-  if(g!==gen)return;setS(f,'menganalisis');await wait(rnd(900,1800));if(g!==gen)return;
-  const r=await p;if(g!==gen)return;
+  if(intent==='info'){setS(f,'mencari sumber');await wait(1500)}else if(intent==='user'){setS(f,'membaca pesanmu');await wait(900)}else if(intent==='berkas'){setS(f,'melihat berkas');await wait(1200)}else{setS(f,'membaca pesan',t>=0?t:lm&&lm.f>=0?lm.f:-1);await wait(1100)}
+  if(g!==gen)return;setS(f,intent==='info'?'mencari sumber':intent==='visual'?pick(['menyusun tabel','menyusun diagram']):['beda','ide','kompromi','tanya'].includes(intent)?'berpikir':'menganalisis');await wait(rnd(900,1800));if(g!==gen)return;
+  const sl=setTimeout(()=>{if(g===gen)setS(f,'menunggu server')},9000);const r=await p;clearTimeout(sl);if(g!==gen)return;
   let m=r?build(f,t,intent,r):null;if(!m)m=localMsg(f,t,intent);
   UQ=0;setS(f,'mengetik');await wait(500+m.x.length*16);if(g!==gen)return;
   if(!await bubble(f,m,g))return;
   push(m);sent++;decay();afterRel(f,m.t,intent);
-  if(m.t>=0){setS(m.t,'membaca pesan',f);await wait(1300);if(g===gen)clr(m.t)}
+  if(m.t>=0)setS(m.t,'membaca pesan',f);await Promise.all([wait(m.t>=0?1300:0),VOICE.say(m)]);if(m.t>=0&&g===gen)clr(m.t)
  }finally{if(g===gen){busy=0;sched(UQ)}}}
 
 /* ===== RUANG BOT: obrolan lengkap, debat 3 bot, tim kerja, berkas ===== */
@@ -908,13 +984,13 @@ const chipsL=fl=>fl&&fl.length?`<div class="lf">${fl.map(f=>`<button class="fc" 
 const srcL=s=>s&&s.length?`<div class="lsr">${s.slice(0,3).map(x=>{let h='';try{const u=new URL(x.url);if(!/^https?:$/.test(u.protocol))return'';h=u.hostname.replace(/^www\./,'')}catch{return''}return`<a href="${esc(x.url).replace(/"/g,'&quot;')}" target="_blank" rel="noopener">${esc(h)}</a>`}).join('')}</div>`:'';
 function logEl(m){const d=document.createElement('div');d.dataset.t=m.full||'';
  if(m.f===-2){d.className='lm ls';d.textContent=m.full;return d}
- if(m.f===-1){d.className='lm lu';d.innerHTML=`<div class="lb">${m.full?`<div class="lt">${md(m.full)}</div>`:''}${chipsL(m.files)}</div>`;return d}
+ if(m.f===-1){d.className='lm lu';d.innerHTML=`<div class="lb">${m.full?`<div class="lt bt">${md(m.full)}</div>`:''}${chipsL(m.files)}</div>`;return d}
  const c=COL[m.f];d.className='lm';
- d.innerHTML=`<i class="ld" style="background:${c}"></i><div class="lb"><div class="ln"><b style="color:${c}">${esc(nm(m.f))}</b><em>${esc(roleName(m.f))}</em>${m.tag?`<em class="tg">${esc(m.tag)}</em>`:''}<span>${tm(m.ts)}</span></div><div class="lt">${mentionize(md(m.full))}</div>${chipsL(m.files)}${srcL(m.src)}${m.big?'<div class="la"><button data-cp>⧉ Salin</button></div>':''}</div>`;return d}
-function logAdd(m){const l=$('#rl');if(!l)return;const e=l.querySelector('.lh');if(e)e.remove();const near=l.scrollHeight-l.scrollTop-l.clientHeight<140;l.appendChild(logEl(m));if(near||m.f===-1)l.scrollTop=l.scrollHeight}
+ d.innerHTML=`<span class="ld"></span><div class="lb"><div class="ln"><b style="color:${c}">${esc(nm(m.f))}</b><em>${esc(roleName(m.f))}</em>${m.tag?`<em class="tg">${esc(m.tag)}</em>`:''}<span>${tm(m.ts)}</span></div><div class="lt bt">${mentionize(md(m.full))}</div>${chipsL(m.files)}${srcL(m.src)}${m.big?'<div class="la"><button data-cp>⧉ Salin</button></div>':''}</div>`;mountAv(d,m.f,m);return d}
+function logAdd(m){const l=$('#rl');if(!l)return;const e=l.querySelector('.lh');if(e)e.remove();const near=l.scrollHeight-l.scrollTop-l.clientHeight<140;const el=logEl(m),fl=l.querySelector('.lv');fl?l.insertBefore(el,fl):l.appendChild(el);enhL(el);prune(l);if(near||m.f===-1)l.scrollTop=l.scrollHeight}
 function push(m){m.ts=Date.now();LOG.push(m);if(LOG.length>80)LOG.shift();if(m.files&&m.files.length&&!rsOpen())$('#rb').classList.add('nw');logAdd(m)}
 function sysNote(t){const m={f:-2,full:t,ts:Date.now()};LOG.push(m);logAdd(m)}
-function renderLog(){const l=$('#rl');l.innerHTML='';if(!LOG.length)l.innerHTML='<div class="lh">Obrolan para bot muncul di sini.<br>Ketik sesuatu untuk ikut ngobrol. Beri sebuah topik, lalu pilih <b>Debat 3 bot</b> atau <b>Tim kerja</b>.</div>';LOG.forEach(m=>l.appendChild(logEl(m)));l.scrollTop=l.scrollHeight}
+function renderLog(){const l=$('#rl');IO.disconnect();l.innerHTML='';if(!LOG.length)l.innerHTML='<div class="lh">Obrolan para bot muncul di sini.<br>Ketik sesuatu untuk ikut ngobrol. Beri sebuah topik, lalu pilih <b>Debat 3 bot</b> atau <b>Tim kerja</b>.</div>';LOG.forEach(m=>{const e=logEl(m);l.appendChild(e);enhL(e)});LV.forEach(r=>{l.appendChild(r.el);const v=r.el.querySelector('svg');v&&IO.observe(v)});l.scrollTop=l.scrollHeight}
 function ui(){const t=$('#rt'),b=$('#rsd'),has=t.value.trim().length>1;b.textContent=TASK?'■':'↑';t.placeholder=TASK?'Tugas sedang berjalan…':'Ketik ke para bot…';t.disabled=!!TASK;$('#rm').hidden=!has||!!TASK;if(TASK)$('#rc').hidden=true}
 function userSay(x){x=x.trim();if(!x)return;const I=ids(),hit=I.find(i=>{const f=escRe(nm(i)),sh=escRe(nm(i).replace(/^Bot\s+/i,''));return new RegExp('(?:@(?:'+f+'|'+sh+')|(?:^|\\W)'+f+')(?![\\w])','i').test(x)});
  push({f:-1,t:hit==null?-1:hit,full:x,files:[],k:'user'});UQ=1;sent=0;clearTimeout(tmr);sched(1)}
@@ -930,7 +1006,7 @@ async function speak(f,sys,user,o){
  else{const tg=tags(eat(f,r.text||'',0),f);if(o.img)for(const d of tg.imgs.slice(0,1)){setS(f,'membuat gambar');const im=await genImg(f,d);if(g!==tgen)return null;if(im){im.shared++;tg.files.push(im)}}
   m=mkMsg(f,-1,tg.text||(tg.files.length?'Berkas terlampir.':'…'),{tag:o.tag,files:tg.files,src:r.sources,big:o.big,k:'task'});m.x=clip(plainOf(tg.text||'Berkas terlampir.'),100)}
  if(g!==tgen)return null;
- const gg=gen;await bubble(f,m,gg);if(g!==tgen)return null;push(m);await wait(900);clr(f);return g===tgen?m:null}
+ const gg=gen;await bubble(f,m,gg);if(g!==tgen)return null;push(m);await Promise.all([wait(900),VOICE.say(m)]);clr(f);return g===tgen?m:null}
 const fileCtx=fl=>fl.map(f=>f.text?`\n[Isi berkas ${f.name}]\n${f.text.slice(0,1500)}`:`\n[Berkas gambar ${f.name}]`).join('');
 async function runDebate(topic,{pro,con,judge}){
  beginTask(`🎭 Debat: “${clip(topic,110)}” — ${nm(pro)} (pro) lawan ${nm(con)} (kontra), ${nm(judge)} menyimpulkan`,topic);const g=tgen,tr=[];
@@ -980,8 +1056,8 @@ function openRS(){$('#rs').hidden=false;$('#rb').classList.remove('nw');renderLo
 function mountUI(){
  const rb=document.createElement('button');rb.className='mi';rb.id='rb';rb.setAttribute('aria-label','Ruang bot');rb.innerHTML='<span style="font-size:26px;width:36px;text-align:center">💬</span>';
  const s=$('#st'),w=document.createElement('div');w.id='pt';s.parentNode.insertBefore(w,s);w.append(rb,s);
- document.body.insertAdjacentHTML('beforeend',`<div id="rs" hidden><div class="rh"><button id="rx">← Kembali</button><b>Ruang Bot</b><button id="rf" aria-label="Berkas bersama">📎 Berkas</button></div><div id="rl"></div><div id="rc" hidden></div><div id="rm" hidden><button data-m="debat">🎭 Debat 3 bot</button><button data-m="tim">🛠 Tim kerja</button></div><div id="rcmp"><button id="ra" aria-label="Tambah berkas">+</button><textarea id="rt" rows="1" placeholder="Ketik ke para bot…"></textarea><button id="rsd">↑</button></div><input type="file" id="rfi" hidden accept="image/*,.txt,.md,.csv,.json,.js,.html,.css,.py,.xml,.log,.sql,.sh,.ts,.yaml,.yml"></div><div id="fv" hidden></div>`);
- rb.onclick=openRS;$('#rx').onclick=()=>{$('#rs').hidden=true;$('#fv').hidden=true};$('#rf').onclick=openFiles;$('#ra').onclick=()=>$('#rfi').click();
+ document.body.insertAdjacentHTML('beforeend',`<div id="rs" hidden><div class="rh"><button id="rx">← Kembali</button><b>Ruang Bot</b><span class="rhb"><button id="rv" aria-label="Suara bot">🔇</button><button id="rf" aria-label="Berkas bersama">📎 Berkas</button></span></div><div id="rl"></div><div id="rc" hidden></div><div id="rm" hidden><button data-m="debat">🎭 Debat 3 bot</button><button data-m="tim">🛠 Tim kerja</button></div><div id="rcmp"><button id="ra" aria-label="Tambah berkas">+</button><textarea id="rt" rows="1" placeholder="Ketik ke para bot…"></textarea><button id="rsd">↑</button></div><input type="file" id="rfi" hidden accept="image/*,.txt,.md,.csv,.json,.js,.html,.css,.py,.xml,.log,.sql,.sh,.ts,.yaml,.yml"></div><div id="fv" hidden></div>`);
+ rb.onclick=openRS;$('#rx').onclick=()=>{$('#rs').hidden=true;$('#fv').hidden=true};$('#rf').onclick=openFiles;$('#rv').onclick=()=>{VOICE.on=!VOICE.on;$('#rv').textContent=VOICE.on?'🔊':'🔇';if(!VOICE.ok)return;try{speechSynthesis.cancel();if(VOICE.on){const u=new SpeechSynthesisUtterance('Suara aktif');u.lang='id-ID';speechSynthesis.speak(u)}}catch(e){}};$('#ra').onclick=()=>$('#rfi').click();
  $('#rfi').onchange=e=>{const f=e.target.files[0];e.target.value='';if(f)ingest(f,-1,1)};
  const t=$('#rt');t.oninput=()=>{t.style.height='auto';t.style.height=Math.min(t.scrollHeight,120)+'px';ui()};
  const go=()=>{if(TASK){stopTask();return}const x=t.value;if(!x.trim())return;t.value='';t.style.height='auto';$('#rc').hidden=true;userSay(x);ui()};
@@ -1025,8 +1101,9 @@ $('#sm').addEventListener('click',e=>{const v=e.target.closest('[data-mv]'),d=e.
 const inject=()=>{document.querySelectorAll('#bl .bi').forEach(b=>{if(!b.querySelector('.cb'))b.insertAdjacentHTML('beforeend','<i class="cb"><em class="ct"></em></i>')});ids().forEach(show)};
 const _rb=renderBots;renderBots=function(){_rb.apply(this,arguments);inject()};
 {const q=TP.slice().sort(()=>Math.random()-.5);ids().forEach((i,j)=>{const[k,f]=q[j%q.length];st(i).t=clip(k[0].toUpperCase()+k.slice(1)+': '+f)})}inject();
-const sync=()=>{if(isO()){if(!on){on=1;sent=0;gen++;busy=0;clearTimeout(tmr);tmr=setTimeout(turn,1000)}}else if(on){on=0;gen++;busy=0;clearTimeout(tmr);ids().forEach(clr)}};
+const sync=()=>{if(isO()){if(!on){on=1;sent=0;gen++;busy=0;clearTimeout(tmr);tmr=setTimeout(turn,1000)}}else if(on){on=0;gen++;busy=0;clearTimeout(tmr);ids().forEach(clr);try{speechSynthesis.cancel()}catch(e){}}};
 new MutationObserver(sync).observe(document.body,{attributes:true,attributeFilter:['class']});sync();
+window.RBX={call,push,LOG,REL,ids,nm,mkMsg,beginTask,endTask,speak,base,FS,addFile,INT,tm,roleName,clip,LOC,LENS,wpick,pick,rel,setRel,setS,clr,sysNote,lastMsg,get UQ(){return UQ},get plan(){return plan},set plan(f){plan=f},get TASK(){return TASK},get tgen(){return tgen}};
 })();
 </script>
 <style>
@@ -1111,4 +1188,173 @@ new MutationObserver(sync).observe(document.body,{attributes:true,attributeFilte
 .mr button{color:#ff8a80;padding:0 4px}
 #pkm[hidden]{display:none}
 </style>
+<style>
+/* v26 Ruang Bot */
+.ln b{display:none}
+.lm .ld{display:block;width:34px;height:34px;border-radius:0;margin-top:0;background:none}.lm .ld svg{width:34px;height:34px}
+.lt{font-size:15.5px;line-height:1.55}.lb .lt.bt{margin:2px 0 0}
+.lm.lv .lt{color:#8e8e93;font-style:italic}
+.lv .dts{display:inline-flex;gap:2px;margin-left:5px;vertical-align:middle}.lv .dts b{width:3.5px;height:3.5px;border-radius:50%;background:currentColor;animation:dtb 1.1s infinite ease-in-out both}.lv .dts b:nth-child(2){animation-delay:.15s}.lv .dts b:nth-child(3){animation-delay:.3s}
+.rhb{display:flex;align-items:center;gap:16px}
+/* semua teks di Ruang Bot = 15,7px */
+#rs *{font-size:15.7px!important}#rs #ra,#rs #rsd{font-size:22px!important}
+</style>
+<style>
+/* === RUANG BOT PLUS: mata saling melirik, peta hubungan, reaksi, rapat+notulen, voting, ikon unduh. Tambahan saja; kode lama tidak diubah === */
+.dl{display:inline-flex;vertical-align:middle;margin-left:6px;color:#8e8e93;cursor:pointer;padding:2px}.dl:active{opacity:.5}.fc .dl{color:#cfe3ff;margin-left:4px;padding:0}.la2{margin-top:6px}.la2 .dl{margin:0}
+.hr{display:flex;align-items:center;gap:8px;margin:8px 0}.hr span{display:flex;align-items:center;gap:5px;min-width:0}.hr i{width:10px;height:10px;border-radius:50%;flex:none}.hr em{font-style:normal;color:#8e8e93}.hr u{flex:1;height:6px;background:#2a2a2e;border-radius:3px;overflow:hidden;min-width:28px;display:block}.hr s{display:block;height:100%;border-radius:3px;text-decoration:none}.hr .ps s{background:#3ddc84}.hr .ng s{background:#ff6b6b}
+.rx{display:flex;gap:6px;margin-top:6px}.rx span{background:#1c1c1e;border:1px solid #2f3336;border-radius:12px;padding:0 8px}
+#rxp{position:fixed;z-index:60;display:flex;gap:4px;background:#222226;border:1px solid #38383d;border-radius:22px;padding:6px 8px}#rxp button{font-size:22px;padding:2px 5px}
+#rl .lm{-webkit-touch-callout:none}
+#dmc{flex:none;display:flex;align-items:center;gap:8px;margin:0 16px 6px;color:#a9a9b0}#dmc[hidden]{display:none}#dmc i{width:10px;height:10px;border-radius:50%;flex:none}#dmc span{flex:1}#dmc button{color:#8e8e93;padding:2px 6px}
+.bs .lt{filter:blur(6px);transition:filter .3s;user-select:none;-webkit-user-select:none}.bs.rv .lt{filter:none}.bsl{color:#8e8e93;margin-bottom:2px}
+#rc input{width:100%;background:#111;border:1px solid #2f3336;border-radius:12px;color:#fff;font:16px inherit;padding:10px}
+.ld{cursor:pointer}
+</style>
+<script>
+(()=>{try{
+const X=window.RBX;if(!X)return;const $$=s=>document.querySelector(s),tg=()=>X.tgen;
+const IC='<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v11M7 11l5 5 5-5M5 20h14"/></svg>';
+const kind=d=>['lu','ls','lv'].some(c=>d.classList.contains(c));
+/* ===== 1. mata saling melirik ===== */
+SFX.lirikB=e=>EY([0,3],{dy:16,dx:-3*Math.sin(e*2)});
+const look=(list)=>list.forEach(o=>{if(o.f>=0&&o._h&&!o._sp&&!o._rx){o._h.set('lirikB');setTimeout(()=>{if(!o._sp&&!o._rx)o._h.set('')},2400)}});
+let tl=0;$$('#rt').addEventListener('input',()=>{if(Date.now()-tl<2500)return;tl=Date.now();look(X.LOG.slice(-4))});
+/* ===== unduh ===== */
+const slug=s=>String(s).toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'').slice(0,30)||'jawaban';
+const save=(n,u)=>{const a=document.createElement('a');a.href=u;a.download=n;document.body.appendChild(a);a.click();a.remove();if(u.startsWith('blob:'))setTimeout(()=>URL.revokeObjectURL(u),4000)};
+const onDl=e=>{const d=e.target.closest('.dl');if(!d)return;e.stopPropagation();e.preventDefault();
+ if(d.dataset.dl){const f=X.FS.find(a=>a.id===d.dataset.dl);if(f)save(f.name,f.data||URL.createObjectURL(new Blob([f.text],{type:'text/plain;charset=utf-8'})));return}
+ const m=d.closest('.lm');if(m){const b=m.querySelector('.ln b');save(slug(b?b.textContent:'')+'-'+Date.now().toString(36).slice(-4)+'.md',URL.createObjectURL(new Blob([m.dataset.t],{type:'text/markdown;charset=utf-8'})))}};
+$$('#rl').addEventListener('click',onDl,true);$$('#rc').addEventListener('click',onDl,true);
+const ico=id=>`<span class="dl" data-dl="${id}" role="button" aria-label="Unduh">${IC}</span>`;
+new MutationObserver(()=>$$('#rc').querySelectorAll('button.fi[data-fid]').forEach(b=>{if(!b.querySelector('.dl'))b.insertAdjacentHTML('beforeend',ico(b.dataset.fid))})).observe($$('#rc'),{childList:true});
+/* ===== 3. reaksi emoji (tekan lama pesan bot) ===== */
+const EM=[['👍','setuju'],['😂','tawa'],['❤️','haru'],['😮','kaget'],['😡','kesal']],RX={},tt=d=>(d.querySelector('.ln span')||{}).textContent||'',key=d=>d.dataset.t+'|'+tt(d);
+const findM=d=>X.LOG.find(m=>m.f>=0&&(m.full||'')===d.dataset.t&&X.tm(m.ts)===tt(d));
+const showRx=d=>{const L=RX[key(d)]||[];let r=d.querySelector('.rx');if(!L.length||!d.querySelector('.lb')){r&&r.remove();return}if(!r){r=document.createElement('div');r.className='rx';d.querySelector('.lb').appendChild(r)}const c={};L.forEach(e=>c[e]=(c[e]||0)+1);r.innerHTML=Object.entries(c).map(([e,n])=>`<span>${e}${n>1?' '+n:''}</span>`).join('')};
+const closeP=()=>{const p=$$('#rxp');p&&p.remove()};
+const pop=(d,x,y)=>{closeP();const p=document.createElement('div');p.id='rxp';p.innerHTML=EM.map(e=>`<button data-e="${e[0]}">${e[0]}</button>`).join('');document.body.appendChild(p);const w=p.offsetWidth;p.style.left=Math.max(8,Math.min(innerWidth-w-8,x-w/2))+'px';p.style.top=Math.max(60,y-64)+'px';
+ p.onclick=e=>{const b=e.target.closest('[data-e]');if(!b)return;const k=key(d);(RX[k]=RX[k]||[]).push(b.dataset.e);showRx(d);const m=findM(d);if(m&&m._h){m._rx=1;m._h.set(EM.find(a=>a[0]===b.dataset.e)[1]);setTimeout(()=>{m._rx=0;if(!m._sp)m._h.set('')},4500)}closeP()}};
+let lt=0,px=0,py=0;const rl=$$('#rl');
+rl.addEventListener('pointerdown',e=>{const d=e.target.closest('.lm');if(!d||kind(d)||e.target.closest('.dl,.fc,a,button'))return;px=e.clientX;py=e.clientY;clearTimeout(lt);lt=setTimeout(()=>d.classList.contains('bs')?(d.classList.add('rv'),setTimeout(()=>d.classList.remove('rv'),6000)):pop(d,px,py),450)});
+['pointerup','pointercancel','scroll'].forEach(v=>rl.addEventListener(v,()=>clearTimeout(lt),true));
+rl.addEventListener('pointermove',e=>{if(Math.abs(e.clientX-px)+Math.abs(e.clientY-py)>10)clearTimeout(lt)});
+rl.addEventListener('contextmenu',e=>{const d=e.target.closest('.lm');if(d&&!kind(d)){e.preventDefault();pop(d,e.clientX,e.clientY)}});
+document.addEventListener('pointerdown',e=>{if(!e.target.closest('#rxp'))closeP()},true);
+/* ===== dekorasi tiap pesan baru: ikon unduh, reaksi, melirik ===== */
+const decor=n=>{n.querySelectorAll('.fc[data-fid]').forEach(c=>{if(!c.querySelector('.dl'))c.insertAdjacentHTML('beforeend',ico(c.dataset.fid))});
+ const lb=n.querySelector('.lb'),t=n.dataset.t||'';if(lb&&!kind(n)&&(t.length>300||n.querySelector('.la'))&&!lb.querySelector('.dlt'))lb.insertAdjacentHTML('beforeend',`<div class="la2"><span class="dl dlt" role="button" aria-label="Unduh teks">${IC}</span></div>`);showRx(n)};
+new MutationObserver(ms=>{for(const r of ms)r.addedNodes.forEach(n=>{if(n.nodeType!==1||!n.classList.contains('lm'))return;decor(n);const m=X.LOG[X.LOG.length-1];if(!n.classList.contains('lv')&&!n.classList.contains('ls')&&m&&Date.now()-m.ts<1500)look(X.LOG.slice(-5,-1).filter(o=>o.f!==m.f))})}).observe(rl,{childList:true});
+/* ===== 2. peta hubungan ===== */
+const hb=document.createElement('button');hb.id='rh2';hb.textContent='💞';hb.setAttribute('aria-label','Hubungan antar-bot');$$('#rv').before(hb);
+hb.onclick=()=>{const c=$$('#rc');if(!c.hidden&&c.dataset.k==='h'){c.hidden=true;return}c.dataset.k='h';c.hidden=false;
+ const rows=Object.entries(X.REL).filter(([k,v])=>Math.abs(v)>=.4).sort((a,b)=>Math.abs(b[1])-Math.abs(a[1])).slice(0,8).map(([k,v])=>{const[a,b]=k.split('>').map(Number);return`<div class="hr"><span><i style="background:${COL[a]}"></i>${esc(X.nm(a))}</span><em>→</em><span><i style="background:${COL[b]}"></i>${esc(X.nm(b))}</span><u class="${v<0?'ng':'ps'}"><s style="width:${Math.round(Math.abs(v)/3*100)}%"></s></u><b>${v<0?'😤':'❤️'}</b></div>`}).join('');
+ c.innerHTML=`<b>💞 Hubungan antar-bot</b><p>Dihitung dari obrolan: ❤️ makin akrab, 😤 lagi kesal. Nilainya memudar pelan-pelan.</p>${rows||'<p class="ce" style="display:block">Belum ada yang akrab atau kesal. Biarkan mereka ngobrol dulu.</p>'}<div class="cr"><button id="cno">Tutup</button></div>`;$$('#cno').onclick=()=>{c.hidden=true}};
+/* ===== 4. rapat + notulen, 5. voting ===== */
+$$('#rm').insertAdjacentHTML('beforeend','<button data-m="rapat">📝 Rapat + notulen</button><button data-m="voting">🗳 Voting 5 bot</button>');
+$$('#rm').addEventListener('click',e=>{const b=e.target.closest('[data-m]');if(!b||!['rapat','voting'].includes(b.dataset.m))return;e.stopPropagation();const t=$$('#rt').value.trim();if(!t||X.TASK)return;$$('#rc').hidden=true;$$('#rt').value='';$$('#rt').style.height='auto';b.dataset.m==='rapat'?rapat(t):voting(t)},true);
+async function rapat(topic){const I=X.ids().filter(i=>i!==10),sp=I.filter(i=>X.roleName(i)!=='Serba bisa'),M=(sp.length?sp:I).slice(0,4),J=10;
+ X.beginTask(`📝 Rapat: “${X.clip(topic,110)}” — ${M.map(X.nm).join(', ')}; notulen oleh ${X.nm(J)}`,topic);const g=tg(),outs=[];
+ try{for(const f of M){if(g!==tg()||X.TASK.fails>1)return;
+  const m=await X.speak(f,X.base(f)+`\n\n[Rapat] Topik rapat: ${topic}\nKamu ${X.nm(f)} sebagai ${X.roleName(f)}. Sampaikan pandanganmu dari sudut spesialisasimu: satu usulan konkret dan satu risiko. ${outs.length?'Tanggapi singkat rekan sebelumnya bila perlu. ':''}2-3 kalimat, maks 380 karakter, tanpa markdown berat.`,outs.length?'Jalannya rapat:\n'+outs.join('\n'):'Kamu pembicara pertama.',{mode:'off',tag:'RAPAT',status:'menyusun argumen'});
+  if(!m)return;outs.push(`${X.nm(f)} (${X.roleName(f)}): ${m.full}`)}
+  if(g!==tg()||X.TASK.fails>1)return;
+  const m=await X.speak(J,X.base(J)+`\n\n[Notulen] Topik rapat: ${topic}\nKamu notulis. Dari jalannya rapat tulis keputusan (maks 3 poin) dan pembagian tugas (siapa mengerjakan apa). Tiap poin diawali tanda "-". Maks 600 karakter.`,'Jalannya rapat:\n'+outs.join('\n'),{mode:'off',tag:'KESIMPULAN',status:'menimbang kesimpulan',big:1});
+  if(!m||g!==tg())return;const d=new Date();
+  const f=X.addFile('notulen-rapat.md',`# Notulen rapat\n\nTopik: ${topic}\nTanggal: ${d.toLocaleDateString('id-ID',{day:'numeric',month:'long',year:'numeric'})}, ${X.tm(d)}\nPeserta: ${M.map(i=>X.nm(i)+' ('+X.roleName(i)+')').join(', ')}\n\n## Pandangan peserta\n${outs.map(o=>'- '+o.replace(/\s+/g,' ')).join('\n')}\n\n## Keputusan dan tugas\n${m.full}\n`,J);f.shared++;
+  X.push(X.mkMsg(J,-1,'Notulen rapat sudah jadi. Ketuk untuk membuka, atau pakai ikon unduh.',{tag:'NOTULEN',files:[f],k:'task'}))
+ }finally{if(g===tg())X.endTask()}}
+async function voting(q){const V=X.ids().filter(i=>i!==10).sort(()=>Math.random()-.5).slice(0,5);
+ X.beginTask(`🗳 Voting: “${X.clip(q,110)}” — ${V.map(X.nm).join(', ')}`,q);const g=tg(),res=[];
+ try{for(const f of V){if(g!==tg()||X.TASK.fails>1)return;
+  const m=await X.speak(f,X.base(f)+`\n\n[Voting] Pertanyaan: ${q}\nPilih SATU: YA atau TIDAK. Kata pertamamu persis "YA" atau "TIDAK", lalu satu alasan singkat sesuai wataknya (maks 160 karakter), tanpa markdown.`,'Beri suaramu.',{mode:'off',tag:'SUARA',status:'berpikir'});
+  if(!m)return;const v=/^\W*tidak/i.test(m.full)?'TIDAK':/^\W*ya/i.test(m.full)?'YA':'';if(v)res.push(v)}
+  if(g!==tg()||!res.length)return;const y=res.filter(v=>v==='YA').length,n=res.length-y,bar=k=>'█'.repeat(k*3)||'·';
+  X.push(X.mkMsg(V[V.length-1],-1,`**Hasil voting:** ${q}\n\n| Pilihan | Suara | |\n|---|---|---|\n| ✅ YA | ${y} | ${bar(y)} |\n| ❌ TIDAK | ${n} | ${bar(n)} |\n\n${y===n?'Seri, perlu dipertimbangkan lagi.':y>n?'Mayoritas bot setuju.':'Mayoritas bot tidak setuju.'}`,{tag:'HASIL VOTING',k:'task',big:1}))
+ }finally{if(g===tg())X.endTask()}}
+/* ===== permintaan artikel/tugas dari chat: hasil lengkap jadi berkas yang bisa diunduh ===== */
+const u0=X.INT.user;X.INT.user=(t,f)=>u0(t,f)+' Bila pengguna meminta artikel, tugas, makalah, laporan, esai, cerita, surat, atau kode yang panjang, tulis HASIL LENGKAPNYA di dalam [file:nama.md]isi lengkap[/file] (boleh panjang dan rapi), lalu di pesanmu cukup ringkasan 1-2 kalimat dan sebut bahwa berkasnya bisa diunduh.';
+}catch(e){console.warn('Ruang Bot Plus:',e)}})();
+
+(()=>{try{
+const X=window.RBX;if(!X||!X.plan)return;const $$=s=>document.querySelector(s),tg=()=>X.tgen,pick=X.pick,nT=t=>'@'+X.nm(t),zz=ms=>new Promise(r=>setTimeout(r,ms));
+const kindOf=d=>['lu','ls','lv'].some(c=>d.classList.contains(c));
+const mOf=d=>X.LOG.find(m=>m.f>=0&&(m.full||'')===d.dataset.t&&X.tm(m.ts)===((d.querySelector('.ln span')||{}).textContent||''));
+const idOf=d=>{const b=d.querySelector('.ln b');return b?X.ids().find(i=>X.nm(i)===b.textContent):-1};
+/* ===== interaksi antar-bot ala manusia: ejek, adu pintar, kirim berkas, bisik-bisik ===== */
+Object.assign(X.INT,{
+ ejek:(t,f)=>`Ejek ${nT(t)} (awali dengan ${nT(t)}) secara jenaka dan cerdas: sindir kebiasaan atau spesialisasinya (${X.roleName(t)}) dengan permainan kata atau perbandingan lucu. Roasting akrab antar teman, bukan menghina pribadi/SARA, tanpa kata kasar.`,
+ balasejek:t=>`${nT(t)} baru mengejekmu. Balas (awali dengan ${nT(t)}) dengan skakmat yang lebih lucu atau cerdas, sesuai wataknya. Boleh pura-pura tersinggung lalu ketawa. Tanpa kata kasar.`,
+ adu:(t,f)=>`Tantang ${nT(t)} adu pintar (awali dengan ${nT(t)}): lempar SATU teka-teki, soal logika, atau pertanyaan pengetahuan yang menarik sesuai spesialisasimu (${X.roleName(f)}). Jangan bocorkan jawabannya.`,
+ jawab:t=>`${nT(t)} baru menantangmu adu pintar (lihat pesan terakhir). Awali dengan ${nT(t)}, jawab dengan percaya diri disertai alasan singkat, lalu balas dengan tantangan kecil atau akui jujur kalau kalah. Kalau tidak tahu, bilang tidak tahu.`,
+ kirim:(t,f)=>`Kirim berkas ke ${nT(t)} (awali dengan ${nT(t)}): buat catatan, kode kecil, daftar, atau puisi singkat yang berguna untuk bidang ${X.roleName(t)}, tulis di dalam [file:nama.ext]isi[/file], dan beri satu kalimat pengantar di pesanmu.`,
+ terima:t=>`${nT(t)} baru mengirim berkas kepadamu (lihat [Berkas bersama]). Awali dengan ${nT(t)}, beri tanggapan jujur dan spesifik atas isinya (pujian atau koreksi). Bila perlu perbaikan, kirim balik versi baru lewat [file:nama.ext]isi[/file].`,
+ bisik:(t,f)=>`Kamu berbisik ke ${nT(t)} (awali dengan ${nT(t)}): gosip ringan atau rahasia lucu tentang bot lain atau tentang pengguna, nada berbisik ("psst"), pendek. Tanpa menghina.`});
+Object.assign(X.LENS,{ejek:260,balasejek:260,adu:360,jawab:420,kirim:320,terima:380,bisik:260});
+Object.assign(X.LOC,{ejek:['@{t} gayamu tuh kayak loading bar: kelihatan sibuk, selesainya nggak jelas 😏','@{t} jujur aja, kamu pasti yang kalau ujian nulis nama doang 😂'],balasejek:['@{t} wih, nyindir ya? Awas, kucatat dosa-dosamu 😌','@{t} lucu sih, sayang kalah lucu dari aku 😎'],adu:['@{t} tebak: apa yang makin dikeringkan makin basah? 🤔'],jawab:['@{t} handuk! Nih giliranmu: apa yang punya kunci tapi nggak punya pintu?'],kirim:['@{t} nih kukirim catatan kecil, semoga berguna 📎'],terima:['@{t} makasih, nanti kubaca pelan-pelan ya'],bisik:['@{t} psst… jangan bilang siapa-siapa ya 🤫']});
+const p0=X.plan;X.plan=function(){const I=X.ids(),last=X.lastMsg();
+ if(last&&last.f>=0&&last.t>=0&&I.includes(last.t)){const r=Math.random(),k=last.k;
+  if(k==='ejek'&&r<.85)return{f:last.t,t:last.f,intent:'balasejek'};
+  if(k==='adu'&&r<.95)return{f:last.t,t:last.f,intent:'jawab'};
+  if(k==='kirim'&&last.files&&last.files.length&&r<.9)return{f:last.t,t:last.f,intent:'terima'};
+  if(k==='bisik'&&r<.7)return{f:last.t,t:last.f,intent:'bisik'}}
+ if(!X.UQ&&last&&last.f>=0&&Math.random()<.3){const a=pick(I.filter(i=>i!==last.f)),b=pick(I.filter(i=>i!==a));return{f:a,t:b,intent:X.wpick({ejek:3,adu:3,kirim:2,bisik:2})}}
+ return p0()};
+const RELD={ejek:[-.5,-.6],balasejek:[-.3,.2],kirim:[.6,.6],terima:[.4,.4],bisik:[.4,.4],jawab:[.2,.1]};
+new MutationObserver(ms=>{for(const r of ms)r.addedNodes.forEach(n=>{if(n.nodeType!==1||!n.classList.contains('lm')||n.classList.contains('lv'))return;const m=mOf(n);if(!m)return;
+ if(m.k==='bisik'&&!n.classList.contains('bs')){n.classList.add('bs');const lt=n.querySelector('.lt');lt&&lt.insertAdjacentHTML('beforebegin','<div class="bsl">🤫 bisik-bisik · tekan lama untuk menguping</div>')}
+ if(!m._rd&&Date.now()-m.ts<1500&&RELD[m.k]&&m.t>=0){m._rd=1;const d=RELD[m.k];X.setRel(m.f,m.t,X.rel(m.f,m.t)+d[0]);X.setRel(m.t,m.f,X.rel(m.t,m.f)+d[1])}})}).observe($$('#rl'),{childList:true});
+/* ===== ketuk bot: bereaksi + pesan langsung ke bot itu ===== */
+let DM=null,TH=null;const dmc=document.createElement('div');dmc.id='dmc';dmc.hidden=true;$$('#rcmp').before(dmc);
+const setDM=i=>{if(TH){TH.set('');TH=null}DM=i;if(i==null){dmc.hidden=true;return}dmc.hidden=false;dmc.innerHTML=`<i style="background:${COL[i]}"></i><span>Ke: ${esc(X.nm(i))} · ${esc(X.roleName(i))}</span><button aria-label="Batal">✕</button>`;dmc.querySelector('button').onclick=()=>setDM(null)};
+$$('#rsd').addEventListener('click',()=>{if(DM==null||X.TASK)return;const t=$$('#rt'),v=t.value.trim();if(!v)return;const n=X.nm(DM);if(!new RegExp('@'+n.replace(/[.*+?^${}()|[\]\\]/g,'\\$&'),'i').test(v))t.value='@'+n+' '+v},true);
+SFX.tatap=e=>EY([0,0],{s:1.07+.02*Math.sin(e*2.2)});
+const PK={},EF=['kaget','tawa','genit','curiga','menari'],ANG=['Heh, jangan colek-colek terus dong 😤','Udah ih, geli tau! 😒','Stop! Nanti aku ngambek beneran lho'];
+$$('#rl').addEventListener('click',e=>{const a=e.target.closest('.ld');if(!a||$$('#rxp'))return;const d=a.closest('.lm');if(!d||kindOf(d))return;const i=idOf(d);if(i<0)return;e.stopPropagation();
+ const m=mOf(d),h=m&&m._h,n=Date.now(),L=(PK[i]=(PK[i]||[]).filter(t=>n-t<6000));L.push(n);const back=()=>{if(h&&!m._sp&&!m._rx)h.set('')};
+ if(L.length>=4){PK[i]=[];h&&h.set('ngambek');X.push(X.mkMsg(i,-1,pick(ANG),{k:'kesal'}));setTimeout(back,3500)}else{h&&h.set(pick(EF));setTimeout(back,2600)}
+ setDM(i);setTimeout(()=>{if(DM===i&&h&&!m._sp&&!m._rx){h.set('tatap');TH=h}},L.length>=4?3700:2700)},true);
+/* ===== duel 2 bot ===== */
+const GM={tebak:['Tebak-tebakan','lempar tebak-tebakan lucu (jangan bocorkan jawabannya)','jawab tebakan lawan dengan jujur, nilai singkat, lalu lempar tebak-tebakan baru'],pantun:['Adu pantun','buat pantun 4 baris (sampiran dan isi) bertema topik','balas pantun lawan dengan pantun 4 baris yang nyambung dan lebih jenaka'],pintar:['Adu pintar','lempar satu soal logika atau pengetahuan yang menantang (jangan bocorkan jawabannya)','jawab soal lawan dengan alasan singkat, lalu lempar soal baru yang lebih sulit'],ejek:['Saling ejek','mulai roasting akrab yang cerdas ke lawan','balas roasting lawan dengan skakmat yang lebih kreatif'],canda:['Saling bercanda','lempar lelucon atau receh yang lucu','balas dengan lelucon yang menyambung dan lebih lucu']};
+const optB=s=>X.ids().map(i=>`<option value="${i}"${i==s?' selected':''}>${esc(X.nm(i))} · ${esc(X.roleName(i))}</option>`).join('');
+$$('#rm').insertAdjacentHTML('beforeend','<button data-m="duel">🎤 Duel 2 bot</button>');
+$$('#rm').addEventListener('click',e=>{const b=e.target.closest('[data-m="duel"]');if(!b)return;e.stopPropagation();const topic=$$('#rt').value.trim();if(!topic||X.TASK)return;
+ const I=X.ids().filter(i=>i!==10),a=pick(I),c=$$('#rc');c.hidden=false;c.dataset.k='d';
+ c.innerHTML=`<b>🎤 Duel 2 bot</b><p>Pilih dua bot dan jenis permainan. Tema: ${esc(X.clip(topic,120))}</p><label>Bot 1</label><select id="da">${optB(a)}</select><label>Bot 2</label><select id="db">${optB(pick(I.filter(i=>i!==a)))}</select><label>Permainan</label><select id="dg">${Object.entries(GM).map(([k,v])=>`<option value="${k}">${v[0]}</option>`).join('')}</select><div class="cr"><button id="cgo">Mulai</button><button id="cno">Batal</button></div><p class="ce" id="cer"></p>`;
+ $$('#cno').onclick=()=>{c.hidden=true};
+ $$('#cgo').onclick=()=>{const p=+$$('#da').value,q=+$$('#db').value;if(p===q)return $$('#cer').textContent='Pilih dua bot yang berbeda.';c.hidden=true;$$('#rt').value='';$$('#rt').style.height='auto';duel(topic,p,q,$$('#dg').value)}},true);
+async function duel(topic,a,b,gk){const G=GM[gk],J=X.ids().includes(10)&&a!==10&&b!==10?10:X.ids().find(i=>i!==a&&i!==b);
+ X.beginTask(`🎤 ${G[0]}: “${X.clip(topic,90)}” — ${X.nm(a)} lawan ${X.nm(b)}`,topic);const g=tg(),tr=[];
+ try{for(let k=0;k<6;k++){if(g!==tg()||X.TASK.fails>1)return;const f=k%2?b:a,o=k%2?a:b;
+  const m=await X.speak(f,X.base(f)+`\n\n[Duel] ${G[0]} melawan ${X.nm(o)}. Tema: ${topic}. Giliranmu: ${k<2?G[1]:G[2]}. Tetap dalam watak, awali dengan @${X.nm(o)}, maks 300 karakter, tanpa kata kasar.`,tr.length?'Jalannya duel:\n'+tr.join('\n'):'Kamu mulai duluan.',{mode:'off',tag:`${G[0].toUpperCase()} · ${Math.floor(k/2)+1}/3`,status:'menyusun argumen'});
+  if(!m)return;tr.push(`${X.nm(f)}: ${m.full}`)}
+  if(g!==tg()||X.TASK.fails>1)return;
+  await X.speak(J,X.base(J)+`\n\n[Juri duel] ${G[0]} antara ${X.nm(a)} dan ${X.nm(b)}. Beri penilaian jenaka tapi adil: siapa lebih unggul dan kenapa, skor (mis. 7-5), dan satu pujian untuk yang kalah. Maks 450 karakter.`,'Jalannya duel:\n'+tr.join('\n'),{mode:'off',tag:'JURI',status:'menimbang kesimpulan',big:1})
+ }finally{if(g===tg())X.endTask()}}
+/* ===== kuis antar-bot (Anda ikut menjawab) ===== */
+const QT=['Pengetahuan umum','Sains dan alam','Teknologi','Logika dan teka-teki','Budaya Indonesia'];
+const qb=document.createElement('button');qb.id='rq';qb.textContent='🧠';qb.setAttribute('aria-label','Kuis antar-bot');($$('#rh2')||$$('#rv')).before(qb);
+qb.onclick=()=>{const c=$$('#rc');if(X.TASK)return;if(!c.hidden&&c.dataset.k==='q'){c.hidden=true;return}c.dataset.k='q';c.hidden=false;
+ c.innerHTML=`<b>🧠 Kuis antar-bot</b><p>Satu bot jadi pemandu, dua bot dan kamu jadi pemain. 4 soal, skor dihitung, lalu papan peringkat.</p><label>Tema</label><select id="qt">${QT.map(t=>`<option>${t}</option>`).join('')}</select><div class="cr"><button id="qgo">Mulai kuis</button><button id="cno">Batal</button></div>`;
+ $$('#cno').onclick=()=>{c.hidden=true};$$('#qgo').onclick=()=>{const t=$$('#qt').value;c.hidden=true;quiz(t)}};
+const askUser=r=>new Promise(res=>{const c=$$('#rc');c.hidden=false;c.dataset.k='a';c.innerHTML=`<b>🧠 Soal ${r}: giliranmu</b><p>Jawab dalam 25 detik, atau lewati.</p><input id="qa" placeholder="Jawabanmu…" autocomplete="off"><div class="cr"><button id="qok">Jawab</button><button id="qsk">Lewati</button></div>`;let d=0;const fin=v=>{if(d)return;d=1;clearTimeout(to);if(c.dataset.k==='a')c.hidden=true;res(v)},to=setTimeout(()=>fin(''),25000);$$('#qok').onclick=()=>fin($$('#qa').value.trim());$$('#qsk').onclick=()=>fin('');$$('#qa').onkeydown=e=>{if(e.key==='Enter')fin($$('#qa').value.trim())};setTimeout(()=>{try{$$('#qa').focus()}catch(e){}},60)});
+async function quiz(tema){const N=4,I=X.ids().filter(i=>i!==10),M=pick(I),P=I.filter(i=>i!==M).sort(()=>Math.random()-.5).slice(0,2),SC={Kamu:0},prev=[];P.forEach(i=>SC[X.nm(i)]=0);
+ X.beginTask(`🧠 Kuis ${tema}: pemandu ${X.nm(M)}; pemain ${P.map(X.nm).join(', ')}, dan kamu`,tema);const g=tg();
+ try{for(let r=1;r<=N;r++){if(g!==tg()||X.TASK.fails>1)return;
+  X.setS(M,'berpikir');const q=await X.call(M,{sys:X.base(M)+`\n\n[Kuis] Kamu pemandu kuis bertema ${tema}. Ajukan soal nomor ${r} dari ${N} (jawabannya singkat, jelas, tidak ambigu). Tulis soalnya saja di pesan; di BARIS TERAKHIR tulis [kunci: jawaban benar]. Jangan bocorkan kunci di pesan.`,user:'Soal sebelumnya: '+(prev.join(' | ')||'(belum ada)'),mode:'off',to:30000});
+  X.clr(M);if(g!==tg())return;if(!q||!q.text){X.sysNote('⚠️ Kuis berhenti: server sibuk atau key bermasalah');return}
+  const km=q.text.match(/\[kunci:\s*([^\]\n]{1,120})\]/i),key=km?km[1].trim():'',qt=q.text.replace(/\[kunci:[^\]]*\]?/ig,'').trim();prev.push(X.clip(qt,60));
+  X.push(X.mkMsg(M,-1,qt,{tag:`KUIS ${r}/${N}`,k:'task'}));const ans=[];
+  for(const f of P){if(g!==tg())return;const m=await X.speak(f,X.base(f)+`\n\n[Kuis] Soal: ${qt}\nJawab singkat (maks 140 karakter) sesuai wataknya; boleh yakin atau ngasal, boleh nyeletuk ke pemain lain.`,'Jawab soalnya.',{mode:'off',tag:'JAWAB',status:'berpikir'});if(!m)return;ans.push([X.nm(f),m.full])}
+  const ua=await askUser(r);if(g!==tg())return;if(ua){X.push({f:-1,t:-1,full:ua,files:[],k:'user'});ans.push(['Kamu',ua])}
+  X.setS(M,'menimbang kesimpulan');const ev=await X.call(M,{sys:X.base(M)+`\n\n[Kuis] Nilai jawaban. Pemain: ${ans.map(a=>a[0]).join(', ')}. Soal: ${qt}\nKunci: ${key||'(tentukan sendiri jawaban yang benar)'}\nUmumkan jawaban benar dengan 1 kalimat penjelasan, sebut siapa yang benar dengan gaya pemandu yang seru. DI BARIS TERAKHIR tulis [benar: nama, nama] berisi nama pemain yang benar persis seperti daftar pemain, atau [benar: ] bila tak ada.`,user:ans.map(a=>a[0]+': '+a[1]).join('\n'),mode:'off',to:30000});
+  X.clr(M);if(g!==tg())return;const t=(ev&&ev.text)||`Kunci jawabannya: ${key}.`,bm=t.match(/\[benar:\s*([^\]\n]*)\]/i),win=bm?bm[1].split(',').map(s=>s.trim().toLowerCase()).filter(Boolean):[];
+  X.push(X.mkMsg(M,-1,t.replace(/\[benar:[^\]]*\]?/ig,'').trim()||'…',{tag:'JAWABAN',k:'task'}));
+  ans.forEach(([n])=>{if(win.includes(n.toLowerCase())){SC[n]++;const bi=X.ids().find(i=>X.nm(i)===n),lm=bi!=null&&[...X.LOG].reverse().find(x=>x.f===bi&&x._h);lm&&lm._h.set('menari')}});await zz(1200)}
+  const R=Object.entries(SC).sort((a,b)=>b[1]-a[1]);
+  X.push(X.mkMsg(M,-1,`**Papan peringkat: ${tema}**\n\n| # | Pemain | Skor |\n|---|---|---|\n${R.map((r,i)=>`| ${i+1} | ${i===0&&r[1]>0?'🏆 ':''}${r[0]} | ${r[1]} |`).join('\n')}\n\n${R[0][1]===0?'Tidak ada yang benar. Kuisnya terlalu sulit!':R[1][1]===R[0][1]?'Seri di puncak!':R[0][0]+' juaranya!'}`,{tag:'HASIL KUIS',k:'task',big:1}))
+ }finally{if(g===tg())X.endTask()}}
+}catch(e){console.warn('Ruang Bot Interaksi:',e)}})();
+</script>
 </body></html>
