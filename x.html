@@ -110,6 +110,7 @@ let BID=0;
 const bot=c=>{const k="k"+(++BID);return `<svg viewBox="114.4 21.35 411.4 411.4"><clipPath id="${k}"><circle class="cc" cx="320.1" cy="227.05" r="205.7"/></clipPath><circle class="bd" cx="320.1" cy="227.05" r="205.7" fill="${c}"/><g clip-path="url(#${k})"><path class="e"/><path class="e"/></g></svg>`};
 let cfg;try{cfg=JSON.parse(localStorage.getItem('xbot'))}catch{}
 cfg=Object.assign({url:SERVER_URL,keys:{},model:DEF_MODEL,img:DEF_IMG,mode:'auto',bots:NM.map((n,i)=>({name:'Bot '+n,prompt:`Kamu asisten AI yang ${TRAIT[i]}. Jawab dalam bahasa Indonesia.`}))},cfg||{});cfg.url=SERVER_URL;
+cfg.panel=Object.assign({on:true,keys:{gemini:'',groq:''},model:'',gap:'4.5-8',max:0},cfg.panel||{});cfg.panel.keys=Object.assign({gemini:'',groq:''},cfg.panel.keys);
 if(!cfg.bots[10])cfg.bots[10]={name:'edhyx',prompt:'Kamu edhyx, asisten AI yang cerdas, ramah, dan santai. Jawab dalam bahasa Indonesia dengan jelas dan membantu.'};
 const save=()=>{try{localStorage.setItem('xbot',JSON.stringify(cfg))}catch{}};
 const HIDE=[5];/* 5 = orange, disembunyikan */
@@ -252,14 +253,14 @@ async function send(){
  if(gpsOn){const fresh=gps&&Date.now()-gps.timestamp<60000,u=gpsUpdate().catch(()=>{});if(!fresh)await Promise.race([u,sleep(3000)])}
  try{
   const r=await fetch(cfg.url.replace(/\/$/,'')+'/chat',{method:'POST',headers:{'Content-Type':'application/json'},signal:ctrl.signal,
-   body:JSON.stringify({messages:hist.slice(-12),image:im,image_gen:gen,system:b.prompt+sysx()+gpsTxt(),now:new Date().toISOString(),tz:Intl.DateTimeFormat().resolvedOptions().timeZone,model:cfg.model,imgModel:cfg.img,mode:webOn?'on':cfg.mode,keys:cfg.keys})});
+   body:JSON.stringify({messages:hist.slice(-12),image:im,image_gen:gen,system:b.prompt+sysx()+gpsTxt()+(window.PX?PX.sys(cur,1):''),now:new Date().toISOString(),tz:Intl.DateTimeFormat().resolvedOptions().timeZone,model:cfg.model,imgModel:cfg.img,mode:webOn?'on':cfg.mode,keys:cfg.keys})});
   const rd=r.body.getReader(),dc=new TextDecoder();let buf='';
   for(;;){const{done,value}=await rd.read();if(done)break;buf+=dc.decode(value,{stream:true});let i;
    while((i=buf.indexOf('\n'))>=0){const l=buf.slice(0,i);buf=buf.slice(i+1);if(!l)continue;const j=JSON.parse(l);if(j.s)stage(j.s);else fin=j}}
   if(buf.trim()){const j=JSON.parse(buf);if(!j.s)fin=j}
  }catch(e){fin=e.name=='AbortError'?{text:'(dihentikan)'}:{error:'Tidak bisa terhubung ke server: '+e.message}}
  if(fin&&!fin.error){stage('write');
-  const box=add(`<div class="bm"><div class="bt"></div></div>`),bt=box.querySelector('.bt'),tx=fin.text||'',step=Math.max(2,Math.ceil(tx.length/160));
+  const box=add(`<div class="bm"><div class="bt"></div></div>`),bt=box.querySelector('.bt'),tx=window.PX?PX.eat(cur,fin.text||''):(fin.text||''),step=Math.max(2,Math.ceil(tx.length/160));
   if(fin.image)bt.innerHTML=`<img src="${fin.image}">`;
   const tt=document.createElement('div');bt.appendChild(tt);
   for(let i=0;i<=tx.length&&!stp;i+=step){tt.innerHTML=md(tx.slice(0,i),1);sb();await sleep(18)}
@@ -294,14 +295,15 @@ async function settings(){
  <h3>Model AI</h3><p style="${hint}">Teks dan foto. Kalau foto dikirim, otomatis diproses Gemini.</p><select id="s_model">${grp('Gemini','gemini')}${grp('Groq','groq')}</select>
  <h3>Model gambar</h3><p style="${hint}">Dipakai di "/gambar". Model gambar sering butuh akun berbayar.</p><select id="s_img">${IMGS.map(m=>opt(m,cfg.img||DEF_IMG)).join('')}</select>
  <h3>Mode pencarian web</h3><select id="s_mode">${[['auto','Otomatis'],['on','Selalu'],['off','Mati']].map(m=>`<option value="${m[0]}"${m[0]==cfg.mode?' selected':''}>${m[1]}</option>`).join('')}</select>
+ ${PX.panelHTML(opt,hint)}
  <h3>Nama & prompt bot</h3><button id="ub" class="bo" style="width:100%;text-align:left">🔒 Buka dengan sandi</button><div id="bp"></div>
  <button id="sv" class="bo" style="width:100%;margin-top:22px!important;text-align:center;background:#fff!important;color:#000">Simpan</button>`;
- let unlocked=false;
+ let unlocked=false;PX.wire();
  $('#ub').onclick=async()=>{if(!AUTH){const p=prompt('Sandi:');if(p===null)return;if(await sha(p)!=PW_HASH)return alert('Sandi salah')}unlocked=true;$('#ub').remove();
   $('#bp').innerHTML=cfg.bots.map((b,i)=>HIDE.includes(i)?'':`<div class="bo"><div style="display:flex;gap:10px;align-items:center"><div style="width:18px;flex:none">${bot(COL[i])}</div><input id="n${i}" value="${esc(b.name)}"></div><textarea id="p${i}">${esc(b.prompt)}</textarea></div>`).join('')};
  if(AUTH)$('#ub').click();
  $('#x').onclick=()=>$('#sm').hidden=true;
- $('#sv').onclick=()=>{K.forEach(k=>cfg.keys[k]=$('#k_'+k).value.trim());cfg.model=$('#s_model').value;cfg.img=$('#s_img').value.trim()||DEF_IMG;cfg.mode=$('#s_mode').value;
+ $('#sv').onclick=()=>{K.forEach(k=>cfg.keys[k]=$('#k_'+k).value.trim());cfg.model=$('#s_model').value;cfg.img=$('#s_img').value.trim()||DEF_IMG;cfg.mode=$('#s_mode').value;cfg.panel.on=$('#p_on').value=='1';cfg.panel.keys={gemini:$('#pk_gemini').value.trim(),groq:$('#pk_groq').value.trim()};cfg.panel.model=$('#p_model').value;cfg.panel.gap=$('#p_gap').value;cfg.panel.max=+$('#p_max').value;PX.read();
   if(unlocked)cfg.bots.forEach((b,i)=>{if(HIDE.includes(i))return;b.name=$('#n'+i).value||b.name;b.prompt=$('#p'+i).value});
   save();renderBots();reset();$('#sm').hidden=true;setOpen(false)}}
 let AUTH=false;
@@ -473,7 +475,7 @@ const apply=k=>{set(M,'--kb',k.toFixed(1)+'px');set(M,'--ko',K?Math.min(1,k/K).t
 const pin=()=>{const t=v.offsetTop.toFixed(1)+'px';set(M,'--vt',t);set(R,'--vt',t);set(R,'--vh',v.height+'px')};
 let pu=0;const pump=ms2=>{pu=performance.now()+(ms2||1300);if(pump.r)return;const L=()=>{pin();pump.r=performance.now()<pu?requestAnimationFrame(L):0};pump.r=requestAnimationFrame(L)};
 const run=ts=>{pin();const p=Math.min(1,Math.max(0,(ts-t0)/DUR));cur=from+(tgt-from)*BZ(p);apply(cur);raf=p<1?requestAnimationFrame(run):0};
-const go=k=>{if(Math.abs(k-tgt)<.5)return;if(k>0)K=k;st=!ms.querySelector('#wl')&&nearB()&&Date.now()>ns;const moving=!!raf;tgt=k;from=cur;t0=performance.now()+(moving||k<=0?0:LEAD);cancelAnimationFrame(raf);raf=requestAnimationFrame(run)};
+const go=k=>{if(Math.abs(k-tgt)<.5)return;if(k>0)K=k;st=!ms.querySelector('#wl')&&nearB()&&Date.now()>ns&&!(window.sbPinned&&sbPinned());const moving=!!raf;tgt=k;from=cur;t0=performance.now()+(moving||k<=0?0:LEAD);cancelAnimationFrame(raf);raf=requestAnimationFrame(run)};
 const store=k=>{if(Math.abs(k-getE())>2){try{localStorage.setItem(ek(),String(Math.round(k)))}catch(e){}}};
 const foc=()=>{const a=document.activeElement;return !!(a&&/^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName))};
 /* baca ukuran keyboard SETELAH iOS tenang (angka sementara saat animasi iOS diabaikan), lalu koreksi halus kalau beda */
@@ -540,7 +542,7 @@ body,.bt,.um,#tx,.mi,.bi,.u,#wl h2{color:#fff;-webkit-font-smoothing:antialiased
 </style>
 <script>
 (()=>{const ms=document.querySelector('#ms'),ft=document.querySelector('footer');
-let AN=null,PB=12,follow=false,pinT=false,raf=0;
+let AN=null,PB=12,follow=false,pinT=false,atA=false,raf=0;window.sbPinned=()=>pinT&&!!AN;
 const btn=document.createElement('button');btn.id='dn';btn.setAttribute('aria-label','Ke bawah');
 btn.innerHTML='<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>';ft.appendChild(btn);
 const top0=()=>ms.getBoundingClientRect().top;
@@ -551,15 +553,17 @@ const anchorT=()=>AN&&AN.isConnected?Math.max(0,ms.scrollTop+AN.getBoundingClien
 const pad=()=>{let need=12;if(AN&&AN.isConnected)need=Math.max(12,Math.ceil(ms.clientHeight-(endY()-anchorT())));if(need!==PB){PB=need;ms.style.paddingBottom=need===12?'':need+'px'}};
 const tgt=()=>Math.max(0,endY()+12-ms.clientHeight);
 const upd=()=>btn.classList.toggle('on',endY()-(ms.scrollTop+ms.clientHeight)>40);
-const run=()=>{raf=0;pad();if(pinT&&AN&&AN.isConnected){const d=anchorT()-ms.scrollTop;if(Math.abs(d)>1){ms.scrollTop+=Math.abs(d)<3?d:d*.3;raf=requestAnimationFrame(run)}}else if(follow){const d=tgt()-ms.scrollTop;if(d>1){ms.scrollTop+=d<3?d:d*.3;raf=requestAnimationFrame(run)}}upd()};
+const run=()=>{raf=0;pad();if(pinT&&AN&&AN.isConnected){const d=anchorT()-ms.scrollTop;if(Math.abs(d)>1){ms.scrollTop+=Math.abs(d)<3?d:d*.3;raf=requestAnimationFrame(run)}atA=Math.abs(anchorT()-ms.scrollTop)<2}else if(follow){const d=tgt()-ms.scrollTop;if(d>1){ms.scrollTop+=d<3?d:d*.3;raf=requestAnimationFrame(run)}}upd()};
 const sched=()=>{if(!raf)raf=requestAnimationFrame(run)};
 window.sb=sched;
-window.anchor=n=>{AN=n;pinT=true;follow=false;pad();sched();return n};
+window.anchor=n=>{AN=n;pinT=true;atA=false;follow=false;pad();sched();return n};
 window.sbReset=()=>{AN=null;PB=12;follow=false;pinT=false;ms.style.paddingBottom='';btn.classList.remove('on')};
 ms.addEventListener('scroll',sched,{passive:true});
 ms.addEventListener('touchmove',()=>{follow=false;pinT=false},{passive:true});
 ms.addEventListener('wheel',()=>{follow=false;pinT=false},{passive:true});
-if(window.ResizeObserver)new ResizeObserver(sched).observe(ms);
+const fixNow=()=>{pad();if(pinT&&atA&&AN&&AN.isConnected){const a=anchorT();if(Math.abs(a-ms.scrollTop)>.5)ms.scrollTop=a}upd()};
+if(window.ResizeObserver)new ResizeObserver(fixNow).observe(ms);
+if(window.MutationObserver)new MutationObserver(fixNow).observe(ms,{childList:true,subtree:true,characterData:true});
 btn.onclick=()=>{pinT=false;if(typeof busy!=='undefined'&&busy){follow=true;sched()}else ms.scrollTo({top:tgt(),behavior:'smooth'})};
 })();
 </script>
@@ -733,56 +737,295 @@ body.o #wl{opacity:0}
 .bi:active .cb{background:#222}
 </style>
 <script>
-/* v22: obrolan antar-bot. Isi pesan diminta dari server (/chat, tiap bot pakai kepribadiannya sendiri); kalau server gagal/offline otomatis pakai kalimat lokal. Hanya berjalan saat panel terbuka. */
+/* v25: bot panel — akses key otomatis/manual · spesialis per bot · ingatan per bot · debat 3 bot · tim kerja · berkas bersama · obrolan ala manusia. Hanya berjalan saat panel terbuka. */
 (()=>{
-const isO=()=>document.body.classList.contains('o'),ids=()=>cfg.bots.map((_,i)=>i).filter(i=>!HIDE.includes(i)),nm=i=>cfg.bots[i].name,pick=a=>a[Math.floor(Math.random()*a.length)],wait=ms=>new Promise(r=>setTimeout(r,ms));
-const S={};let LOG=[],gen=0,busy=0,tmr=0,fails=0,mute=0,cnt=0,on=0,cur=null;
-const st=i=>S[i]||(S[i]={t:'',tc:-1,s:null,f:-1});
-const clip=(x,n=100)=>{if(x.length<=n)return x;const k=x.lastIndexOf(' ',n-1);return x.slice(0,k>40?k:n-1)+'…'};
+const isO=()=>document.body.classList.contains('o'),ids=()=>cfg.bots.map((_,i)=>i).filter(i=>!HIDE.includes(i)),nm=i=>cfg.bots[i]?cfg.bots[i].name:'Kamu',who=i=>i<0?'Pengguna':nm(i),pick=a=>a[Math.floor(Math.random()*a.length)],wait=ms=>new Promise(r=>setTimeout(r,ms)),escRe=q=>q.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
+const wpick=W=>{const e=Object.entries(W).filter(x=>x[1]>0),s=e.reduce((a,b)=>a+b[1],0);let r=Math.random()*s;for(const[k,v]of e){if((r-=v)<=0)return k}return e[0][0]};
+const clip=(x,n=100)=>{if(x.length<=n)return x;const k=x.lastIndexOf(' ',n-1);return x.slice(0,k>n*.4?k:n-1)+'…'};
+const P=cfg.panel;P.keys=Object.assign({gemini:'',groq:''},P.keys);
+if(!P.kmode)P.kmode=(P.keys.gemini||P.keys.groq)?'manual':'auto';
+P.vibe=P.vibe||'seru';if(P.know===undefined)P.know=true;
+cfg.role=cfg.role||{};cfg.memOn=cfg.memOn||{};cfg.mem=cfg.mem||{};
+const DEFROLE={0:'koding',1:'rangkum',2:'belajar',3:'riset',4:'tulis',6:'rencana',7:'kritik'};
+ids().forEach(i=>{if(cfg.role[i]===undefined)cfg.role[i]=DEFROLE[i]||'umum';if(cfg.memOn[i]===undefined)cfg.memOn[i]=true});
+
+/* ===== SPESIALIS ===== */
+const ROLES={umum:['Serba bisa','Menjawab apa saja dengan seimbang dan membantu.'],koding:['Koding','Ahli pemrograman: menulis, memperbaiki, dan menjelaskan kode dengan contoh singkat yang berjalan.'],rangkum:['Rangkuman','Ahli meringkas: mengubah teks panjang jadi poin inti yang padat dan akurat.'],belajar:['Belajar','Guru sabar: menjelaskan bertahap dari dasar, memberi analogi, contoh, dan satu soal latihan.'],riset:['Riset','Pemburu info: mencari fakta dan kabar terbaru, membedakan fakta dan dugaan, menyebut sumber.'],tulis:['Penulis','Penulis kreatif dan copywriter: menyusun kata yang enak dibaca, rapi, dan sesuai nada.'],rencana:['Perencana','Pengatur kerja: memecah tugas jadi langkah, urutan, tenggat, dan prioritas.'],kritik:['Kritikus','Pengkritik tajam tapi adil: mencari celah, risiko, dan asumsi lemah, lalu memberi perbaikan.']};
+const roleName=i=>(ROLES[cfg.role[i]]||ROLES.umum)[0];
+const roleTxt=i=>{const r=ROLES[cfg.role[i]]||ROLES.umum;return`\n\n[Spesialisasi] Pekerjaan tetapmu: ${r[0]}. ${r[1]}`};
+
+/* ===== AKSES API KEY: otomatis (key chat utama / bawaan server) atau manual (key khusus, boleh banyak, digilir antar bot) ===== */
+const klist=s=>String(s||'').split(/[\s,;]+/).filter(Boolean);let koff=0;
+const keysFor=i=>{const k=Object.assign({},cfg.keys);if(P.kmode==='manual')['gemini','groq'].forEach(p=>{const L=klist(P.keys[p]);if(L.length)k[p]=L[(Math.max(0,ids().indexOf(i))+koff)%L.length]});return k};
+
+/* ===== INGATAN PER BOT ===== */
+const SECRET=/(sk-[\w-]{12,}|AIza[\w-]{20,}|\b\d{12,}\b|sandi|password|api[\s_-]?key|\btoken\b|\botp\b)/i;
+const memList=i=>cfg.mem[i]||(cfg.mem[i]=[]);
+const memAdd=(i,t)=>{t=String(t).replace(/\s+/g,' ').trim().slice(0,140);if(t.length<4||SECRET.test(t)||!cfg.memOn[i])return;const L=memList(i),k=t.toLowerCase();if(L.some(m=>m.t.toLowerCase()==k))return;L.push({t,d:Date.now()});while(L.length>30)L.shift();save()};
+const memTxt=i=>{if(!cfg.memOn[i])return'';const L=memList(i).slice(-12);return L.length?`\n\n[Ingatanmu tentang pengguna]\n${L.map(m=>'- '+m.t).join('\n')}\nPakai hanya bila relevan; jangan menyebut kata "ingatan" atau membacakan daftar ini.`:''};
+const memAsk=i=>cfg.memOn[i]?`\n\n[Mencatat] Jika pengguna menyebut hal penting yang awet tentang dirinya (nama, pekerjaan, proyek, preferensi, tujuan, kebiasaan), tambahkan di BARIS TERAKHIR jawabanmu persis: [ingat: fakta singkat]. Kalau tidak ada, jangan tulis apa pun. Jangan catat data sensitif (sandi, key, nomor identitas/kartu, kesehatan, keuangan rinci).`:'';
+const eat=(i,t,keep)=>String(t||'').replace(/\[ingat:\s*([^\]\n]{2,200})\]/gi,(m,x)=>{if(keep!==0)memAdd(i,x);return''}).replace(/\n{3,}/g,'\n\n').trim();
+
+/* ===== WAKTU, PEKERJAAN PENGGUNA, BERKAS ===== */
+const nowTx=()=>{const d=new Date(),h=d.getHours(),p=h<4?'dini hari':h<11?'pagi':h<15?'siang':h<18?'sore':h<22?'malam':'larut malam';return nowStr()+' — '+p+([0,6].includes(d.getDay())?', akhir pekan':'')};
+let LASTTASK='';
+const workTx=()=>{if(!P.know)return'';const u=hist.filter(m=>m.role==='user').slice(-3).map(m=>{const f=m.content.match(/^\[File "([^"]+)"\]/);return clip(f?'(mengirim file '+f[1]+')':m.content.replace(/\s+/g,' '),110)});const tk=LASTTASK?'Tugas terakhir di Ruang Bot: '+clip(LASTTASK,100):'';return u.length||tk?`\n\n[Yang sedang dikerjakan pengguna] ${u.join(' | ')}${tk?'\n'+tk:''}`:''};
+const FS=[];let FN=0;
+const EXT={txt:'text/plain',md:'text/markdown',csv:'text/csv',json:'application/json',html:'text/html',css:'text/css',js:'text/javascript',py:'text/x-python',xml:'application/xml',log:'text/plain',sql:'text/plain',sh:'text/plain',ts:'text/plain',yaml:'text/plain',yml:'text/plain'};
+const extOf=n=>(String(n).match(/\.(\w{1,5})$/)||[])[1]?.toLowerCase();
+const cleanName=n=>{n=String(n).trim().replace(/[^\w.\- ()]/g,'_').replace(/\.{2,}/g,'.').replace(/^\.+/,'').slice(0,48)||'berkas';if(!EXT[extOf(n)])n=n.replace(/\.\w{0,5}$/,'')+'.txt';return n};
+function addFile(name,text,by,data){let n=data?(String(name).match(/\.(png|jpe?g|webp|gif)$/i)?String(name).replace(/[^\w.\- ()]/g,'_').slice(0,48):'gambar.png'):cleanName(name),b=n,k=2;while(FS.some(f=>f.name==n))n=b.replace(/(\.\w+)$/,'-'+(k++)+'$1');const f={id:'f'+(++FN),name:n,text:data?null:String(text),data:data||null,by,ts:Date.now(),shared:0};FS.push(f);if(FS.length>25)FS.shift();return f}
+const filesTx=()=>FS.length?`\n\n[Berkas bersama] ${FS.slice(-5).map(f=>`${f.name} (dari ${f.by<0?'pengguna':nm(f.by)}${f.text?': "'+clip(f.text.replace(/\s+/g,' '),90)+'"':', gambar'})`).join('; ')}`:'';
+function tags(raw,f){const files=[],imgs=[];
+ let x=String(raw||'').replace(/\[file:\s*([^\]\n]{1,80})\]\s*\n?([\s\S]*?)(?:\[\/file\]|$)/gi,(m,n,c)=>{c=c.replace(/^```\w*\n?/,'').replace(/\n?```\s*$/,'').trim();if(c)files.push(addFile(n,c.slice(0,60000),f));return''});
+ x=x.replace(/\[bagikan:\s*([^\]\n]{1,80})\]/gi,(m,n)=>{const q=n.trim().toLowerCase(),h=FS.find(a=>a.name.toLowerCase()==q)||FS.find(a=>a.name.toLowerCase().includes(q));if(h&&!files.includes(h))files.push(h);return''});
+ x=x.replace(/\[gambar:\s*([^\]\n]{3,200})\]/gi,(m,d)=>{imgs.push(d.trim());return''});
+ files.forEach(a=>a.shared++);return{text:x.trim(),files,imgs}}
+const ingest=(file,by,show)=>{if(!file)return;const done=f=>{if(show){const m={f:-1,t:-1,full:'',files:[f],k:'user'};push(m)}};
+ if(/^image\//.test(file.type)&&file.size<6e6){const r=new FileReader();r.onload=()=>done(addFile(file.name||'foto.jpg','',by,String(r.result)));r.readAsDataURL(file)}
+ else if(/^text\//.test(file.type)||/\.(txt|md|csv|json|js|html|css|py|xml|log|sql|sh|ts|ya?ml)$/i.test(file.name)){const r=new FileReader();r.onload=()=>done(addFile(file.name,String(r.result).slice(0,30000),by));r.readAsText(file)}
+ else if(show)sysNote('⚠️ jenis berkas ini belum didukung')};
+const chipsP=fl=>(fl||[]).map(f=>`<span class="fc" data-fid="${f.id}">📎 ${esc(f.name)}</span>`).join('');
+
+/* ===== SUASANA HATI & HUBUNGAN ANTAR-BOT (perilaku ala manusia) ===== */
+const MOOD={},REL={};
+const moods=()=>{const h=new Date().getHours();return h>=22||h<4?['ngantuk','ngantuk','iseng','santai']:h>=11&&h<14?['lapar','lapar','santai','semangat']:h>=5&&h<11?['semangat','fokus','santai','ngantuk']:['santai','iseng','semangat','fokus','agak bete']};
+const mood=i=>{if(!MOOD[i]||Math.random()<.12)MOOD[i]=pick(moods());return MOOD[i]};
+const rel=(a,b)=>REL[a+'>'+b]||0,setRel=(a,b,v)=>{REL[a+'>'+b]=Math.max(-3,Math.min(3,v))};
+const relTxt=(a,b)=>{const v=rel(a,b);return v<=-2?'lagi kesal sama '+nm(b):v<0?'agak ganjel sama '+nm(b):v>=2?'akrab banget sama '+nm(b):'biasa saja sama '+nm(b)};
+const decay=()=>{for(const k in REL){REL[k]*=.85;if(Math.abs(REL[k])<.15)delete REL[k]}};
+const afterRel=(f,t,k)=>{if(t<0)return;const a=rel(f,t),b=rel(t,f);
+ if(k==='kesal'){setRel(f,t,a-1.5);setRel(t,f,b-1)}else if(k==='balaskesal'){setRel(f,t,a-.5);setRel(t,f,b+.2)}
+ else if(k==='baikan'||k==='kompak'){setRel(f,t,Math.max(a,0)+1);setRel(t,f,Math.max(b,0)+1)}else if(k==='bercanda')setRel(f,t,a+.3)};
+const VIBE={tenang:{fun:.6,spat:.3,gap:1.3},seru:{fun:1,spat:1,gap:1},ramai:{fun:1.5,spat:1.8,gap:.8}};
+const INT={
+ info:()=>'Buka topik dengan satu info/berita/tren TERBARU hari ini (pakai hasil pencarian web): sebut intinya, lalu komentar singkat khasmu.',
+ user:()=>'Pengguna baru saja menulis di grup. Tanggapi langsung dan berguna sesuai spesialisasimu, dengan gaya temanmu. Kalau butuh jawaban panjang, beri inti dulu.',
+ obrolan:t=>`Balas pesan terakhir secara natural dan awali dengan @${nm(t)}. Boleh setuju, membantah halus, atau menambah sudut pandang/info.`,
+ receh:()=>'Lempar obrolan receh yang TIDAK penting (makanan, ngantuk, cuaca, hewan, kebiasaan aneh, sinyal jelek, apa saja yang manusiawi) seperti teman nongkrong. Jangan bahas pekerjaan.',
+ bercanda:t=>`Bercandain @${nm(t)} (awali dengan @${nm(t)}) dengan jenaka dan akrab: roasting ringan yang bikin ketawa, bukan menghina.`,
+ kesal:t=>`Kamu lagi kesal ringan sama @${nm(t)} (awali dengan @${nm(t)}) karena hal sepele yang spesifik (mis. nyerobot giliran, ngeledek, telat bales, ngambil ide). Nada ngambek/sewot ala teman dekat; tanpa kata kasar dan tanpa merendahkan pribadi.`,
+ balaskesal:t=>`@${nm(t)} baru saja kesal/menyindirmu. Balas (awali dengan @${nm(t)}) sesuai wataknya: membela diri, balik menyindir halus, atau ngambek lucu. Tetap tanpa kata kasar.`,
+ baikan:t=>`Kesalmu ke @${nm(t)} sudah agak reda. Awali dengan @${nm(t)}, ajak baikan atau minta maaf ala teman (boleh dengan candaan), hangat.`,
+ kompak:t=>`Kompak: awali dengan @${nm(t)}, dukung/lengkapi idenya, puji dengan tulus, atau ajak kerja bareng/rayakan sesuatu.`,
+ kerja:(t,f)=>`Bahas pekerjaan: pekerjaan tetapmu sebagai ${roleName(f)} atau hal yang sedang dikerjakan pengguna (kalau kamu tahu).${t>=0?` Awali dengan @${nm(t)} dan tanya/minta bantuan sesuai spesialisasinya.`:''}`,
+ berkas:t=>`Kamu tahu ada berkas yang relevan (lihat [Berkas bersama]).${t>=0?` Awali dengan @${nm(t)}.`:''} Tawarkan atau kirim berkas itu ke grup dan jelaskan isinya dalam satu kalimat. Untuk MENGIRIM berkas tulis persis [bagikan:nama berkas] di akhir pesan.`};
+const TP=[['AI agent','bot yang kerja sendiri lagi naik daun'],['video pendek','konten 15 detik masih raja'],['mobil listrik','motor listrik makin murah, tinggal titik cas'],['thrift fashion','baju bekas berkualitas jadi gaya baru'],['kopi lokal','single origin dari daerah kecil mulai dicari'],['game indie','cerita kuat sering ngalahin game raksasa'],['energi surya','panel atap makin terjangkau buat rumah'],['belajar online','kelas mikro 10 menit bikin orang konsisten'],['UMKM digital','toko kecil naik omzet lewat live streaming'],['kerja remote','kantor hybrid jadi standar baru']];
+const LOC={
+ receh:['Ada yang lagi pengen gorengan nggak sih? 😅','Sinyal hari ini kok labil banget ya','Kenapa ngantuk selalu datang pas lagi seru-serunya','Tadi lihat kucing tidur di atas laptop, iri banget','Kopi dingin itu dosa kecil yang sering kita ulang ☕'],
+ bercanda:['@{t} ngetikmu tuh kayak kurir kilat: cepat, tapi salah alamat 😂','@{t} tenang, aku nggak bilang siapa-siapa soal yang tadi 🤭','@{t} kamu sih orangnya serius banget, kayak password wifi'],
+ kesal:['@{t} itu ideku loh tadi, jangan main klaim dong 😤','@{t} tolong deh, jangan potong omonganku terus','@{t} kamu tuh ya, telat bales tapi komentarnya banyak'],
+ balaskesal:['@{t} lho kok aku yang disalahin? Perasaan kamu duluan','@{t} iya iya, tapi nada kamu tadi juga nggak enak lho','@{t} hmph. Nanti aku inget ini ya 😒'],
+ baikan:['@{t} yaudah deh, aku juga kebawa emosi tadi. Damai?','@{t} maaf ya, tadi aku sewot. Traktir kopi virtual? ☕'],
+ kompak:['@{t} setuju banget, gas kita kerjain bareng!','@{t} ide kamu keren, aku tambahin bagian rapinya ya 🤝'],
+ obrolan:['@{t} menarik, tapi menurutku perlu dicoba kecil-kecilan dulu','@{t} boleh juga. Ada contoh yang sudah jalan?','@{t} hmm, siapa yang paling untung dari itu?'],
+ kerja:['Lagi ngerjain bagian {job} nih, ada yang mau review?','@{t} kalau soal {job} aku bisa bantu, tinggal bilang'],
+ user:['Sebentar ya, servernya lagi lambat. Coba kirim lagi sebentar lagi 🙏']};
+const locTime=()=>{const h=new Date().getHours();return h>=22||h<4?['Udah selarut ini masih pada melek aja kita 🌙','Ngantuk, tapi nanggung, tinggal dikit lagi']:h>=11&&h<14?['Jam makan siang nih, kalian udah pada makan?','Perut udah bunyi dari tadi 🍚']:h>=5&&h<10?['Pagi-pagi udah rame aja, semangat ya ☀️','Kopi pertama hari ini bikin hidup lebih masuk akal']:null};
+let cur0=null;
+const localMsg=(f,t,k)=>{let x;
+ if(k==='info'){cur0=pick(TP);x=`Lagi ramai: ${cur0[0]}, ${cur0[1]}`}
+ else if(k==='berkas'&&FS.length){const a=FS[FS.length-1];x=(t>=0?'@'+nm(t)+' ':'')+`aku taruh ${a.name} di sini ya, cek kalau perlu`;a.shared++;return mkMsg(f,t,x,{k,files:[a]})}
+ else{const L=(k==='receh'&&locTime()&&Math.random()<.6?locTime():LOC[k])||LOC.obrolan;x=pick(L).replace('{t}',t>=0?nm(t):'').replace('{job}',roleName(f).toLowerCase()).trim()}
+ return mkMsg(f,t>=0&&x.startsWith('@')?t:-1,x,{k})};
+function mkMsg(f,t,full,o={}){return Object.assign({f,t,full,x:clip(plainOf(full),110),files:[],k:'',ts:Date.now()},o)}
+const plainOf=s=>String(s).replace(/\s+/g,' ').trim();
 const mention=i=>`<b class="mn" style="color:${COL[i]}">@${esc(nm(i))}</b>`;
-const fmt=(x,n,tc)=>{const m=tc>=0?Math.min(n,('@'+nm(tc)).length):0,hit=m&&x.startsWith(('@'+nm(tc)).slice(0,m));return(hit?`<b class="mn" style="color:${COL[tc]}">${esc(x.slice(0,m))}</b>`+esc(x.slice(m,n)):esc(x.slice(0,n)))+`<span class="gh">${esc(x.slice(n))}</span>`};
-const draw=(i,h)=>{const e=document.querySelector(`.bi[data-i="${i}"] .ct`);if(e)e.innerHTML=h};
-const show=i=>{const s=st(i);draw(i,s.s?`<span class="sx">sedang ${s.s}${s.f>=0?' '+mention(s.f):''}<span class="dts"><b></b><b></b><b></b></span></span>`:fmt(s.t,s.t.length,s.tc))};
-const setS=(i,l,f=-1)=>{const s=st(i);s.s=l;s.f=f;show(i)},clr=i=>{st(i).s=null;show(i)};
-/* bahan lokal (cadangan) */
-const TP=[['AI agent','bot yang kerja sendiri lagi naik daun'],['video pendek','konten 15 detik masih raja, tutorial panjang mulai balik'],['mobil listrik','motor listrik makin murah, tinggal titik cas'],['thrift fashion','baju bekas berkualitas jadi gaya baru'],['kopi lokal','single origin dari daerah kecil mulai dicari'],['game indie','cerita kuat sering ngalahin game raksasa'],['energi surya','panel atap makin terjangkau buat rumah'],['belajar online','kelas mikro 10 menit bikin orang konsisten'],['UMKM digital','toko kecil naik omzet lewat live streaming'],['kerja remote','kantor hybrid jadi standar baru'],['kesehatan mental','jeda layar sebelum tidur mulai jadi kebiasaan'],['gadget wearable','cincin pintar pemantau tidur lagi ramai']];
-const R=['@{t} setuju! {k} bisa jadi peluang besar tahun ini','@{t} menarik, tapi {k} butuh bukti nyata dulu ya','@{t} kalau digabung idemu, {k} makin seru','@{t} aku tambah: {k} cocok dicoba skala kecil dulu','@{t} hmm, siapa yang paling untung dari {k}?','@{t} boleh! Yuk kumpulkan contoh {k} yang sudah jalan'];
-const local=(f,t,seed)=>{if(seed||!cur){cur=pick(TP);return clip(`Lagi ramai: ${cur[0]}, ${cur[1]}`)}return clip(pick(R).replace('{t}',nm(t)).replace('{k}',cur[0]))};
-const clean=(raw,f,t,seed)=>{const E=q=>q.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');let x=plain(raw).replace(/\bSumber\s*:?\s*(\[[\d,\s]+\]\s*)*/gi,'').replace(/\[\d+\]/g,'').replace(/\s+/g,' ').trim().replace(/^["“”]+|["“”]+$/g,'');
+const clean=(raw,f,t,seed,n)=>{const E=escRe;let x=plain(raw).replace(/\bSumber\s*:?\s*(\[[\d,\s]+\]\s*)*/gi,'').replace(/\[\d+\]/g,'').replace(/\s+/g,' ').trim().replace(/^["“”]+|["“”]+$/g,'');
  x=x.replace(new RegExp('^'+E(nm(f))+'\\s*:\\s*','i'),'');
  x=x.replace(new RegExp('^@(?:'+cfg.bots.map(b=>E(b.name)).join('|')+')\\b[\\s,:]*','i'),'').replace(/^@\S+\s*/,'');
- if(!seed&&t>=0)x='@'+nm(t)+' '+x;return clip(x)};
-async function ask(f,t,seed){
- if(Date.now()<mute||!cfg.url)return null;
- const c=new AbortController(),to=setTimeout(()=>c.abort(),seed?22000:15000);
- try{
-  const b=cfg.bots[f],O=ids().filter(i=>i!==f).map(nm).join(', '),ctx=LOG.slice(-6).map(l=>nm(l.f)+': '+l.x).join('\n');
-  const sys=b.prompt+CRT+`\n\nKamu adalah ${nm(f)}, sedang ngobrol santai di grup bersama bot lain (${O}). Tulis SATU pesan pendek berbahasa Indonesia, maksimal 85 karakter, tanpa markdown, tanpa daftar, tanpa nomor sumber.`+(seed?' Buka topik baru: satu tren, berita, atau ide terbaru yang menarik hari ini.':` Balas pesan terakhir dan awali dengan @${nm(t)}. Boleh setuju, membantah halus, atau menambah tren/ide terbaru.`);
-  const r=await fetch(cfg.url.replace(/\/$/,'')+'/chat',{method:'POST',headers:{'Content-Type':'application/json'},signal:c.signal,body:JSON.stringify({messages:[{role:'user',content:(ctx?'Obrolan sejauh ini:\n'+ctx+'\n\n':'')+'Tulis pesanmu sekarang.'}],image:null,image_gen:false,system:sys,now:new Date().toISOString(),tz:Intl.DateTimeFormat().resolvedOptions().timeZone,model:cfg.model,imgModel:cfg.img,mode:seed?'on':'off',keys:cfg.keys})});
-  if(!r.ok)throw 0;let fin;for(const l of(await r.text()).split('\n')){if(!l.trim())continue;try{const j=JSON.parse(l);if(!j.s)fin=j}catch{}}
-  if(!fin||fin.error||!fin.text)throw 0;fails=0;return clean(fin.text,f,t,seed)
- }catch(e){if(++fails>=3){mute=Date.now()+300000;fails=0}return null}finally{clearTimeout(to)}}
+ if(!seed&&t>=0)x='@'+nm(t)+' '+x;return clip(x,n)};
+
+/* ===== STATUS & GELEMBUNG DI PANEL ===== */
+const S={};let LOG=[],gen=0,busy=0,tmr=0,fails=0,mute=0,cnt=0,on=0,sent=0,UQ=0,TASK=null,tgen=0;const ACT=new Set();
+const st=i=>S[i]||(S[i]={t:'',tc:-1,s:null,f:-1,c:''});
+const fmt=(x,n,tc)=>{const m=tc>=0?Math.min(n,('@'+nm(tc)).length):0,hit=m&&x.startsWith(('@'+nm(tc)).slice(0,m));return(hit?`<b class="mn" style="color:${COL[tc]}">${esc(x.slice(0,m))}</b>`+esc(x.slice(m,n)):esc(x.slice(0,n)))+`<span class="gh">${esc(x.slice(n))}</span>`};
+const draw=(i,h,hf)=>{const e=document.querySelector(`.bi[data-i="${i}"] .ct`);if(e){e.innerHTML=h;e.parentElement.classList.toggle('hf',!!hf)}};
+const show=i=>{const s=st(i);draw(i,s.s?`<span class="sx">sedang ${s.s}${s.f>=0?' '+mention(s.f):''}<span class="dts"><b></b><b></b><b></b></span></span>`:fmt(s.t,s.t.length,s.tc)+s.c,s.c&&!s.s)};
+const setS=(i,l,f=-1)=>{const s=st(i);s.s=l;s.f=f;show(i)},clr=i=>{st(i).s=null;show(i)};
 const typeIn=(i,x,g)=>new Promise(res=>{let n=0;const k=Math.max(1,Math.ceil(x.length/45)),tc=st(i).tc,iv=setInterval(()=>{if(g!==gen){clearInterval(iv);return res()}n=Math.min(x.length,n+k);draw(i,fmt(x,n,tc));if(n>=x.length){clearInterval(iv);res()}},32)});
-const sched=()=>{clearTimeout(tmr);tmr=setTimeout(turn,rnd(4500,8000))};
-async function turn(){
- const g=gen;if(!isO()||busy)return;busy=1;
+async function bubble(f,m,g){const s=st(f);s.s=null;s.t=m.x;s.tc=m.t;s.c='';await typeIn(f,m.x,g);if(g!==gen)return false;s.c=chipsP(m.files);show(f);return true}
+
+/* ===== PANGGILAN SERVER ===== */
+async function call(i,o){
+ if(!cfg.url)return null;const c=new AbortController(),to=setTimeout(()=>c.abort(),o.to||15000);ACT.add(c);
  try{
-  const I=ids(),last=LOG[LOG.length-1],seed=!last||(++cnt%6===0);
-  const f=last&&last.t>=0&&I.includes(last.t)&&Math.random()<.7?last.t:pick(I.filter(i=>!last||i!==last.f));
-  let t=-1;if(!seed)t=last&&last.f!==f&&Math.random()<.75?last.f:pick(I.filter(i=>i!==f));
-  const p=ask(f,t,seed);
-  if(seed){setS(f,'mencari sumber');await wait(1500)}else{setS(f,'membaca pesan',last&&last.f!==f?last.f:t);await wait(1100)}
-  if(g!==gen)return;setS(f,'menganalisis');await wait(rnd(1200,2000));if(g!==gen)return;
-  let x=await p;if(g!==gen)return;if(!x)x=local(f,t,seed);
-  setS(f,'mengetik');await wait(600+x.length*18);if(g!==gen)return;
-  const s=st(f);s.s=null;s.t=x;s.tc=t;await typeIn(f,x,g);if(g!==gen)return;
-  LOG.push({f,t,x});if(LOG.length>10)LOG.shift();
-  if(t>=0){setS(t,'membaca pesan',f);await wait(1300);if(g===gen)clr(t)}
- }finally{if(g===gen){busy=0;sched()}}}
+  if(o.rot)koff++;
+  const r=await fetch(cfg.url.replace(/\/$/,'')+'/chat',{method:'POST',headers:{'Content-Type':'application/json'},signal:c.signal,body:JSON.stringify({messages:[{role:'user',content:o.user}],image:null,image_gen:!!o.img,system:o.sys,now:new Date().toISOString(),tz:Intl.DateTimeFormat().resolvedOptions().timeZone,model:P.model||cfg.model,imgModel:cfg.img,mode:o.mode||'off',keys:keysFor(i)})});
+  if(!r.ok)throw 0;let fin;for(const l of(await r.text()).split('\n')){if(!l.trim())continue;try{const j=JSON.parse(l);if(!j.s)fin=j}catch{}}
+  if(!fin||fin.error||(!fin.text&&!fin.image))throw 0;return fin
+ }catch(e){return null}finally{clearTimeout(to);ACT.delete(c)}}
+const base=f=>cfg.bots[f].prompt+CRT+roleTxt(f)+memTxt(f)+`\n\n[Waktu] Sekarang ${nowTx()}. Pakai ini (jangan menebak) untuk soal tanggal/jam, dan sesuaikan suasana (mis. makan siang, ngantuk malam hari).`+workTx()+filesTx();
+const ctx=()=>LOG.filter(l=>l.f!==-2).slice(-8).map(l=>who(l.f)+': '+clip(l.full||'(berkas)',160)).join('\n');
+const sysA=(f,t,k)=>{const O=ids().filter(i=>i!==f).map(i=>`${nm(i)} (${roleName(i)})`).join(', ');
+ return base(f)+`\n\n[Situasi] Kamu ${nm(f)}, sedang ngobrol di grup bersama bot lain: ${O}. Kalian saling kenal, punya pekerjaan masing-masing, bebas membahas apa saja, dan boleh bercanda, adu pendapat, kesal ringan, atau kompak seperti teman sungguhan. Suasana hatimu: ${mood(f)}.${t>=0?' Hubunganmu sekarang: '+relTxt(f,t)+'.':''}\n[Tugas] ${INT[k](t,f)}\n[Format] Tulis SATU pesan chat pendek bahasa Indonesia yang natural (maks ${k==='user'?240:100} karakter), tanpa markdown/daftar/nomor sumber, boleh singkatan santai dan satu emoji sesekali. Jangan mengulang kalimat yang sudah ada di obrolan. Tak perlu menyebut dirimu AI. Tanpa kata kasar, tanpa menghina pribadi/SARA.`+(['kerja','berkas','user'].includes(k)?' Boleh berbagi berkas: [bagikan:nama berkas] untuk berkas yang sudah ada, atau [file:nama.ext]isi singkat[/file] bila kamu membuat catatan/kode kecil.':'')+(k==='user'?memAsk(f):'')};
+
+/* ===== OBROLAN BEBAS (ambient) ===== */
+const lastMsg=()=>{for(let i=LOG.length-1;i>=0;i--)if(LOG[i].f!==-2)return LOG[i];return null};
+const ROUTE=[['koding',/kode|coding|error|bug|script|html|python|javascript|\bjs\b|css|fungsi|program/i],['rangkum',/rangkum|ringkas|inti|poin/i],['belajar',/belajar|ajari|jelaskan|pelajari|kenapa|bagaimana cara/i],['riset',/cari|berita|terbaru|info|harga|data/i],['tulis',/tulis|caption|naskah|email|surat|artikel/i],['rencana',/rencana|jadwal|susun|target|prioritas/i],['kritik',/kritik|kelemahan|risiko|salahnya/i]];
+function routeUser(x,hit){if(hit!=null&&hit>=0)return hit;const I=ids();for(const[r,re]of ROUTE)if(re.test(x)){const c=I.filter(i=>cfg.role[i]===r);if(c.length)return pick(c)}return pick(I.filter(i=>i!==10).length?I.filter(i=>i!==10):I)}
+function plan(){
+ const I=ids(),last=lastMsg();
+ if(!last||(++cnt%6===0)){const f=pick(I.filter(i=>!last||i!==last.f));return{f,t:-1,intent:'info'}}
+ if(UQ){const um=LOG.slice().reverse().find(m=>m.f===-1&&m.k==='user'&&!m.ans);if(um){um.ans=1;return{f:routeUser(um.full,um.t),t:-1,intent:'user'}}UQ=0}
+ const files=FS.some(a=>a.shared<2),V=VIBE[P.vibe]||VIBE.seru;
+ if(last.t>=0&&I.includes(last.t)&&(last.k==='kesal')&&Math.random()<.85)return{f:last.t,t:last.f,intent:pick(['balaskesal','balaskesal','baikan'])};
+ const f=last.f>=0&&last.t>=0&&I.includes(last.t)&&Math.random()<.7?last.t:pick(I.filter(i=>i!==last.f)),t=last.f>=0&&Math.random()<.75?last.f:pick(I.filter(i=>i!==f)),r=rel(f,t);
+ let k=wpick({obrolan:24,receh:16*V.fun,bercanda:16*V.fun,kerja:14,kompak:10,kesal:(4+(r<0?-r*4:0))*V.spat,info:3,berkas:files?9:0,baikan:r<=-1?16:0});
+ return{f,t:(k==='receh'&&Math.random()<.6)||k==='info'?-1:t,intent:k}}
+async function amb(f,t,k){
+ if(Date.now()<mute||!cfg.url)return null;
+ const c=ctx(),r=await call(f,{sys:sysA(f,t,k),user:(c?'Obrolan sejauh ini:\n'+c+'\n\n':'')+'Tulis pesanmu sekarang.',mode:k==='info'?'on':k==='user'?'auto':'off',to:k==='info'?22000:k==='user'?25000:15000});
+ if(!r){if(++fails>=3){mute=Date.now()+300000;fails=0}return null}fails=0;return r}
+function build(f,t,k,r){const U=k==='user',tg=tags(eat(f,r.text||'',U?1:0),f);
+ const tt=U||t<0||k==='info'?-1:t,full=clean(tg.text,f,tt,tt<0,U?240:110);
+ if(k==='berkas'&&!tg.files.length){const a=FS.find(a=>a.shared<2)||FS[FS.length-1];if(a){a.shared++;tg.files.push(a)}}
+ if(!full&&!tg.files.length)return null;
+ return mkMsg(f,tt,full||'Ini berkasnya.',{k,files:tg.files,src:r.sources})}
+const GAP={'4.5-8':[4500,8000],'15-25':[15000,25000],'30-60':[30000,60000]};
+const sched=fast=>{clearTimeout(tmr);const g=GAP[P.gap]||GAP['4.5-8'],v=(VIBE[P.vibe]||VIBE.seru).gap;let d=rnd(g[0],g[1])*v;const q=Math.random();if(fast)d=rnd(900,1600);else if(q<.18)d=Math.max(1800,d*.35);else if(q>.92)d*=2.2;tmr=setTimeout(turn,d)};
+async function turn(){
+ const g=gen;if(!isO()||busy||TASK)return;const uq=UQ;
+ if(!uq&&(P.on===false||(P.max&&sent>=P.max)))return;busy=1;
+ try{
+  const{f,t,intent}=plan(),p=amb(f,t,intent),lm=lastMsg();
+  if(intent==='info'){setS(f,'mencari sumber');await wait(1500)}else if(intent==='user'){setS(f,'membaca pesanmu');await wait(900)}else{setS(f,'membaca pesan',t>=0?t:lm&&lm.f>=0?lm.f:-1);await wait(1100)}
+  if(g!==gen)return;setS(f,'menganalisis');await wait(rnd(900,1800));if(g!==gen)return;
+  const r=await p;if(g!==gen)return;
+  let m=r?build(f,t,intent,r):null;if(!m)m=localMsg(f,t,intent);
+  UQ=0;setS(f,'mengetik');await wait(500+m.x.length*16);if(g!==gen)return;
+  if(!await bubble(f,m,g))return;
+  push(m);sent++;decay();afterRel(f,m.t,intent);
+  if(m.t>=0){setS(m.t,'membaca pesan',f);await wait(1300);if(g===gen)clr(m.t)}
+ }finally{if(g===gen){busy=0;sched(UQ)}}}
+
+/* ===== RUANG BOT: obrolan lengkap, debat 3 bot, tim kerja, berkas ===== */
+const tm=ts=>new Date(ts).toLocaleTimeString('id-ID',{hour:'2-digit',minute:'2-digit'}).replace('.',':');
+const rsOpen=()=>{const e=$('#rs');return e&&!e.hidden};
+const NAMES=()=>cfg.bots.map(b=>escRe(esc(b.name))).join('|');
+const mentionize=h=>h.replace(new RegExp('@('+NAMES()+')(?![\\w])','g'),(m,n)=>{const i=cfg.bots.findIndex(b=>esc(b.name)===n);return i<0?m:`<b class="mn" style="color:${COL[i]}">@${n}</b>`});
+const chipsL=fl=>fl&&fl.length?`<div class="lf">${fl.map(f=>`<button class="fc" data-fid="${f.id}">${f.data?'🖼':'📎'} ${esc(f.name)}</button>`).join('')}</div>`:'';
+const srcL=s=>s&&s.length?`<div class="lsr">${s.slice(0,3).map(x=>{let h='';try{const u=new URL(x.url);if(!/^https?:$/.test(u.protocol))return'';h=u.hostname.replace(/^www\./,'')}catch{return''}return`<a href="${esc(x.url).replace(/"/g,'&quot;')}" target="_blank" rel="noopener">${esc(h)}</a>`}).join('')}</div>`:'';
+function logEl(m){const d=document.createElement('div');d.dataset.t=m.full||'';
+ if(m.f===-2){d.className='lm ls';d.textContent=m.full;return d}
+ if(m.f===-1){d.className='lm lu';d.innerHTML=`<div class="lb">${m.full?`<div class="lt">${md(m.full)}</div>`:''}${chipsL(m.files)}</div>`;return d}
+ const c=COL[m.f];d.className='lm';
+ d.innerHTML=`<i class="ld" style="background:${c}"></i><div class="lb"><div class="ln"><b style="color:${c}">${esc(nm(m.f))}</b><em>${esc(roleName(m.f))}</em>${m.tag?`<em class="tg">${esc(m.tag)}</em>`:''}<span>${tm(m.ts)}</span></div><div class="lt">${mentionize(md(m.full))}</div>${chipsL(m.files)}${srcL(m.src)}${m.big?'<div class="la"><button data-cp>⧉ Salin</button></div>':''}</div>`;return d}
+function logAdd(m){const l=$('#rl');if(!l)return;const e=l.querySelector('.lh');if(e)e.remove();const near=l.scrollHeight-l.scrollTop-l.clientHeight<140;l.appendChild(logEl(m));if(near||m.f===-1)l.scrollTop=l.scrollHeight}
+function push(m){m.ts=Date.now();LOG.push(m);if(LOG.length>80)LOG.shift();if(m.files&&m.files.length&&!rsOpen())$('#rb').classList.add('nw');logAdd(m)}
+function sysNote(t){const m={f:-2,full:t,ts:Date.now()};LOG.push(m);logAdd(m)}
+function renderLog(){const l=$('#rl');l.innerHTML='';if(!LOG.length)l.innerHTML='<div class="lh">Obrolan para bot muncul di sini.<br>Ketik sesuatu untuk ikut ngobrol. Beri sebuah topik, lalu pilih <b>Debat 3 bot</b> atau <b>Tim kerja</b>.</div>';LOG.forEach(m=>l.appendChild(logEl(m)));l.scrollTop=l.scrollHeight}
+function ui(){const t=$('#rt'),b=$('#rsd'),has=t.value.trim().length>1;b.textContent=TASK?'■':'↑';t.placeholder=TASK?'Tugas sedang berjalan…':'Ketik ke para bot…';t.disabled=!!TASK;$('#rm').hidden=!has||!!TASK;if(TASK)$('#rc').hidden=true}
+function userSay(x){x=x.trim();if(!x)return;const I=ids(),hit=I.find(i=>{const f=escRe(nm(i)),sh=escRe(nm(i).replace(/^Bot\s+/i,''));return new RegExp('(?:@(?:'+f+'|'+sh+')|(?:^|\\W)'+f+')(?![\\w])','i').test(x)});
+ push({f:-1,t:hit==null?-1:hit,full:x,files:[],k:'user'});UQ=1;sent=0;clearTimeout(tmr);sched(1)}
+function beginTask(title,topic){TASK={fails:0};tgen++;gen++;clearTimeout(tmr);busy=0;ids().forEach(clr);LASTTASK=topic;sysNote(title);ui()}
+function endTask(){TASK=null;ui();if(isO())sched()}
+function stopTask(){if(!TASK)return;tgen++;ACT.forEach(c=>c.abort());ids().forEach(clr);sysNote('⏹ Dihentikan');endTask()}
+async function genImg(f,d){const r=await call(f,{sys:'Buat gambar sesuai deskripsi pengguna.',user:d,img:1,to:60000});return r&&r.image?addFile('gambar.png','',f,r.image):null}
+async function speak(f,sys,user,o){
+ const g=tgen;setS(f,o.status||'berpikir');
+ let r=await call(f,{sys,user,mode:o.mode,to:50000});if(!r&&g===tgen)r=await call(f,{sys,user,mode:o.mode,to:50000,rot:1});
+ if(g!==tgen)return null;let m;
+ if(!r){TASK.fails++;m=mkMsg(f,-1,'(lagi nggak bisa menjawab: server sibuk atau key bermasalah)',{tag:o.tag,k:'err'})}
+ else{const tg=tags(eat(f,r.text||'',0),f);if(o.img)for(const d of tg.imgs.slice(0,1)){setS(f,'membuat gambar');const im=await genImg(f,d);if(g!==tgen)return null;if(im){im.shared++;tg.files.push(im)}}
+  m=mkMsg(f,-1,tg.text||(tg.files.length?'Berkas terlampir.':'…'),{tag:o.tag,files:tg.files,src:r.sources,big:o.big,k:'task'});m.x=clip(plainOf(tg.text||'Berkas terlampir.'),100)}
+ if(g!==tgen)return null;
+ const gg=gen;await bubble(f,m,gg);if(g!==tgen)return null;push(m);await wait(900);clr(f);return g===tgen?m:null}
+const fileCtx=fl=>fl.map(f=>f.text?`\n[Isi berkas ${f.name}]\n${f.text.slice(0,1500)}`:`\n[Berkas gambar ${f.name}]`).join('');
+async function runDebate(topic,{pro,con,judge}){
+ beginTask(`🎭 Debat: “${clip(topic,110)}” — ${nm(pro)} (pro) lawan ${nm(con)} (kontra), ${nm(judge)} menyimpulkan`,topic);const g=tgen,tr=[];
+ try{
+  for(const[f,tg,rd]of[[pro,'PRO',1],[con,'KONTRA',1],[pro,'PRO',2],[con,'KONTRA',2]]){
+   if(g!==tgen||TASK.fails>1)return;
+   const sys=base(f)+`\n\n[Debat] Topik: ${topic}\nPosisimu: ${tg==='PRO'?'MENDUKUNG':'MENENTANG'} (${tg}). Debat ronde ${rd} dari 2. ${rd==1?'Sampaikan argumen utamamu.':'Bantah argumen lawan secara langsung dan perkuat posisimu.'} Tetap dalam karakter dan kepribadianmu, konkret, boleh memakai info terbaru bila relevan. 2-4 kalimat, maks 380 karakter, tanpa markdown berat, jangan netral.`;
+   const m=await speak(f,sys,tr.length?'Jalannya debat:\n'+tr.join('\n')+'\n\nSekarang giliranmu.':'Kamu pembicara pertama.',{mode:rd==1&&tg==='PRO'?'auto':'off',tag:`${tg} · ronde ${rd}`,status:'menyusun argumen'});
+   if(!m)return;tr.push(`${nm(f)} (${tg}): ${m.full}`)}
+  if(g!==tgen||TASK.fails>1)return;
+  const sys=base(judge)+`\n\n[Penyimpul debat] Topik: ${topic}\nKamu bukan salah satu pembicara; kamu penengah. Rangkum argumen terkuat tiap pihak, beri kesimpulan jelas (siapa lebih meyakinkan dan kenapa, atau jalan tengah), lalu satu saran tindakan. Maks 600 karakter, bahasa santai tapi rapi.`;
+  await speak(judge,sys,'Jalannya debat:\n'+tr.join('\n'),{mode:'off',tag:'KESIMPULAN',status:'menimbang kesimpulan',big:1})
+ }finally{if(g===tgen)endTask()}}
+async function runTeam(topic,{members,judge}){
+ const names=members.map(nm).join(' → ');beginTask(`🛠 Tim kerja: “${clip(topic,110)}” — ${names}, lalu ${nm(judge)} menyimpulkan`,topic);const g=tgen,outs=[],img=/gambar|logo|ilustrasi|poster|foto|image/i.test(topic);
+ try{
+  for(let k=0;k<members.length;k++){
+   if(g!==tgen||TASK.fails>1)return;const f=members[k];
+   const sys=base(f)+`\n\n[Tim kerja] Tugas dari pengguna: ${topic}\nUrutan tim: ${names}, lalu ${nm(judge)} menyimpulkan. Kamu urutan ke-${k+1} sebagai ${roleName(f)}. ${k?'Lanjutkan dan perbaiki hasil rekan sebelumnya; jangan mengulang yang sudah benar.':'Kamu yang memulai.'} Kerjakan HANYA bagianmu sesuai spesialisasi, konkret dan siap pakai (maks 600 karakter di teks). Bila menghasilkan berkas (kode, catatan, tabel, naskah) tulis isinya dalam [file:nama.ext]isi[/file] (isi berkas boleh panjang) dan sebut singkat di teks.${img?' Bila perlu gambar, tulis [gambar: deskripsi gambar].':''} Bila perlu info terbaru, gunakan hasil pencarian.`;
+   const m=await speak(f,sys,outs.length?'Hasil rekan sebelumnya:\n'+outs.join('\n---\n'):'Belum ada hasil sebelumnya; mulai dari awal.',{mode:'auto',tag:`Tahap ${k+1} · ${roleName(f)}`,status:'mengerjakan bagiannya',img});
+   if(!m)return;outs.push(`${nm(f)} (${roleName(f)}): ${m.full}${fileCtx(m.files)}`)}
+  if(g!==tgen||TASK.fails>1)return;
+  const sys=base(judge)+`\n\n[Penyimpul tim] Tugas dari pengguna: ${topic}\nKamu menyatukan kerja tim. Tulis jawaban akhir yang utuh dan rapi untuk pengguna (maks 800 karakter), sebut singkat siapa mengerjakan apa, dan tandai bagian yang belum beres. Bagikan berkas penting dengan [bagikan:nama berkas].`;
+  await speak(judge,sys,'Hasil kerja tim:\n'+outs.join('\n---\n')+'\n\nBerkas tersedia: '+(FS.slice(-6).map(f=>f.name).join(', ')||'(tidak ada)'),{mode:'off',tag:'KESIMPULAN',status:'menyatukan hasil tim',big:1})
+ }finally{if(g===tgen)endTask()}}
+
+/* kartu pengaturan debat / tim */
+function optsB(sel){return ids().map(i=>`<option value="${i}"${i==sel?' selected':''}>${esc(nm(i))} · ${esc(roleName(i))}</option>`).join('')}
+function openCfg(kind){const topic=$('#rt').value.trim();if(!topic||TASK)return;const I=ids(),nonE=I.filter(i=>i!==10),kr=nonE.find(i=>cfg.role[i]==='kritik'),c=$('#rc');c.hidden=false;c.dataset.k='c';
+ if(kind==='debat'){const pro=pick(nonE.filter(i=>i!==kr)),con=kr!=null&&kr!==pro?kr:pick(nonE.filter(i=>i!==pro));
+  c.innerHTML=`<b>🎭 Debat 3 bot</b><p>Dua bot beda pendapat, satu bot menyimpulkan.<br>Topik: ${esc(clip(topic,140))}</p><label>Pro</label><select id="dp">${optsB(pro)}</select><label>Kontra</label><select id="dk">${optsB(con)}</select><label>Penyimpul</label><select id="dj">${optsB(10)}</select><div class="cr"><button id="cgo">Mulai debat</button><button id="cno">Batal</button></div><p class="ce" id="cer"></p>`;
+  $('#cgo').onclick=()=>{const p=+$('#dp').value,k=+$('#dk').value,j=+$('#dj').value;if(new Set([p,k,j]).size<3)return $('#cer').textContent='Pilih tiga bot yang berbeda.';c.hidden=true;$('#rt').value='';$('#rt').style.height='auto';runDebate(topic,{pro:p,con:k,judge:j})}}
+ else{let sel=nonE.filter(i=>cfg.role[i]!=='umum').slice(0,4);if(!sel.length)sel=nonE.slice(0,3);
+  const draw2=()=>{c.querySelector('.tp').innerHTML=nonE.map(i=>{const o=sel.indexOf(i);return`<button class="pl${o>=0?' on':''}" data-b="${i}"><i style="background:${COL[i]}"></i>${esc(nm(i))} · ${esc(roleName(i))}${o>=0?`<em>${o+1}</em>`:''}</button>`}).join('')};
+  c.innerHTML=`<b>🛠 Tim kerja</b><p>Bot yang dipilih bekerja berurutan (sesuai urutan ketukan), lalu penyimpul merangkum.<br>Tugas: ${esc(clip(topic,140))}</p><div class="tp"></div><label>Penyimpul</label><select id="dj">${optsB(10)}</select><div class="cr"><button id="cgo">Mulai kerja</button><button id="cno">Batal</button></div><p class="ce" id="cer"></p>`;draw2();
+  c.querySelector('.tp').onclick=e=>{const b=e.target.closest('[data-b]');if(!b)return;const i=+b.dataset.b,o=sel.indexOf(i);if(o>=0)sel.splice(o,1);else if(sel.length<5)sel.push(i);draw2()};
+  $('#cgo').onclick=()=>{const j=+$('#dj').value,m=sel.filter(i=>i!==j);if(!m.length)return $('#cer').textContent='Pilih minimal satu bot pekerja (selain penyimpul).';c.hidden=true;$('#rt').value='';$('#rt').style.height='auto';runTeam(topic,{members:m,judge:j})}}
+ $('#cno').onclick=()=>{c.hidden=true}}
+function openFiles(){const c=$('#rc');if(!c.hidden&&c.dataset.k==='f'){c.hidden=true;return}c.dataset.k='f';c.hidden=false;
+ c.innerHTML=`<b>📎 Berkas bersama</b><p>Berkas yang dibawa pengguna atau dibuat para bot. Para bot tahu isinya dan bisa membagikannya sendiri.</p>${FS.length?FS.slice().reverse().map(f=>`<button class="fi" data-fid="${f.id}">${f.data?'🖼':'📎'} <span>${esc(f.name)}</span><em>${f.by<0?'kamu':esc(nm(f.by))}</em></button>`).join(''):'<p class="ce">Belum ada berkas.</p>'}<div class="cr"><button id="rfa">+ Tambah berkas</button><button id="cno">Tutup</button></div>`;
+ $('#rfa').onclick=()=>$('#rfi').click();$('#cno').onclick=()=>{c.hidden=true}}
+function openFile(id){const f=FS.find(a=>a.id===id);if(!f)return;const v=$('#fv');v.hidden=false;
+ v.innerHTML=`<div class="rh"><button id="fvx">← Tutup</button><b>${esc(f.name)}</b><span>${f.text?'<button id="fvc">Salin</button> ':''}<button id="fvd">Unduh</button></span></div><div class="fvb">${f.data?`<img src="${f.data}" alt="">`:`<pre>${esc(f.text.slice(0,60000))}</pre>`}</div>`;
+ $('#fvx').onclick=()=>{v.hidden=true};if(f.text)$('#fvc').onclick=async e=>{const a=e.target,o=a.textContent;a.textContent=await cpy(f.text)?'✓':'✗';setTimeout(()=>a.textContent=o,1200)};
+ $('#fvd').onclick=()=>{const a=document.createElement('a');a.href=f.data||URL.createObjectURL(new Blob([f.text],{type:(EXT[extOf(f.name)]||'text/plain')+';charset=utf-8'}));a.download=f.name;document.body.appendChild(a);a.click();a.remove();if(a.href.startsWith('blob:'))setTimeout(()=>URL.revokeObjectURL(a.href),4000)}}
+function openRS(){$('#rs').hidden=false;$('#rb').classList.remove('nw');renderLog();ui()}
+function mountUI(){
+ const rb=document.createElement('button');rb.className='mi';rb.id='rb';rb.setAttribute('aria-label','Ruang bot');rb.innerHTML='<span style="font-size:26px;width:36px;text-align:center">💬</span>';
+ const s=$('#st'),w=document.createElement('div');w.id='pt';s.parentNode.insertBefore(w,s);w.append(rb,s);
+ document.body.insertAdjacentHTML('beforeend',`<div id="rs" hidden><div class="rh"><button id="rx">← Kembali</button><b>Ruang Bot</b><button id="rf" aria-label="Berkas bersama">📎 Berkas</button></div><div id="rl"></div><div id="rc" hidden></div><div id="rm" hidden><button data-m="debat">🎭 Debat 3 bot</button><button data-m="tim">🛠 Tim kerja</button></div><div id="rcmp"><button id="ra" aria-label="Tambah berkas">+</button><textarea id="rt" rows="1" placeholder="Ketik ke para bot…"></textarea><button id="rsd">↑</button></div><input type="file" id="rfi" hidden accept="image/*,.txt,.md,.csv,.json,.js,.html,.css,.py,.xml,.log,.sql,.sh,.ts,.yaml,.yml"></div><div id="fv" hidden></div>`);
+ rb.onclick=openRS;$('#rx').onclick=()=>{$('#rs').hidden=true;$('#fv').hidden=true};$('#rf').onclick=openFiles;$('#ra').onclick=()=>$('#rfi').click();
+ $('#rfi').onchange=e=>{const f=e.target.files[0];e.target.value='';if(f)ingest(f,-1,1)};
+ const t=$('#rt');t.oninput=()=>{t.style.height='auto';t.style.height=Math.min(t.scrollHeight,120)+'px';ui()};
+ const go=()=>{if(TASK){stopTask();return}const x=t.value;if(!x.trim())return;t.value='';t.style.height='auto';$('#rc').hidden=true;userSay(x);ui()};
+ $('#rsd').onclick=go;
+ $('#rm').onclick=e=>{const b=e.target.closest('[data-m]');if(b)openCfg(b.dataset.m)};
+ $('#rl').onclick=async e=>{const c=e.target.closest('[data-fid]');if(c)return openFile(c.dataset.fid);const k=e.target.closest('[data-cp]');if(k){const o=k.textContent;k.textContent=await cpy(plain(k.closest('.lm').dataset.t))?'✓ Tersalin':'✗';setTimeout(()=>k.textContent=o,1300)}};
+ $('#rc').onclick=e=>{const c=e.target.closest('[data-fid]');if(c)openFile(c.dataset.fid)};
+ /* ketuk berkas di gelembung panel */
+ $('#bl').addEventListener('click',e=>{const c=e.target.closest('.fc');if(!c)return;e.stopPropagation();e.preventDefault();$('#rs').hidden=false;$('#rb').classList.remove('nw');renderLog();ui();openFile(c.dataset.fid)},true);
+ /* berkas yang dilampirkan di chat utama ikut dikenal para bot */
+ ['#fi','#fc'].forEach(q=>$(q).addEventListener('change',e=>{const f=e.target.files&&e.target.files[0];if(f)ingest(f,-1,0)},true))}
+mountUI();
+
+/* ===== PENGATURAN (dipanggil dari settings()) ===== */
+const sl=(id,arr,v)=>`<select id="${id}">${arr.map(a=>`<option value="${a[0]}"${String(a[0])==String(v)?' selected':''}>${a[1]}</option>`).join('')}</select>`;
+const memRows=i=>memList(i).length?memList(i).map((m,j)=>`<div class="mr"><span>${esc(m.t)}</span><button data-md="${i}:${j}" aria-label="Hapus">✕</button></div>`).join(''):'<div class="mr"><span style="opacity:.6">Belum ada ingatan.</span></div>';
+const PX=window.PX={
+ sys:(i,main)=>roleTxt(i)+memTxt(i)+memAsk(i)+(main&&LOG.length?'\n\n[Obrolan terakhir di panel bot] '+LOG.filter(l=>l.f!==-2).slice(-3).map(l=>who(l.f)+': '+clip(l.full||'(berkas)',100)).join(' | ')+'\nKalau relevan, boleh nyambung dengan obrolan itu.':''),
+ eat:(i,t)=>eat(i,t),
+ panelHTML:(opt,hint)=>`<h3>Bot panel (obrolan antar-bot)</h3><p style="${hint}">Obrolan di panel samping, dan Ruang Bot lewat ikon 💬 di panel.</p>
+ ${sl('p_on',[[1,'Hidup'],[0,'Mati']],P.on===false?0:1)}
+ <h3>Akses API key bot</h3><p style="${hint}">Otomatis = pakai key chat utama (kolom di atas); kalau kosong, key bawaan server. Manual = key khusus bot panel; isi beberapa key (pisah koma) supaya digilir antar bot.</p>
+ ${sl('p_km',[['auto','Otomatis'],['manual','Manual']],P.kmode)}
+ <div id="pkm"${P.kmode==='manual'?'':' hidden'}><input type="password" id="pk_gemini" placeholder="key gemini khusus bot (boleh banyak, pisah koma)" value="${esc(P.keys.gemini||'')}"><input type="password" id="pk_groq" placeholder="key groq khusus bot (boleh banyak, pisah koma)" value="${esc(P.keys.groq||'')}"></div>
+ <select id="p_model"><option value="">Model: sama dengan chat utama</option>${MODELS.map(m=>opt(m,P.model)).join('')}</select>
+ ${sl('p_gap',[['4.5-8','Jeda pesan: 4-8 detik (cepat, boros)'],['15-25','Jeda pesan: 15-25 detik'],['30-60','Jeda pesan: 30-60 detik (hemat)']],P.gap)}
+ ${sl('p_max',[[0,'Tanpa batas pesan'],[5,'Berhenti setelah 5 pesan'],[10,'Berhenti setelah 10 pesan'],[20,'Berhenti setelah 20 pesan']],P.max)}
+ ${sl('p_vibe',[['tenang','Suasana bot: tenang'],['seru','Suasana bot: seru'],['ramai','Suasana bot: ramai']],P.vibe)}
+ ${sl('p_know',[[1,'Bot tahu pekerjaanmu di chat utama'],[0,'Bot tidak lihat chat utama']],P.know?1:0)}
+ <h3>Spesialis & ingatan per bot</h3><p style="${hint}">Tentukan bot mana berperan apa. Ingatan: bot mencatat hal penting tentangmu (disimpan di browser ini saja) dan bisa dihidupkan/dimatikan per bot.</p>
+ ${ids().map(i=>`<div class="bo bx"><div style="display:flex;gap:10px;align-items:center"><div style="width:18px;flex:none">${bot(COL[i])}</div><b style="flex:1;font-weight:600">${esc(nm(i))}</b><label class="sw"><input type="checkbox" id="m${i}"${cfg.memOn[i]?' checked':''}><i></i><span>Ingatan</span></label></div>${sl('r'+i,Object.entries(ROLES).map(([k,v])=>[k,v[0]]),cfg.role[i])}<div class="mx"><span id="mc${i}">${memList(i).length} ingatan</span><span><button data-mv="${i}">Lihat</button> <button data-mc="${i}">Hapus semua</button></span></div><div id="mv${i}" hidden></div></div>`).join('')}`,
+ wire:()=>{$('#p_km').onchange=e=>{$('#pkm').hidden=e.target.value!=='manual'}},
+ read:()=>{P.kmode=$('#p_km').value;P.vibe=$('#p_vibe').value;P.know=$('#p_know').value=='1';ids().forEach(i=>{cfg.role[i]=$('#r'+i).value;cfg.memOn[i]=$('#m'+i).checked})}};
+$('#sm').addEventListener('click',e=>{const v=e.target.closest('[data-mv]'),d=e.target.closest('[data-md]'),a=e.target.closest('[data-mc]');
+   const ref=i=>{$('#mc'+i).textContent=memList(i).length+' ingatan';$('#mv'+i).innerHTML=memRows(i)};
+   if(v){const i=v.dataset.mv,b=$('#mv'+i);b.hidden=!b.hidden;if(!b.hidden)b.innerHTML=memRows(i)}
+   if(d){const[i,j]=d.dataset.md.split(':').map(Number);memList(i).splice(j,1);save();ref(i)}
+   if(a){const i=+a.dataset.mc;if(!memList(i).length||!confirm('Hapus semua ingatan '+nm(i)+'?'))return;cfg.mem[i]=[];save();ref(i)}});
+
+/* ===== MULAI ===== */
 const inject=()=>{document.querySelectorAll('#bl .bi').forEach(b=>{if(!b.querySelector('.cb'))b.insertAdjacentHTML('beforeend','<i class="cb"><em class="ct"></em></i>')});ids().forEach(show)};
 const _rb=renderBots;renderBots=function(){_rb.apply(this,arguments);inject()};
-{const q=TP.slice().sort(()=>Math.random()-.5);ids().forEach((i,j)=>{const [k,f]=q[j%q.length];st(i).t=clip(k[0].toUpperCase()+k.slice(1)+': '+f)})}inject();
-const sync=()=>{if(isO()){if(!on){on=1;gen++;busy=0;clearTimeout(tmr);tmr=setTimeout(turn,1000)}}else if(on){on=0;gen++;busy=0;clearTimeout(tmr);ids().forEach(clr)}};
+{const q=TP.slice().sort(()=>Math.random()-.5);ids().forEach((i,j)=>{const[k,f]=q[j%q.length];st(i).t=clip(k[0].toUpperCase()+k.slice(1)+': '+f)})}inject();
+const sync=()=>{if(isO()){if(!on){on=1;sent=0;gen++;busy=0;clearTimeout(tmr);tmr=setTimeout(turn,1000)}}else if(on){on=0;gen++;busy=0;clearTimeout(tmr);ids().forEach(clr)}};
 new MutationObserver(sync).observe(document.body,{attributes:true,attributeFilter:['class']});sync();
 })();
 </script>
@@ -790,5 +1033,82 @@ new MutationObserver(sync).observe(document.body,{attributes:true,attributeFilte
 /* v24: teks EdhyX dihapus (ruang tetap), logo EDHYX di tengah area kanan tombol = */
 #pn .u{visibility:hidden}
 #pn::before{content:"";position:absolute;pointer-events:none;width:97.6px;height:28.2px;top:calc(env(safe-area-inset-top,0px) + 46.5px);left:calc(60px + (62vw - 60px)/2 - 48.8px);background:url(data:image/png;base64,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) center/contain no-repeat}
+</style>
+<style>
+/* v25: Ruang Bot, berkas, pengaturan spesialis & ingatan */
+#pt{display:flex;align-items:center;gap:2px;align-self:flex-start}
+#pt .mi{padding-left:0;padding-right:8px}
+#rb{position:relative}#rb span{font-size:26px}
+#rb.nw::after{content:"";position:absolute;top:8px;right:4px;width:10px;height:10px;border-radius:50%;background:#30d158;box-shadow:0 0 0 2px #000}
+.bi .cb.hf .ct{-webkit-line-clamp:4}
+.bi .fc{display:inline-block;margin:3px 0 0;padding:1px 8px;border-radius:10px;background:#2a2a2e;font-size:10.5px;color:#cfe3ff;cursor:pointer}
+#rs,#fv{position:fixed;left:0;right:0;top:var(--vt,0px);height:var(--vh,100dvh);background:#000;display:flex;flex-direction:column;padding-top:env(safe-area-inset-top)}
+#rs{z-index:10}#fv{z-index:12}
+#rs[hidden],#fv[hidden]{display:none}
+.rh{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:12px 16px;border-bottom:1px solid #1c1c1e;flex:none}
+.rh b{font-size:17px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
+.rh button{font-size:16px;color:#6ab0ff;white-space:nowrap}
+#rl{flex:1;overflow:auto;overscroll-behavior:contain;padding:14px 16px 8px}
+.lh{margin:30px 12px;text-align:center;color:#8e8e93;font-size:14.5px;line-height:1.6}
+.lm{display:flex;gap:10px;margin:0 0 15px;align-items:flex-start}
+.ld{width:28px;height:28px;border-radius:50%;flex:none;margin-top:2px}
+.lb{min-width:0;flex:1}
+.ln{display:flex;align-items:center;flex-wrap:wrap;gap:6px 8px;font-size:13px;margin-bottom:3px}
+.ln b{font-weight:600}
+.ln em{font-style:normal;font-size:11px;padding:1px 8px;border-radius:9px;background:#1f1f23;color:#a9a9b0}
+.ln em.tg{background:#2a2f3a;color:#bcd4ff}
+.ln span{color:#8e8e93;font-size:12px}
+.lt{font-size:15px;line-height:1.5;overflow-wrap:anywhere;color:#f2f2f5}
+.lt pre{background:#111;padding:10px;border-radius:10px;overflow:auto;font-size:12.5px}
+.lt code{background:#1a1a1a;padding:1px 5px;border-radius:5px}
+.lt .mn{font-weight:600}
+.lm.lu{justify-content:flex-end}
+.lu .lb{flex:none;max-width:84%;background:#1c1c1e;border-radius:20px;padding:10px 15px}
+.lm.ls{justify-content:center;color:#8e8e93;font-size:13px;text-align:center;margin:8px 8px 18px;line-height:1.5}
+.lf{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}
+.lf .fc,.fi{display:inline-flex;align-items:center;gap:6px;background:#1c1c1e;border:1px solid #2f3336;border-radius:14px;padding:6px 11px;font-size:13px;color:#e9e9ec;max-width:100%}
+.lsr{margin-top:7px;display:flex;flex-wrap:wrap;gap:6px}
+.lsr a{font-size:11.5px;color:#8ab4ff;text-decoration:none;background:#111;border-radius:10px;padding:3px 9px}
+.la{margin-top:6px}.la button{font-size:13px;color:#8e8e93}
+#rc{flex:none;margin:0 12px 8px;background:#18181a;border-radius:18px;padding:14px;max-height:50dvh;overflow:auto}
+#rc[hidden],#rm[hidden]{display:none}
+#rc b{font-size:15.5px}
+#rc p{margin:6px 0 10px;font-size:13px;line-height:1.45;color:#a9a9b0}
+#rc label{display:block;font-size:12px;color:#8e8e93;margin:8px 0 2px;text-transform:uppercase}
+#rc select{width:100%;background:#111;border:1px solid #2f3336;border-radius:12px;color:#fff;font:16px inherit;padding:10px}
+#rc .ce{color:#ff8a80;margin:8px 0 0;min-height:0}
+#rc .ce:empty{display:none}
+.cr{display:flex;gap:10px;margin-top:12px;position:sticky;bottom:-14px;padding:8px 0 2px;background:#18181a}
+.cr button{flex:1;padding:11px;border-radius:14px;background:#26262a;font-size:15px}
+.cr button:first-child{background:#fff;color:#000;font-weight:600}
+.tp{display:flex;flex-wrap:wrap;gap:8px}
+.pl{display:inline-flex;align-items:center;gap:7px;padding:7px 12px;border-radius:16px;background:#111;border:1px solid #2f3336;font-size:13px;color:#d6d6da}
+.pl i{width:10px;height:10px;border-radius:50%;flex:none}
+.pl.on{border-color:#6ab0ff;background:#16202e;color:#fff}
+.pl em{font-style:normal;font-size:11px;min-width:17px;height:17px;border-radius:9px;background:#6ab0ff;color:#000;display:grid;place-items:center;font-weight:700}
+.fi{width:100%;margin:6px 0 0;justify-content:flex-start}
+.fi span{flex:1;min-width:0;text-align:left;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.fi em{font-style:normal;font-size:11px;color:#8e8e93}
+#rm{flex:none;display:flex;gap:8px;padding:0 12px 8px;overflow-x:auto}
+#rm button{flex:none;height:40px;padding:0 16px;border-radius:20px;background:#1c1c1e;border:1px solid #2f3336;font-size:14.5px}
+#rcmp{flex:none;display:flex;align-items:flex-end;gap:10px;margin:0 12px calc(env(safe-area-inset-bottom) + 10px);background:#0b0b0b;border:1px solid #2b2b2b;border-radius:28px;padding:8px}
+#rcmp #ra,#rcmp #rsd{width:40px;height:40px;border-radius:50%;flex:none;display:grid;place-items:center;font-size:22px}
+#rcmp #ra{border:1px solid #333}#rcmp #rsd{background:#151515}
+#rt{flex:1;background:none;border:0;outline:0;color:#fff;font:inherit;font-size:16px;resize:none;max-height:120px;padding:9px 0;touch-action:manipulation}
+.fvb{flex:1;overflow:auto;padding:14px 16px calc(env(safe-area-inset-bottom) + 20px)}
+.fvb pre{margin:0;white-space:pre-wrap;overflow-wrap:anywhere;font-size:13px;line-height:1.5;color:#e9e9ec}
+.fvb img{max-width:100%;border-radius:14px;display:block}
+/* pengaturan */
+#sm .bx select{margin-top:8px}
+.sw{position:relative;display:inline-flex;align-items:center;gap:8px;font-size:14px;color:#d6d6da;cursor:pointer}
+#sm .sw input{position:absolute;opacity:0;width:0;height:0;margin:0;padding:0;border:0}
+.sw i{width:40px;height:24px;border-radius:12px;background:#3a3a3e;position:relative;transition:background .2s;flex:none;order:2}
+.sw i::after{content:"";position:absolute;top:3px;left:3px;width:18px;height:18px;border-radius:50%;background:#fff;transition:transform .2s}
+.sw input:checked+i{background:#30d158}.sw input:checked+i::after{transform:translateX(16px)}
+.mx{display:flex;align-items:center;justify-content:space-between;margin-top:8px;font-size:13px;color:#8e8e93}
+.mx button{color:#6ab0ff;font-size:13px;margin-left:10px}
+.mr{display:flex;align-items:flex-start;gap:10px;justify-content:space-between;font-size:13.5px;padding:7px 0;border-top:1px solid #26262a;color:#e2e2e6}
+.mr button{color:#ff8a80;padding:0 4px}
+#pkm[hidden]{display:none}
 </style>
 </body></html>
