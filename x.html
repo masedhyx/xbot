@@ -299,16 +299,28 @@ async function send(){
   if(buf.trim()){const j=JSON.parse(buf);if(!j.s)fin=j}
  }catch(e){fin=e.name=='AbortError'?{text:'(dihentikan)'}:{error:'Tidak bisa terhubung ke server: '+e.message}}
  if(fin&&!fin.error){stage('write');
-  const box=add(`<div class="bm"><div class="bt"></div></div>`),bt=box.querySelector('.bt'),tx=window.PX?PX.eat(cur,fin.text||''):(fin.text||''),step=Math.max(2,Math.ceil(tx.length/160));
+  const box=add(`<div class="bm"><div class="bt"></div></div>`);const bt=box.querySelector('.bt'),tx=window.PX?PX.eat(cur,fin.text||''):(fin.text||''),step=Math.max(2,Math.ceil(tx.length/160));
   if(fin.image)bt.innerHTML=`<img src="${fin.image}">`;
   const tt=document.createElement('div');bt.appendChild(tt);
-  for(let i=0;i<=tx.length&&!stp;i+=step){tt.innerHTML=md(tx.slice(0,i),1);sb();await sleep(18)}
+  const CH=[],FD=520,fade=()=>{const now=performance.now();while(CH.length&&now-CH[0].t>FD)CH.shift();if(!CH.length)return;
+   const w=document.createTreeWalker(tt,NodeFilter.SHOW_TEXT),L=[];let n;while(n=w.nextNode())L.push(n);let off=0;
+   for(const nd of L){const len=nd.nodeValue.length,end=off+len;
+    if(!(nd.parentElement&&nd.parentElement.closest('pre,table'))){let cur=nd,used=0;
+     for(const c of CH){const a=Math.max(c.s,off),b=Math.min(c.e,end);if(b<=a)continue;
+      if(a-off>used){cur=cur.splitText(a-off-used);used=a-off}
+      const rest=b-a<cur.nodeValue.length?cur.splitText(b-a):null;
+      const sp=document.createElement('span');sp.className='fw';sp.style.animationDelay=-(now-c.t)+'ms';cur.replaceWith(sp);sp.appendChild(cur);
+      used+=b-a;cur=rest;if(!cur)break}}
+    off=end}};
+  let sh=0;for(let i=0;i<=tx.length&&!stp;i+=step){tt.innerHTML=md(tx.slice(0,i),1);const tl=tt.textContent.length;if(tl>sh){CH.push({s:sh,e:tl,t:performance.now()});sh=tl}fade();sb();await sleep(18)}
+  if(!stp&&CH.length)await sleep(FD);
   tt.innerHTML=md(tx);
   if(fin.sources?.length)box.insertAdjacentHTML('beforeend',`<div class="src">Sumber</div>${fin.sources.map(x=>{let h='';try{h=new URL(x.url).hostname.replace(/^www\./,'')}catch{}return `<a class="sc" href="${esc(x.url)}" target="_blank" rel="noopener"><img src="https://www.google.com/s2/favicons?domain=${encodeURIComponent(h)}&sz=64" alt="" onerror="this.style.visibility='hidden'"><div><b>${esc(x.title||h||x.url)}</b><span>${esc(h)}</span></div></a>`}).join('')}`);
   box.insertAdjacentHTML('beforeend',`<div class="ac"><button data-a="c">⧉</button><button data-a="s">🔊</button><button data-a="l">👍</button><button data-a="h">↗</button></div>`);
-  box.dataset.t=tx;hist.push({role:'assistant',content:tx||'[gambar]'});eb.set('done');if(!stp)await sleep(900);
+  box.dataset.t=tx;hist.push({role:'assistant',content:tx||'[gambar]'});eb.set('done');
  }else if(fin?.error)add(`<div class="bt err">⚠️ ${esc(fin.error)}</div>`);
- st.remove();busy=false;$('#sd').textContent='↑';delete $('#sd').dataset.b;sb()}
+ stOut(st,fin&&!fin.error);busy=false;$('#sd').textContent='↑';delete $('#sd').dataset.b;sb()}
+const stOut=(s,keep)=>{if(!s||!s.isConnected)return;if(keep){const sp=s.querySelector('span'),sv=s.querySelector('svg');if(sp){const t0=performance.now(),f=n=>{const u=Math.min(1,(n-t0)/260);sp.style.opacity=String(1-u*u*(3-2*u));if(u<1)requestAnimationFrame(f)};requestAnimationFrame(f)}if(sv)sv.replaceWith(sv.cloneNode(true));s.style.pointerEvents='none';return}const h=s.offsetHeight,m=getComputedStyle(s);s.style.cssText+=';box-sizing:border-box;overflow:hidden;pointer-events:none;height:'+h+'px;margin-top:'+m.marginTop+';margin-bottom:'+m.marginBottom;void s.offsetHeight;s.style.transition='height .24s ease,margin .24s ease,opacity .16s ease';s.style.height='0';s.style.marginTop='0';s.style.marginBottom='0';s.style.opacity='0';setTimeout(()=>s.remove(),300)};
 const plain=t=>CITS(t).replace(/\[\/?c(?:=#?\w+)?\]/g,'').replace(/```(?:\w*\n)?([\s\S]*?)```/g,'$1').replace(/`([^`\n]+)`/g,'$1').replace(/\*\*(.+?)\*\*/g,'$1').replace(/\*(.+?)\*/g,'$1');
 const cpy=async t=>{try{await navigator.clipboard.writeText(t);return 1}catch{}try{const x=document.createElement('textarea');x.value=t;x.style.cssText='position:fixed;top:0;opacity:0';document.body.appendChild(x);x.focus();x.select();x.setSelectionRange(0,1e6);const ok=document.execCommand('copy');x.remove();return ok}catch{return 0}};
 const flash=(a,m,o)=>{o=a.dataset.o||(a.dataset.o=a.textContent);a.textContent=m;setTimeout(()=>a.textContent=o,1200)};
@@ -362,7 +374,7 @@ renderBots();welcome();
 .ac button.on{color:#3a96ff}.ac button.ok,.gxh button.ok{color:#25e870}
 .ac button.gxs{order:9;width:auto;height:auto;font-size:14px;display:inline-flex;align-items:center;gap:10px;padding:5px 12px 5px 7px;border-radius:20px;background:#1c1c1e;color:#cfcfcf}.ac .gxs::before{display:none}
 .gxs .gf{display:flex}.gxs .gf>*{margin-left:-7px;border:2px solid #1c1c1e}.gxs .gf>*:first-child{margin-left:0}
-.fi,.fl{width:22px;height:22px;border-radius:50%;flex:none;display:block}.fi{background:#fff;object-fit:contain;padding:2px;box-sizing:border-box}.fl{background:#333;color:#fff;font-size:12px;display:flex;align-items:center;justify-content:center}
+.gxfi,.gxfl{width:22px;height:22px;border-radius:50%;flex:none;display:block}.gxfi{background:#fff;object-fit:contain;padding:2px;box-sizing:border-box}.gxfl{background:#333;color:#fff;font-size:12px;display:flex;align-items:center;justify-content:center}
 .bm.gxd .src,.bm.gxd .sc{display:none}
 .gxo{position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:20;display:flex;align-items:flex-end}
 .gxsh{width:100%;max-height:72%;overflow:auto;background:#1c1c1e;border-radius:22px 22px 0 0;padding:16px 18px calc(env(safe-area-inset-bottom,0px) + 18px)}
@@ -406,7 +418,7 @@ const Q=s=>document.querySelector(s),ms=Q('#ms');
 const gp=Q('#gp');
 if(gp){const f=()=>gp.classList.toggle('gq',gp.textContent.indexOf('GPS aktif')>-1);new MutationObserver(f).observe(gp,{childList:true,characterData:true,subtree:true});f()}
 /* favikon asli situs (dengan cadangan) */
-const fav=h=>{const i=new Image(),ok=/^[\w.-]+$/.test(h),u=ok?['https://www.google.com/s2/favicons?domain='+encodeURIComponent(h)+'&sz=64','https://icons.duckduckgo.com/ip3/'+h+'.ico','https://'+h+'/favicon.ico']:[];let k=0;i.className='fi';i.alt='';i.referrerPolicy='no-referrer';const bad=()=>{if(++k<u.length)i.src=u[k];else{const s=document.createElement('span');s.className='fl';s.textContent=(h[0]||'?').toUpperCase();i.replaceWith(s)}};i.onerror=bad;if(u.length)i.src=u[0];else queueMicrotask(()=>{k=0;bad()});return i};
+const fav=h=>{const i=new Image(),ok=/^[\w.-]+$/.test(h),u=ok?['https://www.google.com/s2/favicons?domain='+encodeURIComponent(h)+'&sz=64','https://icons.duckduckgo.com/ip3/'+h+'.ico','https://'+h+'/favicon.ico']:[];let k=0;i.className='gxfi';i.alt='';i.referrerPolicy='no-referrer';const bad=()=>{if(++k<u.length)i.src=u[k];else{const s=document.createElement('span');s.className='gxfl';s.textContent=(h[0]||'?').toUpperCase();i.replaceWith(s)}};i.onerror=bad;if(u.length)i.src=u[0];else queueMicrotask(()=>{k=0;bad()});return i};
 const shw=rows=>{const o=document.createElement('div');o.className='gxo';o.innerHTML='<div class="gxsh"><div class="gxsb"><b>'+rows.length+' sumber</b><button aria-label="Tutup">✕</button></div></div>';const s=o.firstChild;rows.forEach(r=>{const a=document.createElement('a'),d=document.createElement('div');a.className='gxr';a.href=r.u;a.target='_blank';a.rel='noopener';d.innerHTML='<b>'+E(r.t||r.h)+'</b><span>'+E(r.h)+'</span>';a.append(fav(r.h),d);s.append(a)});o.onclick=e=>{if(e.target===o||e.target.closest('.gxsb button'))o.remove()};document.body.append(o)};
 const src=box=>{const cs=[...box.querySelectorAll('.sc')];if(!cs.length)return;const rows=cs.map(a=>({u:/^https?:\/\//i.test(a.href)?a.href:'#',t:(a.querySelector('b')||{}).textContent||'',h:(a.querySelector('span')||{}).textContent||''}));
  const chip=document.createElement('button'),f=document.createElement('span');chip.className='gxs';f.className='gf';[...new Map(rows.map(r=>[r.h,r])).values()].slice(0,3).forEach(r=>f.append(fav(r.h)));chip.append(f,document.createTextNode(rows.length+' sumber'));chip.onclick=()=>shw(rows);box.classList.add('gxd');const ac=box.querySelector('.ac');ac?ac.append(chip):box.append(chip)};
@@ -952,9 +964,9 @@ function mountAv(d,i,m){const a=d.querySelector('.ld');if(!a||i<0)return;a.inner
 function liveSet(i,l,f){const L=document.getElementById('rl');if(!L)return;let r=LV.get(i);
  if(!l){if(r){const v=r.el.querySelector('svg');v&&IO.unobserve(v);r.el.remove();LV.delete(i)}return}
  const[kk,tx]=STG[l]||['think',l];const k=r&&r.l===l?r.k:pk(kk);
- if(!r){const el=document.createElement('div');el.className='lm lv';el.innerHTML=`<span class="ld">${bot(COL[i])}</span><div class="lb"><div class="ln"><em>${esc(roleName(i))}</em></div><div class="lt"></div></div>`;r={el,h:avMk(el.querySelector('svg'),i,1),k:''};LV.set(i,r);const near=L.scrollHeight-L.scrollTop-L.clientHeight<140;L.appendChild(el);el.classList.add('in');if(near)L.scrollTop=L.scrollHeight}
+ if(!r){const el=document.createElement('div');el.className='lm lv';el.innerHTML=`<span class="ld">${bot(COL[i])}</span><div class="lb"><div class="ln"></div></div>`;r={el,h:avMk(el.querySelector('svg'),i,1),k:''};LV.set(i,r);const near=L.scrollHeight-L.scrollTop-L.clientHeight<140;L.appendChild(el);el.classList.add('in');if(near)L.scrollTop=L.scrollHeight}
  r.l=l;if(r.k!==k){r.k=k;r.h.set(k)}
- r.el.querySelector('.lt').innerHTML=`sedang ${esc(tx)}${f>=0?' '+mention(f):''}<span class="dts"><b></b><b></b><b></b></span>`}
+ r.el.querySelector('.ln').innerHTML=`sedang ${esc(tx)}${f>=0?' '+mention(f):''}<span class="dts"><b></b><b></b><b></b></span>`}
 const enhL=el=>requestAnimationFrame(()=>{if(!el.isConnected||!rsOpen()||!window.GX)return;try{GX.enh(el)}catch(e){}});
 const prune=l=>{const a=l.querySelectorAll('.lm:not(.lv)');if(a.length>90){const v=a[0].querySelector('svg');v&&IO.unobserve(v);a[0].remove()}};
 const VPI=[1,.75,1.3,.9,1.5,.65,1.2,.85,1.1,1.4],VRT=[1,.95,1.1,1,1.15,.9,1.05,.95,1.1,1];
@@ -1007,7 +1019,7 @@ const rsOpen=()=>{const e=$('#rs');return e&&!e.hidden};
 const NAMES=()=>cfg.bots.map(b=>escRe(esc(b.name))).join('|');
 const mentionize=h=>h.replace(new RegExp('@('+NAMES()+')(?![\\w])','g'),(m,n)=>{const i=cfg.bots.findIndex(b=>esc(b.name)===n);return i<0?m:`<b class="mn" style="color:${COL[i]}">@${n}</b>`});
 const chipsL=fl=>fl&&fl.length?`<div class="lf">${fl.map(f=>`<button class="fc" data-fid="${f.id}">${f.data?'🖼':'📎'} ${esc(f.name)}</button>`).join('')}</div>`:'';
-const srcL=s=>s&&s.length?`<div class="lsr">${s.slice(0,3).map(x=>{let h='';try{const u=new URL(x.url);if(!/^https?:$/.test(u.protocol))return'';h=u.hostname.replace(/^www\./,'')}catch{return''}return`<a href="${esc(x.url).replace(/"/g,'&quot;')}" target="_blank" rel="noopener">${esc(h)}</a>`}).join('')}</div>`:'';
+const srcL=s=>s&&s.length?`<div class="lsr">${s.slice(0,3).map(x=>{let h='';try{const u=new URL(x.url);if(!/^https?:$/.test(u.protocol))return'';h=u.hostname.replace(/^www\./,'')}catch{return''}return`<a href="${esc(x.url).replace(/"/g,'&quot;')}" target="_blank" rel="noopener" title="${esc(h)}" aria-label="${esc(h)}"><img src="https://www.google.com/s2/favicons?domain=${encodeURIComponent(h)}&sz=64" alt="" onerror="this.replaceWith(document.createTextNode('${esc(h).charAt(0).toUpperCase()}'))"></a>`}).join('')}</div>`:'';
 function logEl(m){const d=document.createElement('div');d.dataset.t=m.full||'';
  if(m.f===-2){d.className='lm ls';d.textContent=m.full;return d}
  if(m.f===-1){d.className='lm lu';d.innerHTML=`<div class="lb">${m.full?`<div class="lt bt">${md(m.full)}</div>`:''}${chipsL(m.files)}</div>`;return d}
@@ -1082,7 +1094,7 @@ function openRS(){$('#rs').hidden=false;$('#rb').classList.remove('nw');renderLo
 function mountUI(){
  const rb=document.createElement('button');rb.className='mi';rb.id='rb';rb.setAttribute('aria-label','Ruang bot');rb.innerHTML='<span style="font-size:26px;width:36px;text-align:center">💬</span>';
  const s=$('#st'),w=document.createElement('div');w.id='pt';s.parentNode.insertBefore(w,s);w.append(rb,s);
- document.body.insertAdjacentHTML('beforeend',`<div id="rs" hidden><div class="rh"><button id="rx">← Kembali</button><b>Ruang Bot</b><span class="rhb"><button id="rv" aria-label="Suara bot">🔇</button><button id="rf" aria-label="Berkas bersama">📎 Berkas</button></span></div><div id="rl"></div><div id="rc" hidden></div><div id="rm" hidden><button data-m="debat">🎭 Debat 3 bot</button><button data-m="tim">🛠 Tim kerja</button></div><div id="rcmp"><button id="ra" aria-label="Tambah berkas">+</button><textarea id="rt" rows="1" placeholder="Ketik ke para bot…"></textarea><button id="rsd">↑</button></div><input type="file" id="rfi" hidden accept="image/*,.txt,.md,.csv,.json,.js,.html,.css,.py,.xml,.log,.sql,.sh,.ts,.yaml,.yml"></div><div id="fv" hidden></div>`);
+ document.body.insertAdjacentHTML('beforeend',`<div id="rs" hidden><div class="rh"><button id="rx" aria-label="Kembali">←</button><b>Ruang Bot</b><span class="rhb"><button id="rv" aria-label="Suara bot">🔇</button><button id="rf" aria-label="Berkas bersama">📎</button></span></div><div id="rl"></div><div id="rc" hidden></div><div id="rm" hidden><button data-m="debat">🎭 Debat 3 bot</button><button data-m="tim">🛠 Tim kerja</button></div><div id="rcmp"><button id="ra" aria-label="Tambah berkas">+</button><textarea id="rt" rows="1" placeholder="Ketik ke para bot…"></textarea><button id="rsd">↑</button></div><input type="file" id="rfi" hidden accept="image/*,.txt,.md,.csv,.json,.js,.html,.css,.py,.xml,.log,.sql,.sh,.ts,.yaml,.yml"></div><div id="fv" hidden></div>`);
  rb.onclick=openRS;$('#rx').onclick=()=>{$('#rs').hidden=true;$('#fv').hidden=true};$('#rf').onclick=openFiles;$('#rv').onclick=()=>{VOICE.on=!VOICE.on;$('#rv').textContent=VOICE.on?'🔊':'🔇';if(!VOICE.ok)return;try{speechSynthesis.cancel();if(VOICE.on){const u=new SpeechSynthesisUtterance('Suara aktif');u.lang='id-ID';speechSynthesis.speak(u)}}catch(e){}};$('#ra').onclick=()=>$('#rfi').click();
  $('#rfi').onchange=e=>{const f=e.target.files[0];e.target.value='';if(f)ingest(f,-1,1)};
  const t=$('#rt');t.oninput=()=>{t.style.height='auto';t.style.height=Math.min(t.scrollHeight,120)+'px';ui()};
@@ -1241,5 +1253,19 @@ new MutationObserver(sync).observe(document.body,{attributes:true,attributeFilte
 .lm.in{animation:lmIn .26s cubic-bezier(.25,.46,.45,.94) backwards}
 @keyframes lmIn{from{opacity:0;transform:translateY(8px)}}
 @media (prefers-reduced-motion:reduce){.lm.in{animation:none}}
+</style>
+<style>/* bot status chat = 28,8px */.stt svg{width:28.8px!important;height:28.8px!important;flex:none}</style>
+<style>@keyframes fwin{from{opacity:0}to{opacity:1}}.fw{animation:fwin .52s ease-out both}</style>
+<style>/* Ruang Bot: judul tengah, panah besar, sumber = ikon, status di baris nama */
+#rs .rh{position:relative}
+#rs .rh>b{position:absolute;left:50%;transform:translateX(-50%);max-width:50%;text-align:center;pointer-events:none}
+#rs #rx{font-size:30px!important;line-height:1;padding:0 8px 2px 0}
+#rs #rf{font-size:20px!important}
+.lm:not(.lv) .ln b,.lm:not(.lv) .ln em:not(.tg),.lm:not(.lv) .ln span{display:none}
+.lm.lv .ln{display:block;font-style:italic;color:#8e8e93;margin:0;line-height:1.42}
+.lm.lv .ln .dts{display:inline-flex}
+.lsr{gap:8px;margin-top:8px}
+.lsr a{display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;padding:0;border-radius:50%;background:#fff;color:#000;font-size:12px!important;font-weight:600;overflow:hidden;text-decoration:none}
+.lsr a img{width:16px;height:16px;object-fit:contain;display:block}
 </style>
 </body></html>
