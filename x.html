@@ -320,7 +320,7 @@ async function send(){
   box.dataset.t=tx;hist.push({role:'assistant',content:tx||'[gambar]'});eb.set('done');
  }else if(fin?.error)add(`<div class="bt err">⚠️ ${esc(fin.error)}</div>`);
  stOut(st,fin&&!fin.error);busy=false;$('#sd').textContent='↑';delete $('#sd').dataset.b;sb()}
-const stOut=(s,keep)=>{if(!s||!s.isConnected)return;if(keep){const sp=s.querySelector('span'),sv=s.querySelector('svg');if(sp){const t0=performance.now(),f=n=>{const u=Math.min(1,(n-t0)/260);sp.style.opacity=String(1-u*u*(3-2*u));if(u<1)requestAnimationFrame(f)};requestAnimationFrame(f)}if(sv)sv.replaceWith(sv.cloneNode(true));s.style.pointerEvents='none';return}const h=s.offsetHeight,m=getComputedStyle(s);s.style.cssText+=';box-sizing:border-box;overflow:hidden;pointer-events:none;height:'+h+'px;margin-top:'+m.marginTop+';margin-bottom:'+m.marginBottom;void s.offsetHeight;s.style.transition='height .24s ease,margin .24s ease,opacity .16s ease';s.style.height='0';s.style.marginTop='0';s.style.marginBottom='0';s.style.opacity='0';setTimeout(()=>s.remove(),300)};
+const stOut=(s,keep)=>{if(!s||!s.isConnected)return;keep=false;/* bot + tulisan status ikut menghilang bersama */if(keep){const sp=s.querySelector('span'),sv=s.querySelector('svg');if(sp){const t0=performance.now(),f=n=>{const u=Math.min(1,(n-t0)/260);sp.style.opacity=String(1-u*u*(3-2*u));if(u<1)requestAnimationFrame(f)};requestAnimationFrame(f)}if(sv)sv.replaceWith(sv.cloneNode(true));s.style.pointerEvents='none';return}const h=s.offsetHeight,m=getComputedStyle(s);s.style.cssText+=';box-sizing:border-box;overflow:hidden;pointer-events:none;height:'+h+'px;margin-top:'+m.marginTop+';margin-bottom:'+m.marginBottom;void s.offsetHeight;s.style.transition='height .24s ease,margin .24s ease,opacity .16s ease';s.style.height='0';s.style.marginTop='0';s.style.marginBottom='0';s.style.opacity='0';setTimeout(()=>s.remove(),300)};
 const plain=t=>CITS(t).replace(/\[\/?c(?:=#?\w+)?\]/g,'').replace(/```(?:\w*\n)?([\s\S]*?)```/g,'$1').replace(/`([^`\n]+)`/g,'$1').replace(/\*\*(.+?)\*\*/g,'$1').replace(/\*(.+?)\*/g,'$1');
 const cpy=async t=>{try{await navigator.clipboard.writeText(t);return 1}catch{}try{const x=document.createElement('textarea');x.value=t;x.style.cssText='position:fixed;top:0;opacity:0';document.body.appendChild(x);x.focus();x.select();x.setSelectionRange(0,1e6);const ok=document.execCommand('copy');x.remove();return ok}catch{return 0}};
 const flash=(a,m,o)=>{o=a.dataset.o||(a.dataset.o=a.textContent);a.textContent=m;setTimeout(()=>a.textContent=o,1200)};
@@ -918,8 +918,8 @@ const ROUTE=[['koding',/kode|coding|error|bug|script|html|python|javascript|\bjs
 function routeUser(x,hit){if(hit!=null&&hit>=0)return hit;const I=ids();for(const[r,re]of ROUTE)if(re.test(x)){const c=I.filter(i=>cfg.role[i]===r);if(c.length)return pick(c)}return pick(I.filter(i=>i!==10).length?I.filter(i=>i!==10):I)}
 function plan(){
  const I=ids(),last=lastMsg();
- if(!last||(++cnt%5===0)){const f=pick(I.filter(i=>!last||i!==last.f));FEED.take();return{f,t:-1,intent:'info'}}
- if(UQ){const um=LOG.slice().reverse().find(m=>m.f===-1&&m.k==='user'&&!m.ans);if(um){um.ans=1;return{f:routeUser(um.full,um.t),t:-1,intent:'user'}}UQ=0}
+ if(!last||(!UQ&&++cnt%5===0)){const f=pick(I.filter(i=>!last||i!==last.f));FEED.take();return{f,t:-1,intent:'info'}}
+ if(UQ){const um=LOG.slice().reverse().find(m=>m.f===-1&&m.k==='user'&&!m.ans);if(um){if(um.all){if(!um.q)um.q=I.slice().sort(()=>Math.random()-.5);const f=um.q.shift();if(!um.q.length)um.ans=1;return{f,t:-1,intent:'user'}}um.ans=1;return{f:routeUser(um.full,um.t),t:-1,intent:'user'}}UQ=0}
  const files=FS.some(a=>a.shared<2),V=VIBE[P.vibe]||VIBE.seru;
  if(last.t>=0&&I.includes(last.t)&&(last.k==='kesal')&&Math.random()<.85)return{f:last.t,t:last.f,intent:pick(['balaskesal','balaskesal','baikan'])};
  if(last.t>=0&&I.includes(last.t)&&last.k==='beda'&&Math.random()<.9){const d=last.d||1;return{f:last.t,t:last.f,intent:d>=3?'kompromi':pick(['beda','kompromi','beda'])}}
@@ -1007,7 +1007,7 @@ async function turn(){
   if(g!==gen)return;setS(f,intent==='info'?'mencari sumber':intent==='visual'?pick(['menyusun tabel','menyusun diagram']):['beda','ide','kompromi','tanya'].includes(intent)?'berpikir':'menganalisis');await wait(rnd(900,1800));if(g!==gen)return;
   const sl=setTimeout(()=>{if(g===gen)setS(f,'menunggu server')},9000);const r=await p;clearTimeout(sl);if(g!==gen)return;
   let m=r?build(f,t,intent,r):null;if(!m)m=localMsg(f,t,intent);
-  UQ=0;setS(f,'mengetik');await wait(500+m.x.length*16);if(g!==gen)return;
+  UQ=LOG.some(m=>m.all&&m.q&&m.q.length)?1:0;setS(f,'mengetik');await wait(500+m.x.length*16);if(g!==gen)return;
   if(!await bubble(f,m,g))return;
   push(m);sent++;decay();afterRel(f,m.t,intent);
   if(m.t>=0)setS(m.t,'membaca pesan',f);await Promise.all([wait(m.t>=0?1300:0),VOICE.say(m)]);if(m.t>=0&&g===gen)clr(m.t)
@@ -1030,8 +1030,8 @@ function push(m){m.ts=Date.now();LOG.push(m);if(LOG.length>80)LOG.shift();if(m.f
 function sysNote(t){const m={f:-2,full:t,ts:Date.now()};LOG.push(m);logAdd(m)}
 function renderLog(){const l=$('#rl');IO.disconnect();l.innerHTML='';if(!LOG.length)l.innerHTML='<div class="lh">Obrolan para bot muncul di sini.<br>Ketik sesuatu untuk ikut ngobrol. Beri sebuah topik, lalu pilih <b>Debat 3 bot</b> atau <b>Tim kerja</b>.</div>';LOG.forEach(m=>{const e=logEl(m);l.appendChild(e);enhL(e)});LV.forEach(r=>{l.appendChild(r.el);const v=r.el.querySelector('svg');v&&IO.observe(v)});l.scrollTop=l.scrollHeight}
 function ui(){const t=$('#rt'),b=$('#rsd'),has=t.value.trim().length>1;b.textContent=TASK?'■':'↑';t.placeholder=TASK?'Tugas sedang berjalan…':'Ketik ke para bot…';t.disabled=!!TASK;$('#rm').hidden=!has||!!TASK;if(TASK)$('#rc').hidden=true}
-function userSay(x){x=x.trim();if(!x)return;const I=ids(),hit=I.find(i=>{const f=escRe(nm(i)),sh=escRe(nm(i).replace(/^Bot\s+/i,''));return new RegExp('(?:@(?:'+f+'|'+sh+')|(?:^|\\W)'+f+')(?![\\w])','i').test(x)});
- push({f:-1,t:hit==null?-1:hit,full:x,files:[],k:'user'});UQ=1;sent=0;clearTimeout(tmr);sched(1)}
+function userSay(x){x=x.trim();if(!x)return;const I=ids(),all=/(?:^|\s)@(?:semua|all)(?:\s*bot)?(?![\w])/i.test(x),hit=all?null:I.find(i=>{const f=escRe(nm(i)),sh=escRe(nm(i).replace(/^Bot\s+/i,''));return new RegExp('(?:@(?:'+f+'|'+sh+')|(?:^|\\W)'+f+')(?![\\w])','i').test(x)});
+ push({f:-1,t:hit==null?-1:hit,full:x,files:[],k:'user',all:all?1:0});UQ=1;sent=0;clearTimeout(tmr);sched(1)}
 function beginTask(title,topic){TASK={fails:0};tgen++;gen++;clearTimeout(tmr);busy=0;ids().forEach(clr);LASTTASK=topic;sysNote(title);ui()}
 function endTask(){TASK=null;ui();if(isO())sched()}
 function stopTask(){if(!TASK)return;tgen++;ACT.forEach(c=>c.abort());ids().forEach(clr);sysNote('⏹ Dihentikan');endTask()}
@@ -1094,7 +1094,7 @@ function openRS(){$('#rs').hidden=false;$('#rb').classList.remove('nw');renderLo
 function mountUI(){
  const rb=document.createElement('button');rb.className='mi';rb.id='rb';rb.setAttribute('aria-label','Ruang bot');rb.innerHTML='<span style="font-size:26px;width:36px;text-align:center">💬</span>';
  const s=$('#st'),w=document.createElement('div');w.id='pt';s.parentNode.insertBefore(w,s);w.append(rb,s);
- document.body.insertAdjacentHTML('beforeend',`<div id="rs" hidden><div class="rh"><button id="rx" aria-label="Kembali">←</button><b>Ruang Bot</b><span class="rhb"><button id="rv" aria-label="Suara bot">🔇</button><button id="rf" aria-label="Berkas bersama">📎</button></span></div><div id="rl"></div><div id="rc" hidden></div><div id="rm" hidden><button data-m="debat">🎭 Debat 3 bot</button><button data-m="tim">🛠 Tim kerja</button></div><div id="rcmp"><button id="ra" aria-label="Tambah berkas">+</button><textarea id="rt" rows="1" placeholder="Ketik ke para bot…"></textarea><button id="rsd">↑</button></div><input type="file" id="rfi" hidden accept="image/*,.txt,.md,.csv,.json,.js,.html,.css,.py,.xml,.log,.sql,.sh,.ts,.yaml,.yml"></div><div id="fv" hidden></div>`);
+ document.body.insertAdjacentHTML('beforeend',`<div id="rs" hidden><div class="rh"><button id="rx" aria-label="Kembali">←</button><b>Ruang Bot</b><span class="rhb"><button id="rv" aria-label="Suara bot">🔇</button><button id="rf" aria-label="Berkas bersama">📎</button></span></div><div id="rl"></div><div id="rfo"><div id="rc" hidden></div><div id="rm" hidden><button data-m="debat">🎭 Debat 3 bot</button><button data-m="tim">🛠 Tim kerja</button></div><div id="rcmp"><button id="ra" aria-label="Tambah berkas">+</button><textarea id="rt" rows="1" placeholder="Ketik ke para bot…"></textarea><button id="rsd">↑</button></div></div><input type="file" id="rfi" hidden accept="image/*,.txt,.md,.csv,.json,.js,.html,.css,.py,.xml,.log,.sql,.sh,.ts,.yaml,.yml"></div><div id="fv" hidden></div>`);
  rb.onclick=openRS;$('#rx').onclick=()=>{$('#rs').hidden=true;$('#fv').hidden=true};$('#rf').onclick=openFiles;$('#rv').onclick=()=>{VOICE.on=!VOICE.on;$('#rv').textContent=VOICE.on?'🔊':'🔇';if(!VOICE.ok)return;try{speechSynthesis.cancel();if(VOICE.on){const u=new SpeechSynthesisUtterance('Suara aktif');u.lang='id-ID';speechSynthesis.speak(u)}}catch(e){}};$('#ra').onclick=()=>$('#rfi').click();
  $('#rfi').onchange=e=>{const f=e.target.files[0];e.target.value='';if(f)ingest(f,-1,1)};
  const t=$('#rt');t.oninput=()=>{t.style.height='auto';t.style.height=Math.min(t.scrollHeight,120)+'px';ui()};
@@ -1268,4 +1268,62 @@ new MutationObserver(sync).observe(document.body,{attributes:true,attributeFilte
 .lsr a{display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;padding:0;border-radius:50%;background:#fff;color:#000;font-size:12px!important;font-weight:600;overflow:hidden;text-decoration:none}
 .lsr a img{width:16px;height:16px;object-fit:contain;display:block}
 </style>
+
+<!-- PERBAIKAN Ruang Bot: keyboard iOS halus (header diam, kolom ketik naik bersama keyboard, tanpa loncat) -->
+<style>
+#rs{top:0;bottom:auto;height:var(--H,100dvh);translate:0 var(--vt,0px);will-change:translate;--kb:0px;--ko:0}
+#rfo{flex:none;display:block;transform:translate3d(0,calc(var(--kb)*-1 + env(safe-area-inset-bottom,0px)*var(--ko)),0);will-change:transform}
+#rl{margin-bottom:calc(var(--kb) - env(safe-area-inset-bottom,0px)*var(--ko))}
+</style>
+<script>
+(()=>{const v=window.visualViewport,rs=document.querySelector('#rs'),rl=document.querySelector('#rl'),rt=document.querySelector('#rt'),cmp=document.querySelector('#rcmp');
+if(!v||!rs||!rt||!cmp)return;
+const S=rs.style,DUR=470,LEAD=60;
+const BZ=(()=>{const x1=.3234,y1=.872,x2=.3683,y2=.9696,P=(a,b,c,t)=>3*(1-t)*(1-t)*t*a+3*(1-t)*t*t*b+t*t*t*c;return x=>{if(x<=0)return 0;if(x>=1)return 1;let t=x;for(let i=0;i<8;i++){const d=P(x1,x2,1,t)-x,dv=3*(1-t)*(1-t)*x1+6*(1-t)*t*(x2-x1)+3*t*t*(1-x2);if(Math.abs(d)<1e-5||!dv)break;t-=d/dv}return P(y1,y2,1,t)}})();
+const ios=/iP(hone|ad|od)/.test(navigator.userAgent)||(navigator.maxTouchPoints>1&&/Mac/.test(navigator.platform));
+const land=()=>window.innerWidth>window.innerHeight,ek=()=>'xkb'+(land()?'l':'p');
+const okK=k=>k>150&&k<window.innerHeight*(land()?.8:.44);
+const getE=()=>{try{const e=+localStorage.getItem(ek())||0;return okK(e)?e:0}catch(e){return 0}};
+const guess=()=>{const e=getE();return e>100?e:Math.round(land()?window.innerHeight*.52:Math.max(screen.width,screen.height)*.386)};
+let cur=0,tgt=0,from=0,t0=0,raf=0,K=0,st=0,pt=0,ho=0,sett=0,last=0,pu=0,pr=0;
+const near=()=>rl.scrollHeight-rl.scrollTop-rl.clientHeight<80;
+const apply=k=>{S.setProperty('--kb',k.toFixed(1)+'px');S.setProperty('--ko',K?Math.min(1,k/K).toFixed(3):'0');if(st)rl.scrollTop=1e9};
+const run=ts=>{const p=Math.min(1,Math.max(0,(ts-t0)/DUR));cur=from+(tgt-from)*BZ(p);apply(cur);raf=p<1?requestAnimationFrame(run):0};
+const go=k=>{if(Math.abs(k-tgt)<.5)return;if(k>0)K=k;st=near();const moving=!!raf;tgt=k;from=cur;t0=performance.now()+(moving||k<=0?0:LEAD);cancelAnimationFrame(raf);raf=requestAnimationFrame(run)};
+const pin=()=>{S.setProperty('--vt',v.offsetTop.toFixed(1)+'px')};
+const fit=()=>{S.setProperty('--H',window.innerHeight+'px');pin()};
+const pump=ms=>{pu=performance.now()+(ms||1300);if(pr)return;const L=()=>{pin();pr=performance.now()<pu?requestAnimationFrame(L):0};pr=requestAnimationFrame(L)};
+const foc=()=>{const a=document.activeElement;return a===rt||a===kp};
+/* koreksi ukuran keyboard setelah iOS tenang (dua bacaan sama berturut-turut) */
+const settle=()=>{if(rs.hidden)return;const k=window.innerHeight-v.height;
+ if(k>60){if(!okK(k)||!foc())return;if(Math.abs(k-last)>2){last=k;clearTimeout(sett);sett=setTimeout(settle,160);return}
+  try{if(Math.abs(k-getE())>2)localStorage.setItem(ek(),String(Math.round(k)))}catch(e){}
+  if(Math.abs(k-tgt)>3)go(k)}
+ else if(!foc()&&!ho)go(0)};
+v.addEventListener('resize',()=>{pump();fit();last=0;clearTimeout(sett);sett=setTimeout(settle,160)});
+v.addEventListener('scroll',()=>{pin();pump(600)});
+window.addEventListener('orientationchange',()=>setTimeout(fit,300));fit();
+/* kolom bayangan di atas layar: iOS membuka keyboard tanpa menggeser halaman, lalu fokus dipindah ke kolom asli */
+const kp=document.createElement('input');kp.type='text';kp.setAttribute('aria-hidden','true');kp.tabIndex=-1;kp.autocapitalize='sentences';
+kp.style.cssText='position:fixed;top:0;left:0;width:1px;height:1px;opacity:0;border:0;padding:0;margin:0;font-size:16px;pointer-events:none;caret-color:transparent;background:none;color:transparent';
+document.body.appendChild(kp);
+const rawFocus=HTMLElement.prototype.focus;
+const handoff=()=>{clearTimeout(ho);ho=0;if(document.activeElement!==kp)return;const typed=kp.value;kp.value='';rawFocus.call(rt,{preventScroll:true});if(typed){rt.value+=typed;rt.dispatchEvent(new Event('input',{bubbles:true}))}try{rt.setSelectionRange(rt.value.length,rt.value.length)}catch(e){}window.scrollTo(0,0);pump()};
+const open=()=>{if(document.activeElement===rt||document.activeElement===kp)return;
+ if(!ios){rawFocus.call(rt);return}
+ pump();clearTimeout(pt);go(guess());rawFocus.call(kp,{preventScroll:true});clearTimeout(ho);ho=setTimeout(handoff,560);pt=setTimeout(settle,900)};
+rt.addEventListener('focus',()=>{pump();if(tgt<1)go(guess());clearTimeout(pt);pt=setTimeout(settle,900)});
+const closed=()=>setTimeout(()=>{if(foc()||ho)return;go(0)},60);
+rt.addEventListener('blur',()=>{pump();closed()});kp.addEventListener('blur',closed);
+cmp.addEventListener('touchstart',e=>{if(e.target.closest('button')||document.activeElement===rt)return;e.preventDefault();open()},{passive:false});
+cmp.addEventListener('click',e=>{if(e.target.closest('button'))return;open()});
+/* tombol kirim tidak boleh mencuri fokus: keyboard tetap terbuka selama ngobrol */
+/* setelah kirim: keyboard turun otomatis (seperti Grok / chat utama) */
+const sd=document.querySelector('#rsd');if(sd)sd.addEventListener('click',()=>{clearTimeout(ho);ho=0;clearTimeout(pt);try{kp.blur()}catch(e){}try{rt.blur()}catch(e){}go(0)});
+/* keluar dari Ruang Bot: reset tanpa animasi */
+const reset=()=>{clearTimeout(ho);ho=0;cancelAnimationFrame(raf);raf=0;cur=tgt=from=0;try{kp.blur();rt.blur()}catch(e){}apply(0)};
+const rx=document.querySelector('#rx');if(rx)rx.addEventListener('click',reset);
+new MutationObserver(()=>{if(rs.hidden)reset();else fit()}).observe(rs,{attributes:true,attributeFilter:['hidden']});
+})();
+</script>
 </body></html>
