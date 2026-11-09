@@ -1666,4 +1666,130 @@ const ANTI_HALU=`
 window.XT=XT;
 })();
 </script>
+<!-- ===== PATCH: media Ruang Bot (foto, video kecil, MP3) + BMKG ===== -->
+<!-- Tempel TEPAT SEBELUM </body> di m.html. Aman ditempel sekali; kalau dua kali tidak merusak. -->
+<script>
+(()=>{
+if(window._xbotPatchLoaded){console.log('[patch] sudah terpasang, dilewati');return}
+window._xbotPatchLoaded=1;
+
+/* ---------- 1. wmFind: filter MIME yang benar + fallback ---------- */
+async function wmFind(q,kind){
+  kind=kind||'foto';
+  const tryQ=async(query)=>{
+    try{
+      const c=new AbortController(),to=setTimeout(()=>c.abort(),8000);
+      const u='https://commons.wikimedia.org/w/api.php?action=query&format=json&origin=*'
+        +'&generator=search&gsrnamespace=6&gsrlimit=15&gsrsearch='+encodeURIComponent(query)
+        +'&prop=imageinfo&iiprop=url|mime|size&iiurlwidth=640';
+      const j=await(await fetch(u,{signal:c.signal})).json();
+      clearTimeout(to);
+      const pages=Object.values((j.query||{}).pages||{}).sort((a,b)=>a.index-b.index);
+      for(const x of pages){
+        const i=(x.imageinfo||[])[0];if(!i)continue;
+        const mime=(i.mime||'').toLowerCase(),url=i.url||'',thumb=i.thumburl||'';
+        if(kind==='foto'){
+          if(/^image\/(jpeg|png|webp|gif)$/.test(mime)&&/^https:\/\//.test(thumb||url))return thumb||url;
+        }else if(kind==='video'){
+          if(/^video\/(webm|ogg|mp4|quicktime|x-matroska)$/.test(mime)&&/^https:\/\//.test(url))return url;
+        }else{
+          if(/^(audio\/(ogg|mpeg|mp3|wav|x-wav|flac|webm|mp4|x-m4a)|application\/ogg)$/.test(mime)&&/^https:\/\//.test(url))return url;
+        }
+      }
+    }catch(e){}
+    return '';
+  };
+  const ft=kind==='foto'?'bitmap':kind==='video'?'video':'audio';
+  let r=await tryQ(q+' filetype:'+ft);
+  if(!r&&kind!=='foto') r=await tryQ(q);
+  if(!r&&kind==='foto')  r=await tryQ(q+' filetype:bitmap');
+  return r;
+}
+window.wmFind=wmFind;
+
+/* ---------- 2. mbad: pengganti media gagal (dipakai chipsL & openFile asli) ---------- */
+window.mbad=el=>{
+  const s=document.createElement('div');s.className='lmx';
+  const src=(el&&(el.src||el.currentSrc))||'';
+  s.innerHTML='⚠️ media tidak bisa dimuat'+(src?` · <a href="${src}" target="_blank" rel="noopener" style="color:#6ab0ff">buka di tab baru</a>`:'');
+  const t=(el&&el.closest&&el.closest('.fc'))||el;
+  if(t&&t.replaceWith)t.replaceWith(s);
+};
+
+/* ---------- 3. BMKG: tool cuaca resmi ---------- */
+const PETA_BMKG={
+  jakarta:'31.71.03.1001','jakarta pusat':'31.71.03.1001',
+  bandung:'32.73.01.1001',surabaya:'35.78.01.1001',
+  yogyakarta:'34.71.03.1001',jogja:'34.71.03.1001',
+  semarang:'33.74.01.1001',medan:'12.71.05.1001',
+  makassar:'73.71.01.1001',denpasar:'51.71.03.1001',
+  palembang:'16.71.01.1001',balikpapan:'64.71.01.1001',
+  banjarmasin:'63.71.01.1001',pontianak:'61.71.01.1001',
+  manado:'71.71.01.1001',padang:'13.71.01.1001',
+  pekanbaru:'14.71.01.1001',lampung:'18.71.01.1001',
+  malang:'35.73.01.1001',solo:'33.72.01.1001',surakarta:'33.72.01.1001'
+};
+async function bmkgWeather(kota){
+  const key=String(kota||'jakarta').toLowerCase().trim();
+  const adm4=PETA_BMKG[key];
+  if(!adm4)throw new Error(`Kode BMKG untuk "${kota}" belum ada. Kota didukung: ${Object.keys(PETA_BMKG).join(', ')}`);
+  const r=await(await fetch(`https://api.bmkg.go.id/publik/prakiraan-cuaca?adm4=${adm4}`)).json();
+  const arr=(r.data&&r.data[0]&&r.data[0].cuaca&&r.data[0].cuaca[0])||[];
+  return{
+    sumber:'BMKG (Badan Meteorologi, Klimatologi, dan Geofisika)',
+    kota:(r.data&&r.data[0]&&r.data[0].lokasi&&(r.data[0].lokasi.desa||r.data[0].lokasi.kecamatan))||kota,
+    adm4,
+    prakiraan:arr.slice(0,3).map(c=>({
+      waktu:c.local_datetime,suhu:c.t+'°C',kondisi:c.weather_desc,
+      kelembapan:c.hu+'%',angin:c.ws+' km/jam'
+    }))
+  };
+}
+window.bmkgWeather=bmkgWeather;
+
+/* ---------- 4. daftarkan XT.bmkg ---------- */
+if(window.XT&&!window.XT.bmkg)window.XT.bmkg=async({kota='jakarta'})=>bmkgWeather(kota);
+
+/* ---------- 5. tambah bmkg ke prompt model (idempoten, sekali bungkus) ---------- */
+if(!window._bmkgFetchPatched){
+  window._bmkgFetchPatched=1;
+  const _fetch=window.fetch.bind(window);
+  window.fetch=async(input,init={})=>{
+    try{
+      if(init&&init.body&&typeof init.body==='string'){
+        const b=JSON.parse(init.body);
+        if(b&&typeof b.system==='string'&&!b.system.includes('- bmkg')){
+          const line='\n- bmkg {"kota":"jakarta"} : prakiraan cuaca resmi BMKG (Indonesia)';
+          if(b.system.includes('[ALAT TERSEDIA]')){
+            b.system=b.system.replace('[ALAT TERSEDIA]','[ALAT TERSEDIA]'+line);
+          }else{
+            b.system+='\n\n[ALAT TERSEDIA]'+line;
+          }
+          if(!b.system.includes('[ALAT CUACA BMKG]')){
+            b.system+='\n\n[ALAT CUACA BMKG] Untuk cuaca di Indonesia, WAJIB panggil alat "bmkg" (jakarta, bandung, surabaya, yogyakarta, semarang, medan, makassar, denpasar, palembang, balikpapan, banjarmasin, pontianak, manado, padang, pekanbaru, lampung, malang, solo). Sebutkan "Sumber: BMKG". Jika kota tidak ada di daftar, katakan data BMKG tidak tersedia.';
+          }
+          init={...init,body:JSON.stringify(b)};
+        }
+      }
+    }catch(e){}
+    return _fetch(input,init);
+  };
+}
+
+/* ---------- 6. CSS kecil: video/audio tampil rapi di Ruang Bot ---------- */
+const st=document.createElement('style');
+st.textContent=`
+.lf .lmv{width:100%;max-width:280px}
+.lf .lmv video{width:100%;max-height:220px;border-radius:12px;background:#000;display:block}
+.lf .lmv audio{width:100%;display:block}
+.lf .lmv.lyt{max-width:320px}
+.lf .lmv iframe{width:100%;aspect-ratio:16/9;border:0;border-radius:12px;background:#000;display:block}
+.lf img.lmi{display:block;max-width:150px;max-height:150px;object-fit:cover;border-radius:12px;background:#1c1c1e}
+.lmx{font-size:12px;opacity:.7;padding:4px 0}
+`;
+document.head.appendChild(st);
+
+console.log('[patch] media + BMKG siap');
+})();
+</script>
 </body></html>
