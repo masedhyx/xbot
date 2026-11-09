@@ -1792,4 +1792,117 @@ document.head.appendChild(st);
 console.log('[patch] media + BMKG siap');
 })();
 </script>
+<!-- ===== PATCH FINAL: Media (YouTube Fix + Wikimedia Fix) ===== -->
+<script>
+(()=>{
+if(window._xbotMediaFinal)return;
+window._xbotMediaFinal=1;
+
+/* --- 1. PERBAIKAN WIKIMEDIA (Anti File Not Found) --- */
+window.wmFind = async function(q, kind){
+  kind = kind || 'foto';
+  const tryQ = async (query) => {
+    try {
+      const c = new AbortController(), to = setTimeout(() => c.abort(), 8000);
+      const u = 'https://commons.wikimedia.org/w/api.php?action=query&format=json&origin=*'
+        + '&generator=search&gsrnamespace=6&gsrlimit=20&gsrsearch=' + encodeURIComponent(query)
+        + '&prop=imageinfo&iiprop=url|mime|derivatives&iiurlwidth=640';
+      const j = await (await fetch(u, {signal: c.signal})).json();
+      clearTimeout(to);
+      const pages = Object.values((j.query || {}).pages || {}).sort((a, b) => a.index - b.index);
+      
+      for (const x of pages) {
+        const i = (x.imageinfo || [])[0];
+        if (!i) continue;
+        const mime = (i.mime || '').toLowerCase();
+        
+        if (kind === 'foto') {
+          if (/^image\/(jpeg|png|webp|gif)$/.test(mime) && /^https:\/\//.test(i.thumburl || i.url || '')) return i.thumburl || i.url;
+        } else if (kind === 'video') {
+          if (i.derivatives && Array.isArray(i.derivatives)) {
+            const mp4 = i.derivatives.find(d => d.type === 'video/mp4');
+            const webm = i.derivatives.find(d => d.type === 'video/webm');
+            if (mp4 && mp4.src) return mp4.src;
+            if (webm && webm.src) return webm.src;
+          }
+          if (/^video\/(webm|mp4)$/.test(mime) && /^https:\/\//.test(i.url || '')) return i.url;
+        } else {
+          if (/^(audio\/(ogg|mpeg|mp3|wav|x-wav|flac|webm|mp4|x-m4a)|application\/ogg)$/.test(mime) && /^https:\/\//.test(i.url || '')) return i.url;
+        }
+      }
+    } catch(e) {}
+    return '';
+  };
+  const ft = kind === 'foto' ? 'bitmap' : kind === 'video' ? 'video' : 'audio';
+  let r = await tryQ(q + ' filetype:' + ft);
+  if (!r && kind !== 'foto') r = await tryQ(q);
+  return r;
+};
+
+/* --- 2. SUNTIK PROMPT YOUTUBE --- */
+const _fetch = window.fetch.bind(window);
+window.fetch = async (input, init={}) => {
+  try {
+    if (init && init.body && typeof init.body === 'string') {
+      const b = JSON.parse(init.body);
+      if (b && typeof b.system === 'string' && !b.system.includes('[PRIORITAS MEDIA]')) {
+        b.system += `\n\n[PRIORITAS MEDIA]
+Jika pengguna meminta video (contoh: "putar video air terjun", "cariin video lucu"), KAMU WAJIB memberikan link YouTube yang valid, BUKAN menggunakan tag [video: kata kunci].
+Format yang benar: [video: https://www.youtube.com/watch?v=KODE_VIDEO]
+Jangan mengarang KODE_VIDEO. Jika kamu tidak tahu ID YouTube yang valid, kamu boleh menggunakan tag [video: kata kunci] biasa.
+Untuk AUDIO/MP3, tetap gunakan tag [audio: kata kunci].
+Untuk GAMBAR/FOTO, tetap gunakan tag [foto: kata kunci].`;
+        init = {...init, body: JSON.stringify(b)};
+      }
+    }
+  } catch(e){}
+  return _fetch(input, init);
+};
+
+/* --- 3. PENYADAP LINK YOUTUBE (Bypass Closure Tanpa Error) --- */
+// Karena variabel _tags asli ada di dalam closure, kita sadap lewat DOM MutationObserver
+const observer = new MutationObserver((mutations) => {
+  for (let m of mutations) {
+    if (m.type === 'childList') {
+      m.addedNodes.forEach(node => {
+        if (node.nodeType === 1 && node.classList.contains('lm')) {
+          // Cari teks mentah di dataset
+          if (node.dataset.t) {
+            const raw = node.dataset.t;
+            // Regex untuk mendeteksi link YouTube (watch?v= atau youtu.be)
+            const regex = /\[video:\s*(?:https?:\/\/)?(?:www\.)?(?:youtube\.com\/watch\?v=|youtu\.be\/)([\w-]{11})[^\]]*\]/gi;
+            
+            if (regex.test(raw)) {
+              // Ubah formatnya
+              const embedRaw = raw.replace(regex, (match, id) => `[video: https://www.youtube.com/embed/${id}]`);
+              node.dataset.t = embedRaw;
+              
+              // Timpa HTML agar YouTube player yang ter-render
+              const _md = window.md; 
+              if (_md) {
+                const bt = node.querySelector('.lt.bt');
+                if (bt) {
+                  // Render ulang dengan raw yang sudah diubah
+                  bt.innerHTML = _md(embedRaw);
+                  // Jalankan fungsi GX enhancer untuk bikin player rapi
+                  if (window.GX && window.GX.enh) window.GX.enh(node);
+                }
+              }
+            }
+          }
+        }
+      });
+    }
+  }
+});
+
+// Mulai pantau setiap ada pesan baru masuk di layar
+const container = document.querySelector('#rl') || document.querySelector('#ms');
+if (container) {
+  observer.observe(container, { childList: true, subtree: true });
+}
+
+console.log('[patch] Media & YouTube Fix siap tempur!');
+})();
+</script>
 </body></html>
