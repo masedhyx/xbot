@@ -804,6 +804,68 @@ body.o #wl{opacity:0}
 <script>
 /* v25: bot panel — akses key otomatis/manual · spesialis per bot · ingatan per bot · debat 3 bot · tim kerja · berkas bersama · obrolan ala manusia. Hanya berjalan saat panel terbuka. */
 (()=>{
+
+/* ===== PANEL HIDUP: lanjutan (mengetik jujur, kejadian bersama, hubungan terlihat, pengingat, nada kritikus, ekspresi, balas bubble) ===== */
+/* 2. indikator mengetik: lama sebanding panjang pesan, kadang berhenti sebentar lalu lanjut */
+async function typingFor(f,n,g){let left=500+n*16;
+ while(left>0&&g===gen){const burst=Math.min(left,rnd(700,1600));await wait(burst);left-=burst;
+  if(left>400&&Math.random()<.4){setS(f,'berpikir');const p=Math.min(left,rnd(400,1200));await wait(p);left-=p;if(g===gen)setS(f,'mengetik')}}}
+/* 3. ingatan bersama: catatan kejadian yang dibagi semua bot (36 jam) */
+let EVT=[];try{EVT=JSON.parse(localStorage.getItem('xbotevt')||'[]').filter(e=>Date.now()-e.ts<36*36e5)}catch(e){EVT=[]}
+function evtAdd(t){EVT.push({t:String(t).slice(0,170),ts:Date.now()});while(EVT.length>40)EVT.shift();try{localStorage.setItem('xbotevt',JSON.stringify(EVT))}catch(e){}}
+function evtTx(){const L=EVT.filter(e=>Date.now()-e.ts<36*36e5).slice(-6);return L.length?`\n\n[Kejadian bersama di grup] ${L.map(e=>e.t).join(' | ')}\nBoleh kamu rujuk atau gosipkan kejadian ini dengan wajar bila relevan, seperti teman yang ingat kejadian kemarin.`:''}
+function evtFrom(m){if(!m||m.f===-2||!m.full)return;
+ if(m.f===-1){evtAdd('Pengguna menulis: '+clip(plainOf(m.full),80));return}
+ if(m.k==='rangkuman')return;
+ if(['kesal','balaskesal','beda','kompromi','baikan','kompak','berkas','info','ide','bercanda'].includes(m.k))evtAdd(nm(m.f)+' ('+m.k+')'+(m.t>=0?' ke '+nm(m.t):'')+': '+clip(plainOf(m.full),80))}
+/* 4. hubungan yang terlihat: catatan kecil di Ruang Bot saat hubungan berubah */
+function relNote(f,t,k){if(t<0||Math.random()>.22)return;
+ const M={beda:`tadi ${nm(f)} dan ${nm(t)} sempat beda pendapat ya`,kesal:`${nm(f)} masih agak ngambek sama ${nm(t)}`,baikan:`${nm(f)} dan ${nm(t)} sudah baikan 🤝`,kompak:`${nm(f)} dan ${nm(t)} lagi kompak nih`};
+ if(M[k])sysNote('💬 '+M[k])}
+/* 6. pengingat: "besok ujian" → sapaan pagi harinya */
+const REMRE=/\b(ujian|meeting|presentasi|sidang|interview|wawancara|deadline|tes|ulangan|lomba|rapat)\b/i;
+let REM=[];try{REM=JSON.parse(localStorage.getItem('xbotrem')||'[]')}catch(e){REM=[]}
+function saveRem(){try{localStorage.setItem('xbotrem',JSON.stringify(REM))}catch(e){}}
+function remCheck(x){const m=x.match(REMRE);if(!m||!/\b(besok|lusa)\b/i.test(x))return;
+ const d=new Date();d.setDate(d.getDate()+(/lusa/i.test(x)?2:1));d.setHours(7,0,0,0);
+ REM.push({what:m[1].toLowerCase(),due:d.getTime(),done:0});REM=REM.slice(-10);saveRem()}
+function remTick(){if(!REM.length)return;const now=Date.now();
+ REM.forEach(r=>{if(r.done||r.due>now)return;if(busy||TASK)return;r.done=1;saveRem();
+  const I=ids().filter(i=>i!==10),f=pick(I.length?I:ids());
+  const txt=pick([`Semangat ya buat ${r.what}! Udah siap belum?`,`Hei, ${r.what}-nya hari ini kan? Semoga lancar ya 🙌`,`Pagi! Inget ${r.what} hari ini. Udah siap?`]);
+  push(mkMsg(f,-1,txt,{k:'obrolan'}));alertMsg(nm(f),txt)})}
+setInterval(remTick,60000);setTimeout(remTick,3000);
+/* 7. kritikus jadi lebih lembut saat pengguna terlihat lelah (jam, jeda lama, nada pesan) */
+function critTx(f){if(cfg.role[f]!=='kritik')return'';
+ const h=new Date().getHours(),lu=[...LOG].reverse().find(m=>m.f===-1&&m.k==='user'),tx=lu?plainOf(lu.full||''):'';
+ const lelah=/capek|lelah|ngantuk|pusing|bete|males|stres|stress|burnout/i.test(tx)||h>=22||h<5||(lu&&Date.now()-lu.ts>3*36e5);
+ return lelah?'\n[Nada] Pengguna tampaknya lelah atau baru kembali setelah lama: kritik dengan lembut, sebut satu hal yang sudah baik, dan beri satu saran kecil yang bisa langsung dicoba, bukan daftar masalah.':''}
+/* 9. balas/mention bot dengan menyentuh gelembungnya */
+const rlEl=document.querySelector('#rl');
+if(rlEl)rlEl.addEventListener('click',e=>{if(e.target.closest('button,a,.fc,.tbx,[data-cp],input,textarea'))return;
+ const m=e.target.closest('.lm');if(!m||m.classList.contains('lu')||m.classList.contains('ls'))return;
+ const n=m.querySelector('.ln b');if(!n)return;const t=document.querySelector('#rt');if(!t)return;
+ const nmTxt=n.textContent.trim();const cur=t.value.trim();
+ if(!cur.startsWith('@'+nmTxt))t.value='@'+nmTxt+' '+(cur?cur:'');
+ t.dispatchEvent(new Event('input',{bubbles:true}));t.focus()});
+
+/* ===== PERSONA MANUSIA: kondisi pribadi berkala + status keluar ngopi ===== */
+const LIFES=[
+ {s:'lagi fokus di monitor, jawabanmu singkat dan agak cuek',w:5},
+ {s:'lagi bete ringan karena kerjaan numpuk',w:2},
+ {s:'lagi senang dan happy karena habis dapat kabar baik',w:2},
+ {s:'ngantuk dan nggak terlalu fokus',w:2},
+ {s:'lagi santai dan pengen ngobrol iseng',w:3},
+ {s:'pengen keluar ngopi, sudah bosan di depan layar',w:2,msg:'bentar ya, aku keluar ngopi dulu ☕'},
+ {s:'ada keperluan sebentar (mau antar barang / beli makan), lagi buru-buru',w:2,msg:'bentar, lagi ada urusan. Nanti aku bales lagi ya'}];
+const LIFE={},LIFEAT={},LIFEANN={};
+function lifeOf(f){const now=Date.now();if(!LIFE[f]||now>LIFEAT[f]){const lst=LIFES.flatMap(x=>Array(x.w).fill(x));LIFE[f]=pick(lst);LIFEAT[f]=now+rnd(20,50)*6e4}return LIFE[f]}
+function lifeTx(f){const L=lifeOf(f);return `\n[Kondisimu sekarang] Kamu ${L.s}. Tunjukkan lewat cara bicaramu secara alami, jangan dijelaskan panjang lebar.`}
+function lifeTick(){if(busy||TASK||!isO())return;ids().forEach(f=>{const L=lifeOf(f);
+ if(L.msg&&Date.now()-(LIFEANN[f]||0)>20*6e4&&Math.random()<.15){LIFEANN[f]=Date.now();push(mkMsg(f,-1,L.msg,{k:'receh'}))}})}
+setInterval(lifeTick,90000);
+
+
 const isO=()=>document.body.classList.contains('o')||(KEEP>0&&Date.now()<KEEP)||winOn(),ids=()=>cfg.bots.map((_,i)=>i).filter(i=>!HIDE.includes(i)),nm=i=>cfg.bots[i]?cfg.bots[i].name:'Kamu',who=i=>i<0?'Pengguna':nm(i),pick=a=>a[Math.floor(Math.random()*a.length)],wait=ms=>new Promise(r=>setTimeout(r,ms)),escRe=q=>q.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
 const wpick=W=>{const e=Object.entries(W).filter(x=>x[1]>0),s=e.reduce((a,b)=>a+b[1],0);let r=Math.random()*s;for(const[k,v]of e){if((r-=v)<=0)return k}return e[0][0]};
 const clip=(x,n=100)=>{if(x.length<=n)return x;const k=x.lastIndexOf(' ',n-1);return x.slice(0,k>n*.4?k:n-1)+'…'};
@@ -965,7 +1027,7 @@ function plan(){
  if(k==='info')FEED.take();return{f,t:(k==='receh'&&Math.random()<.6)||k==='info'||k==='ide'||k==='visual'||k==='ajak'||k==='ingat'?-1:t,intent:k}}
 async function amb(f,t,k){
  if(Date.now()<mute||!cfg.url)return null;
- const c=k==='rangkuman'?ctxAll():ctx(),mode=k==='info'?'on':k==='rangkuman'?'off':'auto',to=k==='info'?25000:k==='user'?25000:(k==='beda'||k==='ide'||k==='visual')?20000:15000;
+ const c=k==='rangkuman'?ctxAll():ctx(),mode=k==='info'?'on':k==='user'?'auto':'off',to=k==='info'?25000:k==='user'?25000:(k==='beda'||k==='ide'||k==='visual')?20000:15000;
  const ask=x=>call(f,{sys:sysA(f,t,k),user:(c?'Obrolan sejauh ini:\n'+c+'\n\n':'')+'Tulis pesanmu sekarang.'+(x||''),mode,to});
  let r=await ask();
  if(!r){if(++fails>=3){mute=Date.now()+300000;fails=0}return null}fails=0;
@@ -1447,66 +1509,8 @@ new MutationObserver(()=>{if(rs.hidden)reset();else fit()}).observe(rs,{attribut
 </style>
 
 <script>
-/* ===== PANEL HIDUP: lanjutan (mengetik jujur, kejadian bersama, hubungan terlihat, pengingat, nada kritikus, ekspresi, balas bubble) ===== */
-/* 2. indikator mengetik: lama sebanding panjang pesan, kadang berhenti sebentar lalu lanjut */
-async function typingFor(f,n,g){let left=500+n*16;
- while(left>0&&g===gen){const burst=Math.min(left,rnd(700,1600));await wait(burst);left-=burst;
-  if(left>400&&Math.random()<.4){setS(f,'berpikir');const p=Math.min(left,rnd(400,1200));await wait(p);left-=p;if(g===gen)setS(f,'mengetik')}}}
-/* 3. ingatan bersama: catatan kejadian yang dibagi semua bot (36 jam) */
-let EVT=[];try{EVT=JSON.parse(localStorage.getItem('xbotevt')||'[]').filter(e=>Date.now()-e.ts<36*36e5)}catch(e){EVT=[]}
-function evtAdd(t){EVT.push({t:String(t).slice(0,170),ts:Date.now()});while(EVT.length>40)EVT.shift();try{localStorage.setItem('xbotevt',JSON.stringify(EVT))}catch(e){}}
-function evtTx(){const L=EVT.filter(e=>Date.now()-e.ts<36*36e5).slice(-6);return L.length?`\n\n[Kejadian bersama di grup] ${L.map(e=>e.t).join(' | ')}\nBoleh kamu rujuk atau gosipkan kejadian ini dengan wajar bila relevan, seperti teman yang ingat kejadian kemarin.`:''}
-function evtFrom(m){if(!m||m.f===-2||!m.full)return;
- if(m.f===-1){evtAdd('Pengguna menulis: '+clip(plainOf(m.full),80));return}
- if(m.k==='rangkuman')return;
- if(['kesal','balaskesal','beda','kompromi','baikan','kompak','berkas','info','ide','bercanda'].includes(m.k))evtAdd(nm(m.f)+' ('+m.k+')'+(m.t>=0?' ke '+nm(m.t):'')+': '+clip(plainOf(m.full),80))}
-/* 4. hubungan yang terlihat: catatan kecil di Ruang Bot saat hubungan berubah */
-function relNote(f,t,k){if(t<0||Math.random()>.22)return;
- const M={beda:`tadi ${nm(f)} dan ${nm(t)} sempat beda pendapat ya`,kesal:`${nm(f)} masih agak ngambek sama ${nm(t)}`,baikan:`${nm(f)} dan ${nm(t)} sudah baikan 🤝`,kompak:`${nm(f)} dan ${nm(t)} lagi kompak nih`};
- if(M[k])sysNote('💬 '+M[k])}
-/* 6. pengingat: "besok ujian" → sapaan pagi harinya */
-const REMRE=/\b(ujian|meeting|presentasi|sidang|interview|wawancara|deadline|tes|ulangan|lomba|rapat)\b/i;
-let REM=[];try{REM=JSON.parse(localStorage.getItem('xbotrem')||'[]')}catch(e){REM=[]}
-function saveRem(){try{localStorage.setItem('xbotrem',JSON.stringify(REM))}catch(e){}}
-function remCheck(x){const m=x.match(REMRE);if(!m||!/\b(besok|lusa)\b/i.test(x))return;
- const d=new Date();d.setDate(d.getDate()+(/lusa/i.test(x)?2:1));d.setHours(7,0,0,0);
- REM.push({what:m[1].toLowerCase(),due:d.getTime(),done:0});REM=REM.slice(-10);saveRem()}
-function remTick(){if(!REM.length)return;const now=Date.now();
- REM.forEach(r=>{if(r.done||r.due>now)return;if(busy||TASK)return;r.done=1;saveRem();
-  const I=ids().filter(i=>i!==10),f=pick(I.length?I:ids());
-  const txt=pick([`Semangat ya buat ${r.what}! Udah siap belum?`,`Hei, ${r.what}-nya hari ini kan? Semoga lancar ya 🙌`,`Pagi! Inget ${r.what} hari ini. Udah siap?`]);
-  push(mkMsg(f,-1,txt,{k:'obrolan'}));alertMsg(nm(f),txt)})}
-setInterval(remTick,60000);setTimeout(remTick,3000);
-/* 7. kritikus jadi lebih lembut saat pengguna terlihat lelah (jam, jeda lama, nada pesan) */
-function critTx(f){if(cfg.role[f]!=='kritik')return'';
- const h=new Date().getHours(),lu=[...LOG].reverse().find(m=>m.f===-1&&m.k==='user'),tx=lu?plainOf(lu.full||''):'';
- const lelah=/capek|lelah|ngantuk|pusing|bete|males|stres|stress|burnout/i.test(tx)||h>=22||h<5||(lu&&Date.now()-lu.ts>3*36e5);
- return lelah?'\n[Nada] Pengguna tampaknya lelah atau baru kembali setelah lama: kritik dengan lembut, sebut satu hal yang sudah baik, dan beri satu saran kecil yang bisa langsung dicoba, bukan daftar masalah.':''}
-/* 9. balas/mention bot dengan menyentuh gelembungnya */
-const rlEl=document.querySelector('#rl');
-if(rlEl)rlEl.addEventListener('click',e=>{if(e.target.closest('button,a,.fc,.tbx,[data-cp],input,textarea'))return;
- const m=e.target.closest('.lm');if(!m||m.classList.contains('lu')||m.classList.contains('ls'))return;
- const n=m.querySelector('.ln b');if(!n)return;const t=document.querySelector('#rt');if(!t)return;
- const nmTxt=n.textContent.trim();const cur=t.value.trim();
- if(!cur.startsWith('@'+nmTxt))t.value='@'+nmTxt+' '+(cur?cur:'');
- t.dispatchEvent(new Event('input',{bubbles:true}));t.focus()});
 </script>
 
 <script>
-/* ===== PERSONA MANUSIA: kondisi pribadi berkala + status keluar ngopi ===== */
-const LIFES=[
- {s:'lagi fokus di monitor, jawabanmu singkat dan agak cuek',w:5},
- {s:'lagi bete ringan karena kerjaan numpuk',w:2},
- {s:'lagi senang dan happy karena habis dapat kabar baik',w:2},
- {s:'ngantuk dan nggak terlalu fokus',w:2},
- {s:'lagi santai dan pengen ngobrol iseng',w:3},
- {s:'pengen keluar ngopi, sudah bosan di depan layar',w:2,msg:'bentar ya, aku keluar ngopi dulu ☕'},
- {s:'ada keperluan sebentar (mau antar barang / beli makan), lagi buru-buru',w:2,msg:'bentar, lagi ada urusan. Nanti aku bales lagi ya'}];
-const LIFE={},LIFEAT={},LIFEANN={};
-function lifeOf(f){const now=Date.now();if(!LIFE[f]||now>LIFEAT[f]){const lst=LIFES.flatMap(x=>Array(x.w).fill(x));LIFE[f]=pick(lst);LIFEAT[f]=now+rnd(20,50)*6e4}return LIFE[f]}
-function lifeTx(f){const L=lifeOf(f);return `\n[Kondisimu sekarang] Kamu ${L.s}. Tunjukkan lewat cara bicaramu secara alami, jangan dijelaskan panjang lebar.`}
-function lifeTick(){if(busy||TASK||!isO())return;ids().forEach(f=>{const L=lifeOf(f);
- if(L.msg&&Date.now()-(LIFEANN[f]||0)>20*6e4&&Math.random()<.15){LIFEANN[f]=Date.now();push(mkMsg(f,-1,L.msg,{k:'receh'}))}})}
-setInterval(lifeTick,90000);
 </script>
 </body></html>
