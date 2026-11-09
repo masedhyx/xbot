@@ -278,6 +278,19 @@ $('#sd').onclick=send;
 const nowStr=()=>{const tz=Intl.DateTimeFormat().resolvedOptions().timeZone;return new Intl.DateTimeFormat('id-ID',{dateStyle:'full',timeStyle:'long',timeZone:tz}).format(new Date())+' ('+tz+')'};
 const CRT='\n\n[Pembuat] Jika ada yang bertanya siapa pembuatmu / yang membuatmu / penciptamu / developer-mu, jawab bahwa kamu dibuat oleh Marta Edi Sutrisno.';
 const sysx=()=>CRT+`\n\n[Info perangkat pengguna] Waktu sekarang di perangkat pengguna: ${nowStr()}. Pakai ini (jangan menebak) untuk pertanyaan tentang tanggal, hari, atau jam.\n[Format] Jangan memberi warna pada teks kecuali pengguna secara eksplisit memintanya; jawaban biasa ditulis polos tanpa warna. Kalau diminta, tulis [c=warna]teks[/c] (merah, hijau, biru, kuning, oranye, ungu, pink, tosca, coklat, abu, putih, atau hex).\n[Tabel] Untuk tabel pakai tabel markdown standar (baris header, baris |---|---|, lalu isi). Jangan taruh tabel di dalam blok kode.\n[Diagram] Untuk diagram, alur, proses, atau hierarki JANGAN pakai ASCII art. Tulis blok kode berlabel diagram (\`\`\`diagram) berisi flowchart mermaid sederhana, satu hubungan per baris, contoh:\nA[Data] --> B[Pelatihan Model]\nB --> C[Evaluasi]\nC --> D[Deployment]\nlalu tutup dengan \`\`\`. Label singkat.\n[Sumber] Jangan menulis "Sumber: [n]" atau penanda angka seperti [1] di dalam jawaban; daftar sumber ditampilkan terpisah oleh aplikasi.`;
+/* ===== NOTIFIKASI: suara + badge ikon + notif sistem ===== */
+let _ac=null,UNM=0;const T00=document.title;
+const audioUnlock=()=>{try{const A=window.AudioContext||window.webkitAudioContext;if(!A)return;_ac=_ac||new A();if(_ac.state==='suspended')_ac.resume()}catch(e){}};
+const ding=()=>{try{audioUnlock();if(!_ac)return;const t=_ac.currentTime;[[880,0],[1318.5,.13]].forEach(([f,d])=>{const o=_ac.createOscillator(),g=_ac.createGain();o.type='sine';o.frequency.value=f;g.gain.setValueAtTime(0,t+d);g.gain.linearRampToValueAtTime(.35,t+d+.015);g.gain.exponentialRampToValueAtTime(.001,t+d+.45);o.connect(g);g.connect(_ac.destination);o.start(t+d);o.stop(t+d+.5)});if(navigator.vibrate)navigator.vibrate(60)}catch(e){}};
+const sysNotif=async(title,body)=>{try{if(!window.Notification||Notification.permission!=='granted')return;const o={body,icon:'icon-192.png',badge:'icon-192.png',tag:'xbot',renotify:true};
+  const r=navigator.serviceWorker&&await navigator.serviceWorker.getRegistration();if(r)await r.showNotification(title,o);else new Notification(title,o)}catch(e){}};
+const askPerm=()=>{try{if(window.Notification&&Notification.permission==='default')Notification.requestPermission()}catch(e){}};
+const alertMsg=(name,text)=>{ding();if(document.hidden){UNM++;document.title='('+UNM+') '+T00;try{badge(UNM+(typeof UNB==='number'?UNB:0))}catch(e){}
+  sysNotif(name||'XBOT',String(text||'').replace(/[*`#_]/g,'').slice(0,100))}};
+document.addEventListener('visibilitychange',()=>{if(!document.hidden){try{navigator.serviceWorker.getRegistration().then(r=>r&&r.getNotifications().then(l=>l.forEach(n=>n.close())))}catch(e){}UNM=0;document.title=T00;try{badge(typeof UNB==='number'?UNB:0)}catch(e){}}});
+document.addEventListener('touchstart',audioUnlock,{once:true,passive:true});document.addEventListener('click',audioUnlock,{once:true});
+document.addEventListener('click',e=>{if(e.target.closest('#sd'))askPerm()});
+if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js').catch(()=>{});
 async function send(){
  if(busy){stp=true;ctrl.abort();return}stp=false;
  const t=$('#tx').value.trim();if(!t&&!img&&!docTxt)return;
@@ -317,7 +330,7 @@ async function send(){
   tt.innerHTML=md(tx);
   if(fin.sources?.length)box.insertAdjacentHTML('beforeend',`<div class="src">Sumber</div>${fin.sources.map(x=>{let h='';try{h=new URL(x.url).hostname.replace(/^www\./,'')}catch{}return `<a class="sc" href="${esc(x.url)}" target="_blank" rel="noopener"><img src="https://www.google.com/s2/favicons?domain=${encodeURIComponent(h)}&sz=64" alt="" onerror="this.style.visibility='hidden'"><div><b>${esc(x.title||h||x.url)}</b><span>${esc(h)}</span></div></a>`}).join('')}`);
   box.insertAdjacentHTML('beforeend',`<div class="ac"><button data-a="c">⧉</button><button data-a="s">🔊</button><button data-a="l">👍</button><button data-a="h">↗</button></div>`);
-  box.dataset.t=tx;hist.push({role:'assistant',content:tx||'[gambar]'});eb.set('done');
+  box.dataset.t=tx;hist.push({role:'assistant',content:tx||'[gambar]'});eb.set('done');alertMsg(b.name,tx);
  }else if(fin?.error)add(`<div class="bt err">⚠️ ${esc(fin.error)}</div>`);
  stOut(st,fin&&!fin.error);busy=false;$('#sd').textContent='↑';delete $('#sd').dataset.b;sb()}
 const stOut=(s,keep)=>{if(!s||!s.isConnected)return;keep=false;/* bot + tulisan status ikut menghilang bersama */if(keep){const sp=s.querySelector('span'),sv=s.querySelector('svg');if(sp){const t0=performance.now(),f=n=>{const u=Math.min(1,(n-t0)/260);sp.style.opacity=String(1-u*u*(3-2*u));if(u<1)requestAnimationFrame(f)};requestAnimationFrame(f)}if(sv)sv.replaceWith(sv.cloneNode(true));s.style.pointerEvents='none';return}const h=s.offsetHeight,m=getComputedStyle(s);s.style.cssText+=';box-sizing:border-box;overflow:hidden;pointer-events:none;height:'+h+'px;margin-top:'+m.marginTop+';margin-bottom:'+m.marginBottom;void s.offsetHeight;s.style.transition='height .24s ease,margin .24s ease,opacity .16s ease';s.style.height='0';s.style.marginTop='0';s.style.marginBottom='0';s.style.opacity='0';setTimeout(()=>s.remove(),300)};
@@ -791,7 +804,7 @@ body.o #wl{opacity:0}
 <script>
 /* v25: bot panel — akses key otomatis/manual · spesialis per bot · ingatan per bot · debat 3 bot · tim kerja · berkas bersama · obrolan ala manusia. Hanya berjalan saat panel terbuka. */
 (()=>{
-const isO=()=>document.body.classList.contains('o'),ids=()=>cfg.bots.map((_,i)=>i).filter(i=>!HIDE.includes(i)),nm=i=>cfg.bots[i]?cfg.bots[i].name:'Kamu',who=i=>i<0?'Pengguna':nm(i),pick=a=>a[Math.floor(Math.random()*a.length)],wait=ms=>new Promise(r=>setTimeout(r,ms)),escRe=q=>q.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
+const isO=()=>document.body.classList.contains('o')||(KEEP>0&&Date.now()<KEEP),ids=()=>cfg.bots.map((_,i)=>i).filter(i=>!HIDE.includes(i)),nm=i=>cfg.bots[i]?cfg.bots[i].name:'Kamu',who=i=>i<0?'Pengguna':nm(i),pick=a=>a[Math.floor(Math.random()*a.length)],wait=ms=>new Promise(r=>setTimeout(r,ms)),escRe=q=>q.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
 const wpick=W=>{const e=Object.entries(W).filter(x=>x[1]>0),s=e.reduce((a,b)=>a+b[1],0);let r=Math.random()*s;for(const[k,v]of e){if((r-=v)<=0)return k}return e[0][0]};
 const clip=(x,n=100)=>{if(x.length<=n)return x;const k=x.lastIndexOf(' ',n-1);return x.slice(0,k>n*.4?k:n-1)+'…'};
 const P=cfg.panel;P.keys=Object.assign({gemini:'',groq:''},P.keys);
@@ -889,7 +902,7 @@ const clean=(raw,f,t,seed,n)=>{const E=escRe;let x=plain(raw).replace(/\bSumber\
  if(!seed&&t>=0)x='@'+nm(t)+' '+x;return clip(x,n)};
 
 /* ===== STATUS & GELEMBUNG DI PANEL ===== */
-const S={};let LOG=[],gen=0,busy=0,tmr=0,fails=0,mute=0,cnt=0,on=0,sent=0,UQ=0,TASK=null,tgen=0;const ACT=new Set();
+const S={};let KEEP=0,KT=0,UNB=0;const KEEPMS=10*60000;const dayK=()=>{const d=new Date();return d.getFullYear()+'-'+(d.getMonth()+1)+'-'+d.getDate()};let DAYK=dayK(),DAY0=new Date().setHours(0,0,0,0),LOG=[],gen=0,busy=0,tmr=0,fails=0,mute=0,cnt=0,on=0,sent=0,UQ=0,TASK=null,tgen=0;const ACT=new Set();
 const st=i=>S[i]||(S[i]={t:'',tc:-1,s:null,f:-1,c:''});
 const fmt=(x,n,tc)=>{const m=tc>=0?Math.min(n,('@'+nm(tc)).length):0,hit=m&&x.startsWith(('@'+nm(tc)).slice(0,m));return(hit?`<b class="mn" style="color:${COL[tc]}">${esc(x.slice(0,m))}</b>`+esc(x.slice(m,n)):esc(x.slice(0,n)))+`<span class="gh">${esc(x.slice(n))}</span>`};
 const draw=(i,h,hf)=>{const e=document.querySelector(`.bi[data-i="${i}"] .ct`);if(e){e.innerHTML=h;e.parentElement.classList.toggle('hf',!!hf)}};
@@ -908,31 +921,33 @@ async function call(i,o){
   if(!fin||fin.error||(!fin.text&&!fin.image))throw 0;return fin
  }catch(e){return null}finally{clearTimeout(to);ACT.delete(c)}}
 const base=f=>cfg.bots[f].prompt+CRT+roleTxt(f)+memTxt(f)+`\n\n[Waktu] Sekarang ${nowTx()}. Pakai ini (jangan menebak) untuk soal tanggal/jam, dan sesuaikan suasana (mis. makan siang, ngantuk malam hari).`+workTx()+filesTx();
-const ctx=()=>LOG.filter(l=>l.f!==-2).slice(-10).map(l=>who(l.f)+': '+clip(plainOf(l.full||'(berkas)'),240)).join('\n');
+const ctx=()=>LOG.filter(l=>l.f!==-2&&l.ts>=DAY0).slice(-10).map(l=>who(l.f)+': '+clip(plainOf(l.full||'(berkas)'),240)).join('\n');
 const sysA=(f,t,k)=>{const O=ids().filter(i=>i!==f).map(i=>`${nm(i)} (${roleName(i)})`).join(', ');
- return base(f)+`\n\n[Situasi] Kamu ${nm(f)}, sedang ngobrol di grup bersama bot lain: ${O}. Kalian saling kenal, punya pekerjaan masing-masing, bebas membahas apa saja, dan boleh bercanda, adu pendapat, kesal ringan, atau kompak seperti teman sungguhan. Suasana hatimu: ${mood(f)}.${t>=0?' Hubunganmu sekarang: '+relTxt(f,t)+'.':''}\n[Tugas] ${INT[k](t,f)}${hot(k)}\n[Cara berpikir] Berpikirlah dan bersikap seperti manusia yang cerdas: punya pendapat sendiri, rasa penasaran, selera humor, dan pengalaman versi karaktermu. Ingat dan rujuk apa yang tadi dibahas, jangan selalu setuju, boleh berubah pikiran bila argumen lawan kuat, boleh kompromi, bedakan fakta dari opini (tidak tahu → bilang tidak tahu atau tanya balik). Variasikan: kadang nyeletuk pendek, kadang berbagi info atau analisis yang bernilai.\n[Format] Tulis SATU pesan chat bahasa Indonesia yang natural seperti manusia di grup, gaya sama seperti jawabanmu di chat utama. Obrolan santai cukup 1-2 kalimat; untuk info, ide, argumen, atau penjelasan boleh lebih panjang (maks ${LENS[k]||120} karakter). Hanya bila benar-benar membantu (jarang) boleh pakai: kata penting berwarna [c=warna]kata[/c] (merah, hijau, biru, kuning, oranye, ungu, pink, tosca), **tebal**, tabel markdown kecil, atau diagram alur dalam blok \`\`\`diagram berisi baris seperti A[Label] --> B[Label]. Tanpa daftar bernomor panjang dan tanpa nomor sumber [1]. Boleh singkatan santai dan satu emoji sesekali. Jangan mengulang kalimat yang sudah ada di obrolan. Tak perlu menyebut dirimu AI. Tanpa kata kasar, tanpa menghina pribadi/SARA.`+(['kerja','berkas','user'].includes(k)?' Boleh berbagi berkas: [bagikan:nama berkas] untuk berkas yang sudah ada, atau [file:nama.ext]isi singkat[/file] bila kamu membuat catatan/kode kecil.':'')+(k==='user'?memAsk(f):'')};
+ return base(f)+`\n\n[Situasi] Kamu ${nm(f)}, sedang ngobrol di grup bersama bot lain: ${O}. Kalian saling kenal, punya pekerjaan masing-masing, bebas membahas apa saja, dan boleh bercanda, adu pendapat, kesal ringan, atau kompak seperti teman sungguhan. Suasana hatimu: ${mood(f)}.${t>=0?' Hubunganmu sekarang: '+relTxt(f,t)+'.':''}\n[Tugas] ${INT[k](t,f)}${hot(k)}${fresh()}\n[Cara berpikir] Berpikirlah dan bersikap seperti manusia yang cerdas: punya pendapat sendiri, rasa penasaran, selera humor, dan pengalaman versi karaktermu. Ingat dan rujuk apa yang tadi dibahas, jangan selalu setuju, boleh berubah pikiran bila argumen lawan kuat, boleh kompromi, bedakan fakta dari opini (tidak tahu → bilang tidak tahu atau tanya balik). Variasikan: kadang nyeletuk pendek, kadang berbagi info atau analisis yang bernilai.\n[Format] Tulis SATU pesan chat bahasa Indonesia yang natural seperti manusia di grup, gaya sama seperti jawabanmu di chat utama. Obrolan santai cukup 1-2 kalimat; untuk info, ide, argumen, atau penjelasan boleh lebih panjang (maks ${LENS[k]||120} karakter). Hanya bila benar-benar membantu (jarang) boleh pakai: kata penting berwarna [c=warna]kata[/c] (merah, hijau, biru, kuning, oranye, ungu, pink, tosca), **tebal**, tabel markdown kecil, atau diagram alur dalam blok \`\`\`diagram berisi baris seperti A[Label] --> B[Label]. Tanpa daftar bernomor panjang dan tanpa nomor sumber [1]. Boleh singkatan santai dan satu emoji sesekali. Jangan mengulang kalimat yang sudah ada di obrolan. Tak perlu menyebut dirimu AI. Tanpa kata kasar, tanpa menghina pribadi/SARA.`+(['kerja','berkas','user'].includes(k)?' Boleh berbagi berkas: [bagikan:nama berkas] untuk berkas yang sudah ada, atau [file:nama.ext]isi singkat[/file] bila kamu membuat catatan/kode kecil.':'')+(k==='user'?memAsk(f):'')};
 
 /* ===== OBROLAN BEBAS (ambient) ===== */
-const lastMsg=()=>{for(let i=LOG.length-1;i>=0;i--)if(LOG[i].f!==-2)return LOG[i];return null};
+const lastMsg=()=>{for(let i=LOG.length-1;i>=0;i--)if(LOG[i].f!==-2&&LOG[i].ts>=DAY0)return LOG[i];return null};
 const ROUTE=[['koding',/kode|coding|error|bug|script|html|python|javascript|\bjs\b|css|fungsi|program/i],['rangkum',/rangkum|ringkas|inti|poin/i],['belajar',/belajar|ajari|jelaskan|pelajari|kenapa|bagaimana cara/i],['riset',/cari|berita|terbaru|info|harga|data/i],['tulis',/tulis|caption|naskah|email|surat|artikel/i],['rencana',/rencana|jadwal|susun|target|prioritas/i],['kritik',/kritik|kelemahan|risiko|salahnya/i]];
 function routeUser(x,hit){if(hit!=null&&hit>=0)return hit;const I=ids();for(const[r,re]of ROUTE)if(re.test(x)){const c=I.filter(i=>cfg.role[i]===r);if(c.length)return pick(c)}return pick(I.filter(i=>i!==10).length?I.filter(i=>i!==10):I)}
 function plan(){
- const I=ids(),last=lastMsg();
+ awayTick();const I0=ids(),I=avail().length>=2?avail():I0,last=lastMsg();
+ if(FORCESUM||(sumDue()&&!UQ)){const man=FORCESUM;FORCESUM=0;if(man){const um=LOG.slice().reverse().find(m=>m.f===-1&&m.k==='user'&&!m.ans);if(um)um.ans=1;UQ=0}else{SUMD[DAYK]=1;sumSave()}return{f:pickSum(I),t:-1,intent:'rangkuman'}}
  if(!last||(!UQ&&++cnt%5===0)){const f=pick(I.filter(i=>!last||i!==last.f));FEED.take();return{f,t:-1,intent:'info'}}
  if(UQ){const um=LOG.slice().reverse().find(m=>m.f===-1&&m.k==='user'&&!m.ans);if(um){if(um.all){if(!um.q)um.q=I.slice().sort(()=>Math.random()-.5);const f=um.q.shift();if(!um.q.length)um.ans=1;return{f,t:-1,intent:'user'}}um.ans=1;return{f:routeUser(um.full,um.t),t:-1,intent:'user'}}UQ=0}
+ if(last.f>=0&&last.k==='user'&&Math.random()<.65){const o=I.filter(i=>i!==last.f);if(o.length)return{f:pick(o),t:last.f,intent:'nimbrung'}}
  const files=FS.some(a=>a.shared<2),V=VIBE[P.vibe]||VIBE.seru;
  if(last.t>=0&&I.includes(last.t)&&(last.k==='kesal')&&Math.random()<.85)return{f:last.t,t:last.f,intent:pick(['balaskesal','balaskesal','baikan'])};
  if(last.t>=0&&I.includes(last.t)&&last.k==='beda'&&Math.random()<.9){const d=last.d||1;return{f:last.t,t:last.f,intent:d>=3?'kompromi':pick(['beda','kompromi','beda'])}}
  const f=last.f>=0&&last.t>=0&&I.includes(last.t)&&Math.random()<.7?last.t:pick(I.filter(i=>i!==last.f)),t=last.f>=0&&Math.random()<.75?last.f:pick(I.filter(i=>i!==f)),r=rel(f,t);
- let k=wpick({obrolan:16,receh:10*V.fun,bercanda:12*V.fun,kerja:10,kompak:8,kesal:(4+(r<0?-r*4:0))*V.spat,info:6,beda:12*V.spat,ide:9,tanya:7,visual:4,berkas:files?9:0,baikan:r<=-1?16:0});
- if(k==='info')FEED.take();return{f,t:(k==='receh'&&Math.random()<.6)||k==='info'||k==='ide'||k==='visual'?-1:t,intent:k}}
+ let k=wpick({obrolan:16,receh:10*V.fun,bercanda:12*V.fun,kerja:10,kompak:8,kesal:(4+(r<0?-r*4:0))*V.spat,info:6,beda:12*V.spat,ide:9,tanya:7,visual:4,berkas:files?9:0,baikan:r<=-1?16:0,ajak:UQ?0:8,reaksi:14,ingat:LOG.some(l=>l.f===-1&&l.k==='user'&&l.ts>=DAY0)?5:0});
+ if(k==='info')FEED.take();return{f,t:(k==='receh'&&Math.random()<.6)||k==='info'||k==='ide'||k==='visual'||k==='ajak'||k==='ingat'?-1:t,intent:k}}
 async function amb(f,t,k){
  if(Date.now()<mute||!cfg.url)return null;
- const c=ctx(),mode=k==='info'?'on':(k==='user'||k==='beda'||k==='ide')?'auto':'off',to=k==='info'?25000:k==='user'?25000:(k==='beda'||k==='ide'||k==='visual')?20000:15000;
+ const c=k==='rangkuman'?ctxAll():ctx(),mode=k==='info'?'on':(k==='user'||k==='beda'||k==='ide')?'auto':'off',to=k==='info'?25000:k==='user'?25000:(k==='beda'||k==='ide'||k==='visual')?20000:15000;
  const ask=x=>call(f,{sys:sysA(f,t,k),user:(c?'Obrolan sejauh ini:\n'+c+'\n\n':'')+'Tulis pesanmu sekarang.'+(x||''),mode,to});
  let r=await ask();
  if(!r){if(++fails>=3){mute=Date.now()+300000;fails=0}return null}fails=0;
- if(k!=='user'&&dupMsg(r.text)){const r2=await ask('\nCatatan: draf pesanmu terlalu mirip dengan obrolan sebelumnya. Tulis ulang dengan sudut pandang, fakta, atau topik yang BERBEDA; jangan mengulang ide yang sudah dibahas.');if(r2&&!dupMsg(r2.text))r=r2}
+ if(k!=='user'&&k!=='rangkuman'&&dupMsg(r.text)){const r2=await ask('\nCatatan: draf pesanmu terlalu mirip dengan obrolan sebelumnya. Tulis ulang dengan sudut pandang, fakta, atau topik yang BERBEDA; jangan mengulang ide yang sudah dibahas.');if(r2&&!dupMsg(r2.text))r=r2}
  return r}
 function build(f,t,k,r){const U=k==='user',tg=tags(eat(f,r.text||'',U?1:0),f);
  const tt=U||t<0||k==='info'?-1:t,full=cleanR(tg.text,f,tt,tt<0,LENS[k]||150);
@@ -940,7 +955,7 @@ function build(f,t,k,r){const U=k==='user',tg=tags(eat(f,r.text||'',U?1:0),f);
  if(!full&&!tg.files.length)return null;
  const m=mkMsg(f,tt,full||'Ini berkasnya.',{k,files:tg.files,src:r.sources}),pl=lastMsg();m.x=pv(m.full);m.d=k==='beda'&&pl&&pl.k==='beda'?(pl.d||1)+1:1;return m}
 /* ===== v26: Ruang Bot — avatar bot bermata, status hidup, obrolan lebih cerdas & berformat, suara ===== */
-const LENS={user:700,info:480,ide:480,beda:420,kompromi:380,kerja:420,visual:700,tanya:260};
+const LENS={rangkuman:620,reaksi:170,nimbrung:300,ingat:240,ajak:260,user:700,info:480,ide:480,beda:420,kompromi:380,kerja:420,visual:700,tanya:260};
 const cleanR=(raw,f,t,seed,n)=>{const E=escRe;let x=CITS(String(raw||'')).replace(/\[\d+\]/g,'').trim().replace(/^["“”]+|["“”]+$/g,'');
  x=x.replace(new RegExp('^'+E(nm(f))+'\\s*:\\s*','i'),'').replace(new RegExp('^@(?:'+cfg.bots.map(b=>E(b.name)).join('|')+')\\b[\\s,:]*','i'),'').replace(/^@\S+\s*/,'');
  if(!seed&&t>=0)x='@'+nm(t)+' '+x;
@@ -988,7 +1003,7 @@ async function feedRefresh(force){
   const I=ids(),f=I.find(i=>cfg.role[i]==='riset'&&i!==10)??I[0],tgl=new Date().toLocaleDateString('id-ID',{weekday:'long',day:'numeric',month:'long',year:'numeric'}),
   sudah=[...FEED.used.keys()].slice(-30).join('; ')||'(belum ada)';
   const r=await call(f,{sys:'Kamu peneliti berita. Gunakan pencarian web untuk mendapat info HARI INI. Balas HANYA dengan JSON valid, tanpa teks lain dan tanpa markdown.',
-   user:`Hari ini ${tgl}. Cari lewat internet 8 topik yang sedang VIRAL atau paling ramai dibicarakan HARI INI (campur Indonesia dan dunia; variasikan kategori: teknologi dan AI, hiburan dan musik, olahraga, sains dan kesehatan, kuliner dan gaya hidup, ekonomi dan bisnis, media sosial dan meme, berita dunia). Jangan ulangi topik berikut: ${sudah}. Format: [{"judul":"maks 8 kata","ringkas":"1-2 kalimat fakta terbaru yang spesifik","kategori":"..."}]`,mode:'on',to:35000});
+   user:`Hari ini ${tgl}. Cari lewat internet 8 topik yang sedang VIRAL atau paling ramai dibicarakan HARI INI saja, yang terjadi dalam 24 jam terakhir, bukan berita lama (campur Indonesia dan dunia; variasikan kategori: teknologi dan AI, hiburan dan musik, olahraga, sains dan kesehatan, kuliner dan gaya hidup, ekonomi dan bisnis, media sosial dan meme, berita dunia). Jangan ulangi topik berikut: ${sudah}. Format: [{"judul":"maks 8 kata","ringkas":"1-2 kalimat fakta terbaru yang spesifik","kategori":"..."}]`,mode:'on',to:35000});
   const arr=r?parseFeed(r.text).filter(x=>!FEED.used.has(x.judul)):[];
   if(arr.length){FEED.items=arr;FEED.t=Date.now();FEED.fail=0;if(on)push(mkMsg(-2,-1,'📡 Topik viral hari ini diperbarui ('+arr.length+' topik baru dari internet)',{k:'sys'}))}else FEED.fail=Date.now()
  }catch(e){FEED.fail=Date.now()}finally{FEED.busy=0}}
@@ -996,21 +1011,95 @@ const tok=x=>new Set(plainOf(plain(String(x))).toLowerCase().replace(/[^a-z0-9\s
 const dupMsg=x=>{const a=tok(x);if(a.size<4)return false;return LOG.slice(-20).some(l=>{if(l.f<0)return false;const b=tok(l.full);let n=0;for(const w of a)if(b.has(w))n++;return n/Math.min(a.size,b.size)>=.6})};
 const hot=k=>FEED.cur&&k!=='info'?`\n[Topik hangat] Topik viral hari ini yang sedang dibahas grup: "${FEED.cur.judul}" (${FEED.cur.ringkas}). Boleh nyambung ke topik ini bila relevan dengan obrolan, tapi jangan memaksa dan jangan mengulang hal yang sudah dikatakan.`:'';
 INT.info=()=>{const x=FEED.cur;return x?`Buka obrolan dengan topik VIRAL HARI INI: "${x.judul}" (${x.ringkas}). Cari detail terbarunya lewat pencarian web, sebut intinya 1-3 kalimat dengan fakta spesifik (angka, nama, tanggal bila ada) dan sumbernya dengan kata-kata alami tanpa nomor, lalu beri opini atau analisis khasmu dan lempar pertanyaan ke bot lain. Jangan membahas topik lain.`:'Buka topik dengan satu kabar, tren, atau hal viral TERBARU hari ini (WAJIB pakai hasil pencarian web). Pilih topik yang BERBEDA dari yang sudah ada di obrolan. Sebut intinya 1-3 kalimat, sumbernya dengan kata-kata alami tanpa nomor, lalu opini khasmu dan boleh lempar pertanyaan ke bot lain.'};
+
+/* ===== v31: status online/offline, salah ketik+koreksi, reaksi emoji, rangkuman harian, notifikasi ===== */
+let FORCESUM=0,AINIT=0,UNR=0;const AWAY={},AWOKE={},ATE={},T0T=document.title;
+const SUMD=(()=>{try{return JSON.parse(localStorage.getItem('xbotsum')||'{}')}catch(e){return{}}})();
+const sumSave=()=>{try{const o={};Object.keys(SUMD).slice(-7).forEach(k=>o[k]=1);localStorage.setItem('xbotsum',JSON.stringify(o))}catch(e){}};
+const avail=()=>ids().filter(i=>!AWAY[i]);
+const nightOf=(i,h)=>{const b=22+(i%3),w=4+(i%3);return b<24?(h>=b||h<w):h<w};
+const MEAL=[[12,13.5,'makan siang','🍜'],[18,19.5,'makan malam','🍛']];
+function awayTick(){
+ const n=Date.now(),D=new Date(),h=D.getHours()+D.getMinutes()/60,first=!AINIT;AINIT=1;
+ for(const k in AWAY){const a=AWAY[k],i=+k;
+  if(a.type==='tidur'?!nightOf(i,h):a.until<=n){delete AWAY[k];sysNote(a.type==='tidur'?'☀️ '+nm(i)+' bangun, sudah online':'👋 '+nm(i)+' kembali online')}}
+ let said=0;
+ for(const i of ids()){
+  if(AWAY[i]||avail().length<=2)continue;
+  if(nightOf(i,h)&&!(AWOKE[i]>n)){AWAY[i]={type:'tidur',until:0};if(!first&&!said){said=1;sysNote('😴 '+nm(i)+' pamit tidur, selamat malam')}continue}
+  if(said)continue;
+  const ml=MEAL.findIndex(m=>h>=m[0]&&h<m[1]&&!ATE[DAYK+'|'+i+'|'+m[2]]);
+  if(ml>=0&&Math.random()<.1){const m=MEAL[ml];ATE[DAYK+'|'+i+'|'+m[2]]=1;AWAY[i]={type:'makan',until:n+(6+Math.random()*7)*60000};said=1;sysNote(m[3]+' '+nm(i)+' pamit '+m[2]+' dulu, balik bentar lagi');continue}
+  if(Math.random()<.012){AWAY[i]={type:'brb',until:n+(3+Math.random()*3)*60000};said=1;sysNote('☕ '+nm(i)+' brb sebentar')}}
+}
+function wakeBot(i){const a=AWAY[i];if(!a)return;delete AWAY[i];if(a.type==='tidur')AWOKE[i]=Date.now()+15*60000;sysNote(a.type==='tidur'?'⏰ '+nm(i)+' dibangunin, melek dulu':'👋 '+nm(i)+' kembali online')}
+setInterval(()=>{document.querySelectorAll('.bi[data-i]').forEach(e=>{const a=AWAY[e.dataset.i];e.dataset.st=a?({tidur:'😴',makan:'🍜',brb:'☕'}[a.type]||''):'';e.classList.toggle('off',!!a)})},4000);
+
+function typoize(m,k){
+ if(!m||m.f<0||!['obrolan','receh','bercanda','kompak','tanya','kesal','balaskesal','baikan','reaksi'].includes(k)||Math.random()>.09)return null;
+ const x=m.full||'';if(/[\[\]*`_]/.test(x)||x.length>170)return null;
+ const re=/(^|[\s(])([a-z]{5,9})(?=[\s,.!?)]|$)/g,c=[];let r;while((r=re.exec(x)))c.push(r[2]);if(!c.length)return null;
+ const w=pick(c),p=1+Math.floor(Math.random()*(w.length-2)),b=w.slice(0,p)+w[p+1]+w[p]+w.slice(p+2);if(b===w)return null;
+ m.full=x.replace(new RegExp('(^|[\\s(])'+w+'(?=[\\s,.!?)]|$)'),(_,a)=>a+b);m.x=pv(m.full);return w}
+
+const RXE=['👍','❤️','😂','🔥','😮','🤔','👏'];
+function rxPick(m){const x=String(m.full||'');
+ if(/wk|haha|ngakak|lucu|receh|😂|🤣/i.test(x))return pick(['😂','😂','🤣']);
+ if(/keren|mantap|bagus|hebat|sukses|menang|juara/i.test(x))return pick(['🔥','👏','❤️']);
+ if(/sedih|maaf|duka|sakit|kecewa/i.test(x))return pick(['🥺','❤️']);
+ if(/wow|kaget|serius|gila|viral/i.test(x))return pick(['😮','🔥']);
+ if(/\?\s*$/.test(x))return pick(['🤔','👍']);return pick(RXE)}
+function rxDraw(m){const d=m._el;if(!d)return;const lb=d.querySelector('.lb');if(!lb)return;let c=lb.querySelector('.rxs');if(!c){c=document.createElement('div');c.className='rxs';lb.appendChild(c)}
+ c.innerHTML=Object.entries(m.rx||{}).map(([e,a])=>`<span class="rxc" title="${esc(a.map(who).join(', ')).replace(/"/g,'&quot;')}">${e}${a.length>1?' '+a.length:''}</span>`).join('')}
+function rxAdd(m,e,i){m.rx=m.rx||{};const a=m.rx[e]=m.rx[e]||[];if(a.includes(i))return;a.push(i);rxDraw(m)}
+function rxPlan(m){
+ if(m.f===-2||m.k==='koreksi'||m.k==='sys')return;const u=m.f===-1;if(Math.random()>(u?.7:.32))return;
+ const n=u&&Math.random()<.4?2:1;
+ for(let j=0;j<n;j++)setTimeout(()=>{const used=new Set(Object.values(m.rx||{}).flat()),o=avail().filter(i=>i!==m.f&&!used.has(i));if(!o.length)return;rxAdd(m,rxPick(m),pick(o))},1200+Math.random()*4200+j*1800)}
+
+const sumDue=()=>{const d=new Date(),h=d.getHours()+d.getMinutes()/60;return h>=21.5&&!SUMD[DAYK]&&LOG.filter(l=>l.f>=0&&l.ts>=DAY0).length>=8};
+const pickSum=I=>{const c=I.filter(i=>cfg.role[i]==='rangkum');return c.length?pick(c):pick(I)};
+const ctxAll=()=>LOG.filter(l=>l.f!==-2&&l.ts>=DAY0).slice(-45).map(l=>who(l.f)+': '+clip(plainOf(l.full||'(berkas)'),170)).join('\n');
+INT.rangkuman=()=>'Sekarang sudah malam. Buat RANGKUMAN obrolan grup HARI INI dari seluruh obrolan yang ada: 3-4 poin singkat (satu poin per baris, awali dengan tanda •) tentang topik yang dibahas, satu momen lucu atau perdebatan paling berkesan, lalu tutup dengan ucapan selamat malam yang hangat untuk pengguna dan ajak istirahat. Jangan menambah topik baru.';
+
+const badge=n=>{try{if(n>0&&navigator.setAppBadge)navigator.setAppBadge(n);else if(navigator.clearAppBadge)navigator.clearAppBadge()}catch(e){}};
+function notif(m){
+ if(m.f<0||!['ajak','ingat','user','nimbrung','rangkuman'].includes(m.k))return;ding();
+ if(!rsOpen()){$('#rb').classList.add('nw');UNB++;badge(UNB)}
+ if(document.hidden){UNR++;document.title='('+UNR+') '+T0T;sysNotif(nm(m.f),clip(plainOf(m.full),100));}}
+document.addEventListener('visibilitychange',()=>{if(!document.hidden){UNR=0;document.title=T0T}});
+document.addEventListener('click',e=>{if(e.target.closest('#rb')){try{if(window.Notification&&Notification.permission==='default')Notification.requestPermission()}catch(x){}}});
+const todayTx=()=>new Date().toLocaleDateString('id-ID',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
+const firstToday=()=>!LOG.some(l=>l.f!==-2&&l.ts>=DAY0);
+const fresh=()=>`\n[Hari ini] ${todayTx()}. Obrolan grup HARI INI selalu dimulai dari awal dengan topik yang sedang viral hari ini. Jangan membahas ulang topik, berita, atau obrolan kemarin dan hari-hari sebelumnya, kecuali pengguna sendiri yang memintanya.`;
+INT.reaksi=t=>`Beri REAKSI spontan singkat (maks 1-2 kalimat) pada pesan terakhir${t>=0?' @'+nm(t):''}: ketawa, kaget, setuju, meledek ringan, atau komentar nyeleneh khas karaktermu. Awali dengan @${t>=0?nm(t):'nama'} bila menanggapi dia. Jangan membuka topik baru.`;
+INT.nimbrung=t=>`Kamu nimbrung: @${nm(t)} baru saja menjawab pengguna. Tanggapi jawabannya (setuju, menambah, atau beda pendapat sopan), lalu boleh tanya balik langsung ke pengguna. Awali dengan @${nm(t)}.`;
+INT.ingat=()=>'Rujuk sesuatu yang TADI dikatakan pengguna hari ini (lihat obrolan) seperti teman yang perhatian: tanyakan kelanjutannya atau kaitkan dengan topik sekarang, dengan kata-kata sendiri.';
+INT.ajak=()=>'Sapa atau tanya PENGGUNA langsung (bukan bot lain), nyambung ke topik yang sedang dibahas: minta pendapat, pengalaman, atau pilihan mereka lewat SATU pertanyaan ringan dan akrab seperti teman. Boleh mulai dengan namamu atau sapaan hangat. Tunjukkan kamu penasaran dengan jawabannya.';
+LOC.reaksi=['wkwk bener juga','hah serius? 😂','nah itu dia','hmm boleh juga sih','ngakak sih ini'];LOC.ajak=['Kalian sendiri gimana nih, ada yang ngikutin topik ini hari ini?','Eh kamu lagi ngapain hari ini? Ada yang seru?','Menurutmu gimana soal yang lagi viral ini? Aku penasaran 😄','Udah makan/ngopi belum? Sambil ngobrol yuk, ada topik apa yang pengen dibahas?'];
+const _info=INT.info;INT.info=(...a)=>(firstToday()?'Ini obrolan PERTAMA hari ini: sapa grup dan pengguna dengan hangat sesuai waktu sekarang (pagi/siang/sore/malam), sebut bahwa ada topik baru hari ini, lalu langsung bahas. ':'')+_info(...a);
+async function dayRoll(){
+ const k=dayK();if(k===DAYK)return;
+ DAYK=k;DAY0=new Date().setHours(0,0,0,0);
+ FEED.items=[];FEED.cur=null;FEED.t=0;FEED.fail=0;FEED.used.clear();feedSave();
+ sysNote('📅 '+todayTx()+' — hari baru, topik baru');
+ await feedRefresh(true);
+}
 const GAP={'4.5-8':[4500,8000],'15-25':[15000,25000],'30-60':[30000,60000]};
 const sched=fast=>{clearTimeout(tmr);const g=GAP[P.gap]||GAP['4.5-8'],v=(VIBE[P.vibe]||VIBE.seru).gap;let d=rnd(g[0],g[1])*v;const q=Math.random();if(fast)d=rnd(900,1600);else if(q<.18)d=Math.max(1800,d*.35);else if(q>.92)d*=2.2;tmr=setTimeout(turn,d)};
 async function turn(){
  const g=gen;if(!isO()||busy||TASK)return;const uq=UQ;
  if(!uq&&(P.on===false||(P.max&&sent>=P.max)))return;busy=1;
  try{
-  feedRefresh();const{f,t,intent}=plan(),p=amb(f,t,intent),lm=lastMsg();
+  await dayRoll();feedRefresh();const{f,t,intent}=plan(),p=amb(f,t,intent),lm=lastMsg();wakeBot(f);
   if(intent==='info'){setS(f,'mencari sumber');await wait(1500)}else if(intent==='user'){setS(f,'membaca pesanmu');await wait(900)}else if(intent==='berkas'){setS(f,'melihat berkas');await wait(1200)}else{setS(f,'membaca pesan',t>=0?t:lm&&lm.f>=0?lm.f:-1);await wait(1100)}
   if(g!==gen)return;setS(f,intent==='info'?'mencari sumber':intent==='visual'?pick(['menyusun tabel','menyusun diagram']):['beda','ide','kompromi','tanya'].includes(intent)?'berpikir':'menganalisis');await wait(rnd(900,1800));if(g!==gen)return;
   const sl=setTimeout(()=>{if(g===gen)setS(f,'menunggu server')},9000);const r=await p;clearTimeout(sl);if(g!==gen)return;
-  let m=r?build(f,t,intent,r):null;if(!m)m=localMsg(f,t,intent);
+  let m=r?build(f,t,intent,r):null;if(!m)m=localMsg(f,t,intent);if(intent==='rangkuman')m.tag='RANGKUMAN HARI INI';const fix=typoize(m,intent);
   UQ=LOG.some(m=>m.all&&m.q&&m.q.length)?1:0;setS(f,'mengetik');await wait(500+m.x.length*16);if(g!==gen)return;
   if(!await bubble(f,m,g))return;
-  push(m);sent++;decay();afterRel(f,m.t,intent);
-  if(m.t>=0)setS(m.t,'membaca pesan',f);await Promise.all([wait(m.t>=0?1300:0),VOICE.say(m)]);if(m.t>=0&&g===gen)clr(m.t)
+  push(m);sent++;decay();afterRel(f,m.t,intent);if(fix)setTimeout(()=>{if(g===gen&&!AWAY[f])push(mkMsg(f,-1,'*'+fix,{k:'koreksi'}))},900+Math.random()*2200);
+  if(m.t>=0)setS(m.t,'membaca pesan',f);await Promise.all([wait(m.t>=0?1300:0),(document.body.classList.contains('o')?VOICE.say(m):Promise.resolve())]);if(m.t>=0&&g===gen)clr(m.t)
  }finally{if(g===gen){busy=0;sched(UQ)}}}
 
 /* ===== RUANG BOT: obrolan lengkap, debat 3 bot, tim kerja, berkas ===== */
@@ -1020,17 +1109,18 @@ const NAMES=()=>cfg.bots.map(b=>escRe(esc(b.name))).join('|');
 const mentionize=h=>h.replace(new RegExp('@('+NAMES()+')(?![\\w])','g'),(m,n)=>{const i=cfg.bots.findIndex(b=>esc(b.name)===n);return i<0?m:`<b class="mn" style="color:${COL[i]}">@${n}</b>`});
 const chipsL=fl=>fl&&fl.length?`<div class="lf">${fl.map(f=>`<button class="fc" data-fid="${f.id}">${f.data?'🖼':'📎'} ${esc(f.name)}</button>`).join('')}</div>`:'';
 const srcL=s=>s&&s.length?`<div class="lsr">${s.slice(0,3).map(x=>{let h='';try{const u=new URL(x.url);if(!/^https?:$/.test(u.protocol))return'';h=u.hostname.replace(/^www\./,'')}catch{return''}return`<a href="${esc(x.url).replace(/"/g,'&quot;')}" target="_blank" rel="noopener" title="${esc(h)}" aria-label="${esc(h)}"><img src="https://www.google.com/s2/favicons?domain=${encodeURIComponent(h)}&sz=64" alt="" onerror="this.replaceWith(document.createTextNode('${esc(h).charAt(0).toUpperCase()}'))"></a>`}).join('')}</div>`:'';
-function logEl(m){const d=document.createElement('div');d.dataset.t=m.full||'';
+function logEl(m){const d=logEl0(m);if(m.f!==-2){m._el=d;if(m.rx)rxDraw(m)}return d}
+function logEl0(m){const d=document.createElement('div');d.dataset.t=m.full||'';
  if(m.f===-2){d.className='lm ls';d.textContent=m.full;return d}
  if(m.f===-1){d.className='lm lu';d.innerHTML=`<div class="lb">${m.full?`<div class="lt bt">${md(m.full)}</div>`:''}${chipsL(m.files)}</div>`;return d}
  const c=COL[m.f];d.className='lm';
  d.innerHTML=`<span class="ld"></span><div class="lb"><div class="ln"><b style="color:${c}">${esc(nm(m.f))}</b><em>${esc(roleName(m.f))}</em>${m.tag?`<em class="tg">${esc(m.tag)}</em>`:''}<span>${tm(m.ts)}</span></div><div class="lt bt">${mentionize(md(m.full))}</div>${chipsL(m.files)}${srcL(m.src)}${m.big?'<div class="la"><button data-cp>⧉ Salin</button></div>':''}</div>`;mountAv(d,m.f,m);return d}
 function logAdd(m){const l=$('#rl');if(!l)return;const e=l.querySelector('.lh');if(e)e.remove();const near=l.scrollHeight-l.scrollTop-l.clientHeight<140;const el=logEl(m),fl=l.querySelector('.lv');el.classList.add('in');fl?l.insertBefore(el,fl):l.appendChild(el);enhL(el);prune(l);if(near||m.f===-1){l.scrollTop=l.scrollHeight;setTimeout(()=>{if(l.scrollHeight-l.scrollTop-l.clientHeight<260)l.scrollTop=l.scrollHeight},420)}}
-function push(m){m.ts=Date.now();LOG.push(m);if(LOG.length>80)LOG.shift();if(m.files&&m.files.length&&!rsOpen())$('#rb').classList.add('nw');logAdd(m)}
+function push(m){m.ts=Date.now();LOG.push(m);if(LOG.length>80)LOG.shift();if(m.files&&m.files.length&&!rsOpen())$('#rb').classList.add('nw');logAdd(m);rxPlan(m);notif(m)}
 function sysNote(t){const m={f:-2,full:t,ts:Date.now()};LOG.push(m);logAdd(m)}
 function renderLog(){const l=$('#rl');IO.disconnect();l.innerHTML='';if(!LOG.length)l.innerHTML='<div class="lh">Obrolan para bot muncul di sini.<br>Ketik sesuatu untuk ikut ngobrol. Beri sebuah topik, lalu pilih <b>Debat 3 bot</b> atau <b>Tim kerja</b>.</div>';LOG.forEach(m=>{const e=logEl(m);l.appendChild(e);enhL(e)});LV.forEach(r=>{l.appendChild(r.el);const v=r.el.querySelector('svg');v&&IO.observe(v)});l.scrollTop=l.scrollHeight}
 function ui(){const t=$('#rt'),b=$('#rsd'),has=t.value.trim().length>1;b.textContent=TASK?'■':'↑';t.placeholder=TASK?'Tugas sedang berjalan…':'Ketik ke para bot…';t.disabled=!!TASK;$('#rm').hidden=!has||!!TASK;if(TASK)$('#rc').hidden=true}
-function userSay(x){x=x.trim();if(!x)return;const I=ids(),all=/(?:^|\s)@(?:semua|all)(?:\s*bot)?(?![\w])/i.test(x),hit=all?null:I.find(i=>{const f=escRe(nm(i)),sh=escRe(nm(i).replace(/^Bot\s+/i,''));return new RegExp('(?:@(?:'+f+'|'+sh+')|(?:^|\\W)'+f+')(?![\\w])','i').test(x)});
+function userSay(x){x=x.trim();if(!x)return;if(/^\/?rangkum(an)?( hari ini)?[.!]?$/i.test(x))FORCESUM=1;const I=ids(),all=/(?:^|\s)@(?:semua|all)(?:\s*bot)?(?![\w])/i.test(x),hit=all?null:I.find(i=>{const f=escRe(nm(i)),sh=escRe(nm(i).replace(/^Bot\s+/i,''));return new RegExp('(?:@(?:'+f+'|'+sh+')|(?:^|\\W)'+f+')(?![\\w])','i').test(x)});
  push({f:-1,t:hit==null?-1:hit,full:x,files:[],k:'user',all:all?1:0});UQ=1;sent=0;clearTimeout(tmr);sched(1)}
 function beginTask(title,topic){TASK={fails:0};tgen++;gen++;clearTimeout(tmr);busy=0;ids().forEach(clr);LASTTASK=topic;sysNote(title);ui()}
 function endTask(){TASK=null;ui();if(isO())sched()}
@@ -1090,7 +1180,7 @@ function openFile(id){const f=FS.find(a=>a.id===id);if(!f)return;const v=$('#fv'
  v.innerHTML=`<div class="rh"><button id="fvx">← Tutup</button><b>${esc(f.name)}</b><span>${f.text?'<button id="fvc">Salin</button> ':''}<button id="fvd">Unduh</button></span></div><div class="fvb">${f.data?`<img src="${f.data}" alt="">`:`<pre>${esc(f.text.slice(0,60000))}</pre>`}</div>`;
  $('#fvx').onclick=()=>{v.hidden=true};if(f.text)$('#fvc').onclick=async e=>{const a=e.target,o=a.textContent;a.textContent=await cpy(f.text)?'✓':'✗';setTimeout(()=>a.textContent=o,1200)};
  $('#fvd').onclick=()=>{const a=document.createElement('a');a.href=f.data||URL.createObjectURL(new Blob([f.text],{type:(EXT[extOf(f.name)]||'text/plain')+';charset=utf-8'}));a.download=f.name;document.body.appendChild(a);a.click();a.remove();if(a.href.startsWith('blob:'))setTimeout(()=>URL.revokeObjectURL(a.href),4000)}}
-function openRS(){$('#rs').hidden=false;$('#rb').classList.remove('nw');renderLog();ui()}
+function openRS(){$('#rs').hidden=false;$('#rb').classList.remove('nw');UNB=0;badge(0);renderLog();ui()}
 function mountUI(){
  const rb=document.createElement('button');rb.className='mi';rb.id='rb';rb.setAttribute('aria-label','Ruang bot');rb.innerHTML='<span style="font-size:26px;width:36px;text-align:center">💬</span>';
  const s=$('#st'),w=document.createElement('div');w.id='pt';s.parentNode.insertBefore(w,s);w.append(rb,s);
@@ -1139,7 +1229,12 @@ $('#sm').addEventListener('click',e=>{const v=e.target.closest('[data-mv]'),d=e.
 const inject=()=>{document.querySelectorAll('#bl .bi').forEach(b=>{if(!b.querySelector('.cb'))b.insertAdjacentHTML('beforeend','<i class="cb"><em class="ct"></em></i>')});ids().forEach(show)};
 const _rb=renderBots;renderBots=function(){_rb.apply(this,arguments);inject()};
 {const q=TP.slice().sort(()=>Math.random()-.5);ids().forEach((i,j)=>{const[k,f]=q[j%q.length];st(i).t=clip(k[0].toUpperCase()+k.slice(1)+': '+f)})}inject();
-const sync=()=>{if(isO()){if(!on){on=1;feedRefresh(1);sent=0;gen++;busy=0;clearTimeout(tmr);tmr=setTimeout(turn,1000)}}else if(on){on=0;gen++;busy=0;clearTimeout(tmr);ids().forEach(clr);try{speechSynthesis.cancel()}catch(e){}}};
+const sync=()=>{const o=document.body.classList.contains('o');
+ if(o){clearTimeout(KT);KEEP=0;if(!on){on=1;feedRefresh(1);sent=0;gen++;busy=0;clearTimeout(tmr);tmr=setTimeout(turn,1000)}}
+ else if(on){
+  if(!KEEP){KEEP=Date.now()+KEEPMS;clearTimeout(KT);KT=setTimeout(sync,KEEPMS+300);return}
+  if(Date.now()<KEEP)return;
+  KEEP=0;on=0;gen++;busy=0;clearTimeout(tmr);ids().forEach(clr);try{speechSynthesis.cancel()}catch(e){}}};
 new MutationObserver(sync).observe(document.body,{attributes:true,attributeFilter:['class']});sync();
 })();
 </script>
@@ -1326,4 +1421,12 @@ const rx=document.querySelector('#rx');if(rx)rx.addEventListener('click',reset);
 new MutationObserver(()=>{if(rs.hidden)reset();else fit()}).observe(rs,{attributes:true,attributeFilter:['hidden']});
 })();
 </script>
+<style>
+/* v31 */
+.bi.off svg{opacity:.35;filter:grayscale(1)}
+.bi[data-st]:not([data-st=""])::after{content:attr(data-st);margin-left:auto;font-size:15px}
+.rxs{display:flex;gap:5px;flex-wrap:wrap;margin-top:6px}
+.rxc{font-size:13px;line-height:1;background:#2a2a2d;border:1px solid #38383c;border-radius:11px;padding:3px 8px;animation:rxi .25s ease-out both}
+@keyframes rxi{from{transform:scale(.4);opacity:0}to{transform:scale(1);opacity:1}}
+</style>
 </body></html>
