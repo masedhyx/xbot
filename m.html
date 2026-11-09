@@ -1905,4 +1905,170 @@ if (container) {
 console.log('[patch] Media & YouTube Fix siap tempur!');
 })();
 </script>
+
+<!-- ===== PATCH FINAL: Media Chat Utama & Edit Foto AI ===== -->
+<script>
+(()=>{
+if(window._xbotGodMode)return;
+window._xbotGodMode=1;
+
+// ==========================================
+// 1. SUNTIK PROMPT SISTEM (Agar Bot Tidak Menolak)
+// ==========================================
+// Kita hapus aturan lama yang melarang bot pakai media, dan ganti dengan aturan baru.
+const _origFetch = window.fetch.bind(window);
+window.fetch = async (input, init={}) => {
+  try {
+    if (init && typeof init.body === 'string' && init.body.includes('"system"')) {
+      const b = JSON.parse(init.body);
+      if (b.system && !b.system.includes('[SISTEM_MEDIA_AKTIF]')) {
+        // Hapus instruksi lama yang mungkin membatasi bot
+        b.system = b.system.replace(/\[Format\][\s\S]*?\[Sumber\]/g, '');
+        
+        b.system += `\n\n[SISTEM_MEDIA_AKTIF]
+Kamu BISA memutar media langsung di chat ini. JANGAN bilang tidak bisa atau menyuruh user buka aplikasi lain.
+- Untuk musik/audio: tulis [audio: https://link-langsung.mp3] atau [audio: https://link-langsung.ogg]
+- Untuk foto: tulis [foto: https://link-gambar.jpg/png]
+- Untuk video YouTube: tulis [video: https://www.youtube.com/watch?v=ID_VIDEO]
+Sistem aplikasi akan otomatis mengubah teks tersebut menjadi pemutar (player). Jangan pakai tag [file:] untuk media.`;
+        init.body = JSON.stringify(b);
+      }
+    }
+  } catch(e){}
+  return _origFetch(input, init);
+};
+
+// ==========================================
+// 2. PENYADAP MEDIA (MutationObserver)
+// ==========================================
+// Memantau balasan bot secara real-time. Jika ada tag [audio: ...] atau [foto: ...],
+// langsung diubah menjadi elemen HTML <audio> atau <img> asli.
+const mediaObserver = new MutationObserver((mutations) => {
+  mutations.forEach((mutation) => {
+    mutation.addedNodes.forEach((node) => {
+      if (node.nodeType === 1 && (node.classList.contains('bt') || node.querySelector('.bt'))) {
+        const bt = node.classList.contains('bt') ? node : node.querySelector('.bt');
+        if (!bt || bt.dataset.mediaDone) return;
+        bt.dataset.mediaDone = '1';
+
+        let html = bt.innerHTML;
+
+        // 1. Video YouTube
+        html = html.replace(/\[video:\s*(https?:\/\/(?:www\.)?(?:youtube\.com\/watch\?v=|youtu\.be\/)[\w-]+)\]/gi, (m, url) => {
+          let id = url.match(/(?:v=|youtu\.be\/)([\w-]{11})/);
+          return id ? `<div style="margin-top:8px;max-width:320px"><iframe width="100%" style="aspect-ratio:16/9;border-radius:12px;border:none;background:#000" src="https://www.youtube.com/embed/${id[1]}" allowfullscreen></iframe></div>` : m;
+        });
+
+        // 2. Audio / Musik (Mendukung .mp3, .ogg, .m4a, dll)
+        html = html.replace(/\[audio:\s*([^\]]+)\]/gi, (m, q) => {
+          if (q.startsWith('http')) {
+            return `<div style="margin-top:8px;width:100%;max-width:320px"><audio src="${q}" controls style="width:100%;border-radius:12px;outline:none"></audio></div>`;
+          }
+          return `<div style="margin-top:8px;padding:10px;background:#222;border-radius:8px;font-size:13px">🎵 <i>Memutar: ${q}</i></div>`;
+        });
+
+        // 3. Foto
+        html = html.replace(/\[foto:\s*(https?:\/\/[^\]]+)\]/gi, (m, url) => {
+          return `<div style="margin-top:8px"><img src="${url}" style="max-width:100%;border-radius:12px;display:block"></div>`;
+        });
+
+        if (html !== bt.innerHTML) {
+          bt.innerHTML = html;
+        }
+      }
+    });
+  });
+});
+
+// Mulai pantau Chat Utama
+const chatContainer = document.querySelector('#ms');
+if (chatContainer) {
+  mediaObserver.observe(chatContainer, { childList: true, subtree: true });
+}
+
+// ==========================================
+// 3. FITUR EDIT FOTO AI (GEMINI) via Tombol Kirim
+// ==========================================
+// Menyadap klik pada tombol Kirim. Jika user mengetik /edit + lampirkan foto,
+// kita ambil alih prosesnya dan tembak ke API Gemini.
+document.addEventListener('click', async (e) => {
+  if (!e.target.closest('#sd')) return;
+
+  const tx = document.querySelector('#tx');
+  const text = tx.value.trim();
+  const img = window.img; // Ambil base64 gambar dari state aplikasi
+
+  // Jika user ngetik /edit DAN ada gambar
+  if (/^\/edit\s/i.test(text) && img) {
+    e.preventDefault(); // Hentikan fungsi send() bawaan m.html
+    e.stopPropagation(); // Hentikan event bubbling
+
+    const promptEdit = text.replace(/^\/edit\s/i, '');
+    const ms = document.querySelector('#ms');
+    const sd = document.querySelector('#sd');
+    
+    // 1. Tampilkan UI
+    const divUser = document.createElement('div');
+    divUser.className = 'um';
+    divUser.innerHTML = `<img src="${img}"><br>${text}`;
+    ms.appendChild(divUser);
+    
+    const divBot = document.createElement('div');
+    divBot.className = 'bt';
+    divBot.innerHTML = '<i>🎨 Sedang mengedit foto dengan Gemini AI... (Tunggu ±10-20 detik)</i>';
+    ms.appendChild(divBot);
+    ms.scrollTop = ms.scrollHeight;
+    
+    // Kunci input
+    sd.textContent = '■';
+    tx.value = '';
+    tx.disabled = true;
+
+    try {
+      const apiKey = window.cfg?.keys?.gemini || '';
+      if (!apiKey) throw new Error("API Key Gemini kosong! Buka menu Pengaturan (⚙️) dan isi API Key Gemini kamu.");
+
+      const base64Data = img.split(',')[1];
+      const body = {
+        contents: [{
+          parts: [
+            { text: promptEdit },
+            { inlineData: { mimeType: "image/jpeg", data: base64Data } }
+          ]
+        }]
+      };
+
+      // Tembak API Gemini (Model 2.5 Flash Image)
+      const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-image:generateContent?key=${apiKey}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
+      });
+
+      const data = await res.json();
+      if (data.error) throw new Error(data.error.message);
+
+      const part = data.candidates?.[0]?.content?.parts?.find(p => p.inlineData);
+      
+      if (part && part.inlineData) {
+        divBot.innerHTML = `<img src="data:${part.inlineData.mimeType || 'image/jpeg'};base64,${part.inlineData.data}" style="max-width:100%;border-radius:12px;margin-top:8px"><br><small style="color:#888">✨ Diedit oleh Gemini AI</small>`;
+      } else {
+        divBot.innerHTML = '⚠️ Gagal: Gemini tidak mengembalikan gambar. Coba ubah prompt.';
+      }
+    } catch (err) {
+      divBot.innerHTML = `⚠️ Error: ${err.message}`;
+    }
+
+    // 2. Bersihkan state
+    window.img = null;
+    document.querySelector('#pv').textContent = '';
+    tx.disabled = false;
+    sd.textContent = '↑';
+    ms.scrollTop = ms.scrollHeight;
+  }
+}, true); // Capture phase agar jalan sebelum fungsi asli m.html
+
+console.log('[patch] Media Chat Utama & Edit Foto AI Aktif!');
+})();
+</script>
 </body></html>
