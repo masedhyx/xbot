@@ -909,15 +909,18 @@ const FS=[];let FN=0;
 const EXT={txt:'text/plain',md:'text/markdown',csv:'text/csv',json:'application/json',html:'text/html',css:'text/css',js:'text/javascript',py:'text/x-python',xml:'application/xml',log:'text/plain',sql:'text/plain',sh:'text/plain',ts:'text/plain',yaml:'text/plain',yml:'text/plain'};
 const extOf=n=>(String(n).match(/\.(\w{1,5})$/)||[])[1]?.toLowerCase();
 const cleanName=n=>{n=String(n).trim().replace(/[^\w.\- ()]/g,'_').replace(/\.{2,}/g,'.').replace(/^\.+/,'').slice(0,48)||'berkas';if(!EXT[extOf(n)])n=n.replace(/\.\w{0,5}$/,'')+'.txt';return n};
-function addFile(name,text,by,data){let n=data?(String(name).match(/\.(png|jpe?g|webp|gif)$/i)?String(name).replace(/[^\w.\- ()]/g,'_').slice(0,48):'gambar.png'):cleanName(name),b=n,k=2;while(FS.some(f=>f.name==n))n=b.replace(/(\.\w+)$/,'-'+(k++)+'$1');const f={id:'f'+(++FN),name:n,text:data?null:String(text),data:data||null,by,ts:Date.now(),shared:0};FS.push(f);if(FS.length>25)FS.shift();return f}
+const isVid=x=>/^data:video|\.(mp4|webm|mov|m4v)(\?|$)/i.test(String(x||''));
+function addFile(name,text,by,data){let n=data?(String(name).match(/\.(png|jpe?g|webp|gif|mp4|webm|mov|m4v)$/i)?String(name).replace(/[^\w.\- ()]/g,'_').slice(0,48):(isVid(data)?'video.mp4':'gambar.png')):cleanName(name),b=n,k=2;while(FS.some(f=>f.name==n))n=b.replace(/(\.\w+)$/,'-'+(k++)+'$1');const f={id:'f'+(++FN),name:n,text:data?null:String(text),data:data||null,by,ts:Date.now(),shared:0};FS.push(f);if(FS.length>25)FS.shift();return f}
 const filesTx=()=>FS.length?`\n\n[Berkas bersama] ${FS.slice(-5).map(f=>`${f.name} (dari ${f.by<0?'pengguna':nm(f.by)}${f.text?': "'+clip(f.text.replace(/\s+/g,' '),90)+'"':', gambar'})`).join('; ')}`:'';
 function tags(raw,f){const files=[],imgs=[];
  let x=String(raw||'').replace(/\[file:\s*([^\]\n]{1,80})\]\s*\n?([\s\S]*?)(?:\[\/file\]|$)/gi,(m,n,c)=>{c=c.replace(/^```\w*\n?/,'').replace(/\n?```\s*$/,'').trim();if(c)files.push(addFile(n,c.slice(0,60000),f));return''});
  x=x.replace(/\[bagikan:\s*([^\]\n]{1,80})\]/gi,(m,n)=>{const q=n.trim().toLowerCase(),h=FS.find(a=>a.name.toLowerCase()==q)||FS.find(a=>a.name.toLowerCase().includes(q));if(h&&!files.includes(h))files.push(h);return''});
+ x=x.replace(/\[(foto|video):\s*(https:\/\/[^\s\]]{8,500})\]/gi,(m,k,u)=>{const nm=(u.split('?')[0].split('/').pop()||'media').slice(0,40);const a=addFile(/\.\w{2,5}$/.test(nm)?nm:(k.toLowerCase()==='video'?'video.mp4':'foto.jpg'),'',f,u);if(a)files.push(a);return''});
  x=x.replace(/\[gambar:\s*([^\]\n]{3,200})\]/gi,(m,d)=>{imgs.push(d.trim());return''});
  files.forEach(a=>a.shared++);return{text:x.trim(),files,imgs}}
 const ingest=(file,by,show)=>{if(!file)return;const done=f=>{if(show){const m={f:-1,t:-1,full:'',files:[f],k:'user'};push(m)}};
  if(/^image\//.test(file.type)&&file.size<6e6){const r=new FileReader();r.onload=()=>done(addFile(file.name||'foto.jpg','',by,String(r.result)));r.readAsDataURL(file)}
+ else if(/^video\//.test(file.type)&&file.size<8e6){const r=new FileReader();r.onload=()=>done(addFile(file.name||'video.mp4','',by,String(r.result)));r.readAsDataURL(file)}
  else if(/^text\//.test(file.type)||/\.(txt|md|csv|json|js|html|css|py|xml|log|sql|sh|ts|ya?ml)$/i.test(file.name)){const r=new FileReader();r.onload=()=>done(addFile(file.name,String(r.result).slice(0,30000),by));r.readAsText(file)}
  else if(show)sysNote('⚠️ jenis berkas ini belum didukung')};
 const chipsP=fl=>(fl||[]).map(f=>`<span class="fc" data-fid="${f.id}">📎 ${esc(f.name)}</span>`).join('');
@@ -1183,7 +1186,7 @@ const tm=ts=>new Date(ts).toLocaleTimeString('id-ID',{hour:'2-digit',minute:'2-d
 const rsOpen=()=>{const e=$('#rs');return e&&!e.hidden};
 const NAMES=()=>cfg.bots.map(b=>escRe(esc(b.name))).join('|');
 const mentionize=h=>h.replace(new RegExp('@('+NAMES()+')(?![\\w])','g'),(m,n)=>{const i=cfg.bots.findIndex(b=>esc(b.name)===n);return i<0?m:`<b class="mn" style="color:${COL[i]}">@${n}</b>`});
-const chipsL=fl=>fl&&fl.length?`<div class="lf">${fl.map(f=>`<button class="fc" data-fid="${f.id}">${f.data?'🖼':'📎'} ${esc(f.name)}</button>`).join('')}</div>`:'';
+const chipsL=fl=>fl&&fl.length?`<div class="lf">${fl.map(f=>`<button class="fc" data-fid="${f.id}">${f.data?(isVid(f.data)?'🎬':(f.data.length<3e6?`<img class="th" src="${f.data}" alt="" onerror="this.style.display='none'">`:'🖼')):'📎'} ${esc(f.name)}</button>`).join('')}</div>`:'';
 const srcL=s=>s&&s.length?`<div class="lsr">${s.slice(0,3).map(x=>{let h='';try{const u=new URL(x.url);if(!/^https?:$/.test(u.protocol))return'';h=u.hostname.replace(/^www\./,'')}catch{return''}return`<a href="${esc(x.url).replace(/"/g,'&quot;')}" target="_blank" rel="noopener" title="${esc(h)}" aria-label="${esc(h)}"><img src="https://www.google.com/s2/favicons?domain=${encodeURIComponent(h)}&sz=64" alt="" onerror="this.replaceWith(document.createTextNode('${esc(h).charAt(0).toUpperCase()}'))"></a>`}).join('')}</div>`:'';
 function logEl(m){const d=logEl0(m);if(m.f!==-2){m._el=d;if(m.rx)rxDraw(m)}return d}
 function logEl0(m){const d=document.createElement('div');d.dataset.t=m.full||'';
@@ -1211,7 +1214,7 @@ async function speak(f,sys,user,o){
   m=mkMsg(f,-1,tg.text||(tg.files.length?'Berkas terlampir.':'…'),{tag:o.tag,files:tg.files,src:r.sources,big:o.big,k:'task'});m.x=clip(plainOf(tg.text||'Berkas terlampir.'),100)}
  if(g!==tgen)return null;
  const gg=gen;await bubble(f,m,gg);if(g!==tgen)return null;push(m);await Promise.all([wait(900),VOICE.say(m)]);clr(f);return g===tgen?m:null}
-const fileCtx=fl=>fl.map(f=>f.text?`\n[Isi berkas ${f.name}]\n${f.text.slice(0,1500)}`:`\n[Berkas gambar ${f.name}]`).join('');
+const fileCtx=fl=>fl.map(f=>f.text?`\n[Isi berkas ${f.name}]\n${f.text.slice(0,1500)}`:`\n[${isVid(f.data)?'Berkas video':'Berkas gambar'} ${f.name}]`).join('');
 async function runDebate(topic,{pro,con,judge}){
  beginTask(`🎭 Debat: “${clip(topic,110)}” — ${nm(pro)} (pro) lawan ${nm(con)} (kontra), ${nm(judge)} menyimpulkan`,topic);const g=tgen,tr=[];
  try{
@@ -1250,10 +1253,10 @@ function openCfg(kind){const topic=$('#rt').value.trim();if(!topic||TASK)return;
   $('#cgo').onclick=()=>{const j=+$('#dj').value,m=sel.filter(i=>i!==j);if(!m.length)return $('#cer').textContent='Pilih minimal satu bot pekerja (selain penyimpul).';c.hidden=true;$('#rt').value='';$('#rt').style.height='auto';runTeam(topic,{members:m,judge:j})}}
  $('#cno').onclick=()=>{c.hidden=true}}
 function openFiles(){const c=$('#rc');if(!c.hidden&&c.dataset.k==='f'){c.hidden=true;return}c.dataset.k='f';c.hidden=false;
- c.innerHTML=`<b>📎 Berkas bersama</b><p>Berkas yang dibawa pengguna atau dibuat para bot. Para bot tahu isinya dan bisa membagikannya sendiri.</p>${FS.length?FS.slice().reverse().map(f=>`<button class="fi" data-fid="${f.id}">${f.data?'🖼':'📎'} <span>${esc(f.name)}</span><em>${f.by<0?'kamu':esc(nm(f.by))}</em></button>`).join(''):'<p class="ce">Belum ada berkas.</p>'}<div class="cr"><button id="rfa">+ Tambah berkas</button><button id="cno">Tutup</button></div>`;
+ c.innerHTML=`<b>📎 Berkas bersama</b><p>Berkas yang dibawa pengguna atau dibuat para bot. Para bot tahu isinya dan bisa membagikannya sendiri.</p>${FS.length?FS.slice().reverse().map(f=>`<button class="fi" data-fid="${f.id}">${f.data?(isVid(f.data)?'🎬':(f.data.length<3e6?`<img class="th" src="${f.data}" alt="" onerror="this.style.display='none'">`:'🖼')):'📎'} <span>${esc(f.name)}</span><em>${f.by<0?'kamu':esc(nm(f.by))}</em></button>`).join(''):'<p class="ce">Belum ada berkas.</p>'}<div class="cr"><button id="rfa">+ Tambah berkas</button><button id="cno">Tutup</button></div>`;
  $('#rfa').onclick=()=>$('#rfi').click();$('#cno').onclick=()=>{c.hidden=true}}
 function openFile(id){const f=FS.find(a=>a.id===id);if(!f)return;const v=$('#fv');v.hidden=false;
- v.innerHTML=`<div class="rh"><button id="fvx">← Tutup</button><b>${esc(f.name)}</b><span>${f.text?'<button id="fvc">Salin</button> ':''}<button id="fvd">Unduh</button></span></div><div class="fvb">${f.data?`<img src="${f.data}" alt="">`:`<pre>${esc(f.text.slice(0,60000))}</pre>`}</div>`;
+ v.innerHTML=`<div class="rh"><button id="fvx">← Tutup</button><b>${esc(f.name)}</b><span>${f.text?'<button id="fvc">Salin</button> ':''}<button id="fvd">Unduh</button></span></div><div class="fvb">${f.data?(isVid(f.data)?`<video src="${f.data}" controls playsinline style="width:100%;border-radius:14px"></video>`:`<img src="${f.data}" alt="">`):`<pre>${esc(f.text.slice(0,60000))}</pre>`}</div>`;
  $('#fvx').onclick=()=>{v.hidden=true};if(f.text)$('#fvc').onclick=async e=>{const a=e.target,o=a.textContent;a.textContent=await cpy(f.text)?'✓':'✗';setTimeout(()=>a.textContent=o,1200)};
  $('#fvd').onclick=()=>{const a=document.createElement('a');a.href=f.data||URL.createObjectURL(new Blob([f.text],{type:(EXT[extOf(f.name)]||'text/plain')+';charset=utf-8'}));a.download=f.name;document.body.appendChild(a);a.click();a.remove();if(a.href.startsWith('blob:'))setTimeout(()=>URL.revokeObjectURL(a.href),4000)}}
 function openRS(){$('#rs').hidden=false;$('#rb').classList.remove('nw');UNB=0;badge(0);renderLog();ui()}
@@ -1353,6 +1356,7 @@ new MutationObserver(sync).observe(document.body,{attributes:true,attributeFilte
 .lu .lb{flex:none;max-width:84%;background:#1c1c1e;border-radius:20px;padding:10px 15px}
 .lm.ls{justify-content:center;color:#8e8e93;font-size:13px;text-align:center;margin:8px 8px 18px;line-height:1.5}
 .lf{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}
+.lf img.th{width:26px;height:26px;object-fit:cover;border-radius:6px;display:inline-block;vertical-align:middle}
 .lf .fc,.fi{display:inline-flex;align-items:center;gap:6px;background:#1c1c1e;border:1px solid #2f3336;border-radius:14px;padding:6px 11px;font-size:13px;color:#e9e9ec;max-width:100%}
 .lsr{margin-top:7px;display:flex;flex-wrap:wrap;gap:6px}
 .lsr a{font-size:11.5px;color:#8ab4ff;text-decoration:none;background:#111;border-radius:10px;padding:3px 9px}
@@ -1561,11 +1565,8 @@ XT.time=async({zona='jakarta'})=>{
   return {zona,waktu:new Intl.DateTimeFormat('id-ID',{timeZone:tz,dateStyle:'full',timeStyle:'long'}).format(new Date())};
 };
 XT.news=async({topik='teknologi'})=>{
-  const feeds={teknologi:'https://www.antaranews.com/rss/tekno.xml',umum:'https://www.antaranews.com/rss/terkini.xml',bisnis:'https://www.antaranews.com/rss/ekonomi.xml',olahraga:'https://www.antaranews.com/rss/olahraga.xml'};
-  const t=await jina(feeds[topik]||feeds.umum);
-  const titles=[...t.matchAll(/^#\s+(.+)$/gm)].slice(0,5).map(m=>m[1].trim());
-  if(!titles.length) throw new Error('Gagal ambil berita');
-  return {topik,judul:titles};
+  const r=await XT.search({q:`berita ${topik} terbaru hari ini Indonesia`});
+  return {topik,hasil:r.hasil};
 };
 XT.read=async({url})=>{
   if(!url) throw new Error('URL kosong');
@@ -1599,9 +1600,10 @@ const TOOL_SYS=`
 - wiki {"q":"kata kunci","lang":"id"} : ringkasan Wikipedia (lang: id atau en)
 - calc {"expr":"15*100000+25000"} : hitung ekspresi matematika
 - time {"zona":"tokyo"} : waktu sekarang di kota/zona
-- news {"topik":"teknologi"} : judul berita (teknologi, umum, bisnis, olahraga)
+- news {"topik":"teknologi"} : berita terbaru (teknologi, umum, bisnis, olahraga)
 - read {"url":"https://..."} : isi halaman web
 - search {"q":"pertanyaan"} : cari informasi terbaru di web
+Untuk menampilkan foto atau video dari link yang kamu temukan di pencarian, tulis di baris terpisah [foto: https://...] atau [video: https://...]. Hanya pakai URL https langsung ke file gambar atau video yang benar-benar ada di hasil pencarian. Jangan membuat URL sendiri dan jangan pakai link YouTube atau halaman web biasa.
 Jika butuh data terkini atau hitungan, balas HANYA satu baris berbentuk:
 <tool>{"name":"nama_alat","args":{...}}</tool>
 Tanpa teks lain di baris itu. Setelah hasil alat diberikan, jawab pengguna dengan bahasa biasa. Jangan panggil alat jika tidak perlu.`;
@@ -1621,7 +1623,14 @@ window.fetch=async(input,init={})=>{
   const url=typeof input==='string'?input:(input&&input.url)||'';
   if(url!==CHAT||!init.body) return origFetch(input,init);
   let body;try{body=JSON.parse(init.body)}catch{return origFetch(input,init)}
-  body.system=(body.system||'')+TOOL_SYS;
+const ANTI_HALU=`
+
+[ATURAN KEJUJURAN]
+- Jangan mengarang nama model, angka, tanggal, nama orang, atau kutipan. Jika tidak yakin, katakan tidak yakin.
+- Untuk berita, harga, skor, atau kejadian terbaru: hanya sebutkan fakta yang ada di hasil alat atau hasil pencarian. Sebutkan sumber dan tanggalnya.
+- Jika hasil pencarian kosong atau tidak relevan, bilang "saya tidak menemukan informasi yang jelas" dan jangan menebak.
+- Bedakan dengan jelas antara fakta yang terverifikasi dan dugaan pribadi.`;
+  body.system=(body.system||'')+TOOL_SYS+ANTI_HALU;
   let fin=null;
   try{
     for(let step=0;step<4;step++){
