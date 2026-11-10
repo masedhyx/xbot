@@ -384,7 +384,7 @@ async function settings(){
  const K=['groq','gemini','tavily','exa','firecrawl'];
  $('#sm').hidden=false;$('#sm').innerHTML=`<button id="x" style="font-size:17px;color:#6ab0ff">← Kembali</button>
   <h3>API key (disimpan di browser ini saja; kosong = pakai key bawaan server)</h3>${K.map(k=>`<input type="password" id="k_${k}" placeholder="${k}" value="${esc(cfg.keys[k]||'')}">`).join('')}
- <h3>Foto gratis</h3><p style="${hint}">Key gratis dari pixabay.com/api/docs dan pexels.com/api. Urutan: Pixabay, Pexels, lalu Wikimedia. Video tetap lewat YouTube seperti biasa. Kosong = langsung pakai cadangan.</p><input type="password" id="k_pixabay" placeholder="Pixabay key" value="${esc((cfg.media||{}).pixabay||'')}"><input type="password" id="k_pexels" placeholder="Pexels key" value="${esc((cfg.media||{}).pexels||'')}">
+ <h3>Foto gratis</h3><p style="${hint}">Key gratis dari pixabay.com/api/docs dan pexels.com/api. Urutan: Pixabay, Pexels, lalu Wikimedia. Video tetap lewat YouTube seperti biasa. Kosong = langsung pakai cadangan.</p><input type="password" id="k_pixabay" placeholder="Pixabay key" value="${esc((cfg.media||{}).pixabay||'')}"><input type="password" id="k_pexels" placeholder="Pexels key" value="${esc((cfg.media||{}).pexels||'')}"><input type="password" id="k_unsplash" placeholder="Unsplash Access Key (cadangan foto)" value="${esc((cfg.media||{}).unsplash||'')}"><p style="${hint}">Cadangan tambahan: Unsplash (pakai key di atas) dan Openverse (otomatis, tanpa key). Parallel dipakai sebagai cadangan pencarian web kalau pencarian utama gagal.</p><input type="password" id="k_parallel" placeholder="Parallel key (cadangan pencarian web)" value="${esc((cfg.media||{}).parallel||'')}">
  <h3>Model AI</h3><p style="${hint}">Teks dan foto. Kalau foto dikirim, otomatis diproses Gemini.</p><select id="s_model">${grp('Gemini','gemini')}${grp('Groq','groq')}</select>
  <h3>Model gambar</h3><p style="${hint}">Dipakai di "/gambar". Model gambar sering butuh akun berbayar.</p><select id="s_img">${IMGS.map(m=>opt(m,cfg.img||DEF_IMG)).join('')}</select>
  <h3>Mode pencarian web</h3><select id="s_mode">${[['auto','Otomatis'],['on','Selalu'],['off','Mati']].map(m=>`<option value="${m[0]}"${m[0]==cfg.mode?' selected':''}>${m[1]}</option>`).join('')}</select>
@@ -396,7 +396,7 @@ async function settings(){
   $('#bp').innerHTML=cfg.bots.map((b,i)=>HIDE.includes(i)?'':`<div class="bo"><div style="display:flex;gap:10px;align-items:center"><div style="width:18px;flex:none">${bot(COL[i])}</div><input id="n${i}" value="${esc(b.name)}"></div><textarea id="p${i}">${esc(b.prompt)}</textarea></div>`).join('')};
  if(AUTH)$('#ub').click();
  $('#x').onclick=()=>$('#sm').hidden=true;
- $('#sv').onclick=()=>{K.forEach(k=>cfg.keys[k]=$('#k_'+k).value.trim());cfg.media={pixabay:$('#k_pixabay').value.trim(),pexels:$('#k_pexels').value.trim()};cfg.model=$('#s_model').value;cfg.img=$('#s_img').value.trim()||DEF_IMG;cfg.mode=$('#s_mode').value;cfg.panel.on=$('#p_on').value=='1';cfg.panel.keys={gemini:$('#pk_gemini').value.trim(),groq:$('#pk_groq').value.trim()};cfg.panel.model=$('#p_model').value;cfg.panel.gap=$('#p_gap').value;cfg.panel.max=+$('#p_max').value;PX.read();
+ $('#sv').onclick=()=>{K.forEach(k=>cfg.keys[k]=$('#k_'+k).value.trim());cfg.media={pixabay:$('#k_pixabay').value.trim(),pexels:$('#k_pexels').value.trim(),unsplash:$('#k_unsplash').value.trim(),parallel:$('#k_parallel').value.trim()};cfg.model=$('#s_model').value;cfg.img=$('#s_img').value.trim()||DEF_IMG;cfg.mode=$('#s_mode').value;cfg.panel.on=$('#p_on').value=='1';cfg.panel.keys={gemini:$('#pk_gemini').value.trim(),groq:$('#pk_groq').value.trim()};cfg.panel.model=$('#p_model').value;cfg.panel.gap=$('#p_gap').value;cfg.panel.max=+$('#p_max').value;PX.read();
   if(unlocked)cfg.bots.forEach((b,i)=>{if(HIDE.includes(i))return;b.name=$('#n'+i).value||b.name;b.prompt=$('#p'+i).value});
   save();renderBots();reset();$('#sm').hidden=true;setOpen(false)}}
 let AUTH=false;
@@ -1626,6 +1626,22 @@ XT.search=async({q})=>{
   if(!fin||fin.error||!fin.text) throw new Error(fin?.error||'Tidak ada hasil');
   return {q,hasil:fin.text.slice(0,3000)};
 };
+/* Cadangan pencarian web: Parallel (key di Pengaturan). Dipakai hanya jika pencarian utama gagal/kosong. */
+{const _s=XT.search;
+XT.search=async a=>{let err=null;
+  try{const r=await _s(a);if(r&&r.hasil)return r}catch(e){err=e}
+  const pk=((typeof cfg!=='undefined'&&cfg&&cfg.media)||{}).parallel;
+  if(!pk||!a||!a.q){if(err)throw err;return {q:a&&a.q,hasil:''}}
+  const c=new AbortController(),to=setTimeout(()=>c.abort(),20000);
+  try{
+    const r=await origFetch('https://api.parallel.ai/v1/search',{method:'POST',signal:c.signal,headers:{'Content-Type':'application/json','x-api-key':pk},
+      body:JSON.stringify({objective:String(a.q).slice(0,500),search_queries:[String(a.q).slice(0,100)],mode:'basic',advanced_settings:{max_results:6,excerpt_settings:{max_chars_per_result:700}}})});
+    if(!r.ok)throw new Error('Parallel HTTP '+r.status);
+    const j=await r.json(),L=(j.results||[]).filter(x=>x&&x.url);
+    if(!L.length)throw new Error('Parallel: tidak ada hasil');
+    return {q:a.q,sumber:'Parallel',hasil:L.map((x,i)=>(i+1)+'. '+(x.title||x.url)+(x.publish_date?' ('+x.publish_date+')':'')+'\n'+x.url+'\n'+((x.excerpts||[]).join(' ').replace(/\s+/g,' ').slice(0,700))).join('\n\n').slice(0,3000)}
+  }catch(e){throw new Error((err?err.message+'; ':'')+((e&&e.message)||'Parallel gagal'))}
+  finally{clearTimeout(to)}}}
 /* alias nama tool yang dipakai model */
 XT.run=async(name,args)=>{const f=XT[name];if(!f)throw new Error('Alat "'+name+'" tidak dikenal');return f(args||{})};
 
@@ -1959,10 +1975,21 @@ async function pexels(q,key){
   const x=rnd(j.photos||[]);if(!x)continue;const s=x.src||{},src=ok(s.large)?s.large:ok(s.medium)?s.medium:'';if(!src)continue;
   return{src,kind:'foto',by:x.photographer||'',page:ok(x.url)?x.url:'https://www.pexels.com',name:'Pexels'}}
  return null}
-window.STK={has:()=>!!(mk().pixabay||mk().pexels),
+async function unsplash(q,key){
+ const j=await J('https://api.unsplash.com/search/photos?query='+encodeURIComponent(q.slice(0,100))+'&per_page=15&client_id='+encodeURIComponent(key),8000);
+ const x=rnd((j.results||[]).filter(x=>x&&x.urls&&ok(x.urls.regular)));if(!x)return null;
+ const u=x.links&&ok(x.links.html)?x.links.html:'https://unsplash.com';
+ return{src:x.urls.regular,kind:'foto',by:(x.user&&x.user.name)||'',page:u+(u.indexOf('?')<0?'?':'&')+'utm_source=xbot&utm_medium=referral',name:'Unsplash'}}
+async function openverse(q){
+ const j=await J('https://api.openverse.org/v1/images/?q='+encodeURIComponent(q.slice(0,100))+'&page_size=15&mature=false',8000);
+ const x=rnd((j.results||[]).filter(x=>x&&(ok(x.thumbnail)||ok(x.url))));if(!x)return null;
+ return{src:ok(x.thumbnail)?x.thumbnail:x.url,kind:'foto',by:x.creator||'',page:ok(x.foreign_landing_url)?x.foreign_landing_url:'https://openverse.org',name:'Openverse'}}
+window.STK={has:()=>true,
  async find(q,kind){const k=mk();q=String(q||'').trim();if(!q||kind!=='foto')return null;
   if(k.pixabay){try{const r=await pixabay(q,k.pixabay);if(r)return r}catch(e){}}
   if(k.pexels){try{const r=await pexels(q,k.pexels);if(r)return r}catch(e){}}
+  if(k.unsplash){try{const r=await unsplash(q,k.unsplash);if(r)return r}catch(e){}}
+  try{const r=await openverse(q);if(r)return r}catch(e){}
   return null}};
 const stkH=s=>`<div class="mpw">${imgH(s.src)}<div class="mpc">📷 <a href="${E(s.page)}" target="_blank" rel="noopener">${E(s.by?s.by+' · ':'')}${E(s.name)}</a></div></div>`;
 const PREF={video:/^video\/mp4$/,audio:/^audio\/(mpeg|mp3|wav|x-wav)$/};
