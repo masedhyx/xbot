@@ -43,7 +43,7 @@ footer{padding:6px 18px calc(env(safe-area-inset-bottom) + 12px);position:relati
 #sm[hidden]{display:none}#sm h3{margin:22px 0 8px;font-size:15px;color:#888;font-weight:600;text-transform:uppercase}
 #sm input,#sm select,#sm textarea{width:100%;background:#111;border:1px solid #2b2b2b;border-radius:12px;color:#fff;font:inherit;font-size:16px;padding:11px;margin:4px 0}
 #sm textarea{min-height:84px}.bo{background:#1c1c1e!important;border-radius:12px;padding:12px 14px!important;margin-top:8px!important}
-</style></head><body>
+</style><style>.vc{margin:8px 0;border:1px solid #2c2c2e;border-radius:18px;background:#141416;overflow:hidden;max-width:340px}.vc .vh{display:flex;align-items:center;gap:8px;padding:10px 14px;border-bottom:1px solid #2c2c2e;font-size:14px;color:#e5e5ea}.vc .vb{display:flex;align-items:center;gap:10px;padding:12px 14px;color:#aeaeb2;font-size:12px}.vc .vp{flex:none;width:40px;height:40px;border-radius:50%;border:0;background:#3a3a3c;color:#fff;font-size:16px;line-height:1;padding:0;cursor:pointer}.vc .vr{flex:1;height:6px;border-radius:3px;background:#3a3a3c;position:relative;cursor:pointer;touch-action:manipulation}.vc .vr:before{content:'';position:absolute;left:0;right:0;top:-12px;bottom:-12px}.vc .vr i{display:block;height:100%;width:0;border-radius:3px;background:#fff}.vc .vt,.vc .vd{min-width:34px;font-variant-numeric:tabular-nums}.vc .vd{text-align:right}</style></head><body>
 <aside id="pn">
  <div class="u">EdhyX</div>
  <div id="bl"></div>
@@ -292,9 +292,35 @@ document.addEventListener('visibilitychange',()=>{if(!document.hidden){try{navig
 document.addEventListener('touchstart',audioUnlock,{once:true,passive:true});document.addEventListener('click',audioUnlock,{once:true});
 document.addEventListener('click',e=>{if(e.target.closest('#sd'))askPerm()});
 if('serviceWorker' in navigator){const had=!!navigator.serviceWorker.controller;let rl=0;navigator.serviceWorker.register('sw.js').then(r=>{try{r.update()}catch(e){}}).catch(()=>{});navigator.serviceWorker.addEventListener('controllerchange',()=>{if(!had||rl)return;rl=1;location.reload()})}
+/* ===== MODE BALAS PAKE SUARA: jawaban dibacakan otomatis (TTS), bukan file audio ===== */
+let VR=0;const VRHINT='\n[MODE SUARA AKTIF] Aplikasi otomatis membacakan jawabanmu dengan suara. Jawab dengan teks biasa yang singkat dan natural untuk diucapkan. JANGAN pakai tag [audio:] atau [musik:], jangan buat link audio, dan jangan bilang kamu tidak bisa bersuara.';
+const fmtT=x=>{x=Math.max(0,Math.round(x));return Math.floor(x/60)+':'+String(x%60).padStart(2,'0')};
+function mountVC(box,raw,auto){const bt=box.querySelector('.bt');if(!bt||!window.speechSynthesis)return;const ss=window.speechSynthesis;
+ const text=String(raw||'').replace(/[*`#_]/g,'').trim();if(!text)return;
+ const w=document.createElement('div');w.className='vc';w.innerHTML='<div class="vh"><span class="vi">🎙️</span><b>balasan_suara</b></div><div class="vb"><button type="button" class="vp" aria-label="Putar">▶</button><span class="vt">0:00</span><div class="vr"><i></i></div><span class="vd"></span></div>';
+ bt.after(w);
+ const btn=w.querySelector('.vp'),cur=w.querySelector('.vt'),bar=w.querySelector('.vr'),fill=bar.firstChild,dur=w.querySelector('.vd');
+ const est=Math.max(1,text.length/14);dur.textContent='-'+fmtT(est);
+ let pos=0,play=0,tk=0,t0=0,base=0,id=0;
+ const ui=()=>{const f=Math.min(1,pos/text.length);fill.style.width=(f*100)+'%';cur.textContent=fmtT(f*est);dur.textContent='-'+fmtT((1-f)*est);btn.textContent=play?'⏸':'▶'};
+ const stopT=()=>{clearInterval(tk);tk=0};
+ const stop=()=>{play=0;id++;stopT();try{ss.cancel()}catch(e){}ui()};
+ const start=()=>{try{ss.cancel()}catch(e){}if(pos>=text.length-1)pos=0;const my=++id,from=pos,u=new SpeechSynthesisUtterance(text.slice(from));u.lang='id-ID';
+  try{const v=ss.getVoices().find(v=>v.lang.toLowerCase().replace('_','-').startsWith('id'));if(v)u.voice=v}catch(e){}
+  u.onboundary=e=>{if(my===id&&typeof e.charIndex==='number'){pos=from+e.charIndex;ui()}};
+  const end=()=>{if(my!==id)return;play=0;stopT();pos=text.length;ui()};u.onend=end;u.onerror=()=>{if(my===id){play=0;stopT();ui()}};
+  play=1;base=from/text.length*est;t0=performance.now();stopT();
+  tk=setInterval(()=>{if(!play)return;const f=Math.min(.99,(base+(performance.now()-t0)/1000)/est);pos=Math.min(text.length-1,Math.max(pos,f*text.length));ui()},250);
+  ui();try{ss.speak(u)}catch(e){stop()}};
+ btn.onclick=e=>{e.stopPropagation();if(play)stop();else start()};
+ bar.onclick=e=>{e.stopPropagation();const r=bar.getBoundingClientRect();pos=Math.floor(Math.max(0,Math.min(1,(e.clientX-r.left)/r.width))*text.length);if(play)start();else ui()};
+ ui();if(auto)setTimeout(start,60)}
 async function send(){
  if(busy){stp=true;ctrl.abort();return}stp=false;
  const t=$('#tx').value.trim();if(!t&&!img&&!docTxt&&!att)return;
+ if(/(pake|pakai|pakek|dengan|lewat|via)\s+(suara|voice|vn)|(balas|bales|jawab)\w*\s+(suara|voice)|suara\s+dong|bicara\s+dong|ngomong\s+dong/i.test(t))VR=1;
+ if(/(pake|pakai|pakek|balas|jawab)\s+(teks|tulisan|chat)\b|(matikan|matiin|stop|off)\s+(mode\s+)?suara|jangan\s+(pake|pakai)\s+suara/i.test(t))VR=0;
+ if(VR&&window.speechSynthesis){try{const u=new SpeechSynthesisUtterance(' ');u.volume=0;speechSynthesis.speak(u)}catch(e){}}
  const dt=docTxt;docTxt=null;const at=att;att=null;const im=img,gen=/^\/gambar\s/i.test(t);$('#tx').value='';$('#tx').style.height='auto';img=null;$('#pv').textContent='';
  if(window.kbClose)kbClose();
  hist.push({role:'user',content:dt?`[File "${dt.name}"]\n${dt.text}\n\n${t||'Jelaskan isi file ini.'}`:(window.MP&&at?MP.userText(t,at):(t||'Jelaskan foto ini.'))});
@@ -306,7 +332,7 @@ async function send(){
  if(gpsOn){const fresh=gps&&Date.now()-gps.timestamp<60000,u=gpsUpdate().catch(()=>{});if(!fresh)await Promise.race([u,sleep(3000)])}
  try{
   const r=await fetch(cfg.url.replace(/\/$/,'')+'/chat',{method:'POST',headers:{'Content-Type':'application/json'},signal:ctrl.signal,
-   body:JSON.stringify({messages:hist.slice(-12),image:im,image_gen:gen,system:b.prompt+sysx()+gpsTxt()+(window.PX?PX.sys(cur,1):''),now:new Date().toISOString(),tz:Intl.DateTimeFormat().resolvedOptions().timeZone,model:cfg.model,imgModel:cfg.img,mode:webOn?'on':cfg.mode,keys:cfg.keys})});
+   body:JSON.stringify({messages:hist.slice(-12),image:im,image_gen:gen,system:b.prompt+sysx()+gpsTxt()+(window.PX?PX.sys(cur,1):'')+(VR?VRHINT:''),now:new Date().toISOString(),tz:Intl.DateTimeFormat().resolvedOptions().timeZone,model:cfg.model,imgModel:cfg.img,mode:webOn?'on':cfg.mode,keys:cfg.keys})});
   const rd=r.body.getReader(),dc=new TextDecoder();let buf='';
   for(;;){const{done,value}=await rd.read();if(done)break;buf+=dc.decode(value,{stream:true});let i;
    while((i=buf.indexOf('\n'))>=0){const l=buf.slice(0,i);buf=buf.slice(i+1);if(!l)continue;const j=JSON.parse(l);if(j.s)stage(j.s);else fin=j}}
@@ -328,9 +354,10 @@ async function send(){
     off=end}};
   let sh=0;for(let i=0;i<=tx.length&&!stp;i+=step){tt.innerHTML=md(tx.slice(0,i),1);const tl=tt.textContent.length;if(tl>sh){CH.push({s:sh,e:tl,t:performance.now()});sh=tl}fade();sb();await sleep(18)}
   if(!stp&&CH.length)await sleep(FD);
-  tt.innerHTML=md(tx);if(window.MP&&mp.items.length)MP.mount(box,mp.items);
+  tt.innerHTML=md(tx);if(VR){mp.items=mp.items.filter(i=>i.k!=='audio');mp.tags=mp.tags.split('\n').filter(l=>!/^\[audio:/.test(l)).join('\n')}if(window.MP&&mp.items.length)MP.mount(box,mp.items);
   if(fin.sources?.length)box.insertAdjacentHTML('beforeend',`<div class="src">Sumber</div>${fin.sources.map(x=>{let h='';try{h=new URL(x.url).hostname.replace(/^www\./,'')}catch{}return `<a class="sc" href="${esc(x.url)}" target="_blank" rel="noopener"><img src="https://www.google.com/s2/favicons?domain=${encodeURIComponent(h)}&sz=64" alt="" onerror="this.style.visibility='hidden'"><div><b>${esc(x.title||h||x.url)}</b><span>${esc(h)}</span></div></a>`}).join('')}`);
   box.insertAdjacentHTML('beforeend',`<div class="ac"><button data-a="c">⧉</button><button data-a="s">🔊</button><button data-a="l">👍</button><button data-a="h">↗</button></div>`);
+  if(VR&&window.speechSynthesis&&tx){try{speechSynthesis.cancel()}catch(e){}mountVC(box,plain(tx),true)}
   box.dataset.t=tx;hist.push({role:'assistant',content:(tx||'[gambar]')+(mp.tags?'\n'+mp.tags:'')});eb.set('done');alertMsg(b.name,tx);
  }else if(fin?.error)add(`<div class="bt err">⚠️ ${esc(fin.error)}</div>`);
  stOut(st,fin&&!fin.error);busy=false;$('#sd').textContent='↑';delete $('#sd').dataset.b;sb()}
