@@ -114,7 +114,7 @@ cfg.panel=Object.assign({on:true,keys:{gemini:'',groq:''},model:'',gap:'4.5-8',m
 if(!cfg.bots[10])cfg.bots[10]={name:'edhyx',prompt:'Kamu edhyx, asisten AI yang cerdas, ramah, dan santai. Jawab dalam bahasa Indonesia dengan jelas dan membantu.'};
 const save=()=>{try{localStorage.setItem('xbot',JSON.stringify(cfg))}catch{}};
 const HIDE=[5];/* 5 = orange, disembunyikan */
-let stp=false,cur=10,open=false,hist=[],img=null,docTxt=null,busy=false,ctrl=null,MODELS=[],IMGS=[];
+let stp=false,cur=10,open=false,hist=[],img=null,docTxt=null,att=null,busy=false,ctrl=null,MODELS=[],IMGS=[];
 
 /* ===== MESIN MATA: gerak disalin dari video (60 fps), diputar berulang ===== */
 /* data keyframe hasil ukur video: [selisih frame*4+bit mata (kiri=2,kanan=1), 15 selisih nilai (0.1px): badan cx,cy,r; mata kiri x1,y1,r1,x2,y2,r2; mata kanan idem] */
@@ -228,7 +228,7 @@ function welcome(){clearInterval(gt);const ph=FW;FW=0;$('#ms').innerHTML=`<div i
 const setOpen=v=>{open=v;document.body.classList.toggle('o',v)};
 $('#mb').onclick=()=>setOpen(!open);
 $('#mn').addEventListener('click',e=>{if(open){e.preventDefault();e.stopPropagation();setOpen(false)}},true);
-function reset(){if(ctrl)ctrl.abort();hist=[];img=null;docTxt=null;$('#pv').textContent='';sbReset();welcome()}
+function reset(){if(ctrl)ctrl.abort();hist=[];img=null;docTxt=null;att=null;$('#pv').textContent='';sbReset();welcome()}
 $('#nw').onclick=()=>{reset();setOpen(false)};
 $('#bl').onclick=e=>{const b=e.target.closest('.bi');if(!b)return;cur=+b.dataset.i;renderBots();reset();setOpen(false)};
 
@@ -263,14 +263,14 @@ $('#m_g').onclick=async()=>{$('#pm').hidden=true;
  try{await gpsUpdate()}catch(er){gpsOn=false;gpsDot();$('#gp').textContent='⚠️ GPS gagal: '+(er.code==1?'izin lokasi ditolak (aktifkan di Pengaturan browser)':er.code==3?'waktu habis, coba lagi':er.message||'tidak diketahui');setTimeout(()=>{if(!gpsOn)$('#gp').textContent=''},5000)}};
 const note=m=>{$('#pv').textContent=m};
 const toImg=src=>{const i=new Image();i.onload=()=>{const k=Math.min(1,1280/Math.max(i.width,i.height)),c=document.createElement('canvas');c.width=i.width*k;c.height=i.height*k;c.getContext('2d').drawImage(i,0,0,c.width,c.height);img=c.toDataURL('image/jpeg',.85);docTxt=null;note('📎 foto terlampir')};i.onerror=()=>note('⚠️ foto tidak bisa dibaca');i.src=src};
-const FILEFN=e=>{const f=e.target.files[0];e.target.value='';if(!f)return;
- if(/^video\//.test(f.type)){note('⏳ membaca video...');const v=document.createElement('video'),u=URL.createObjectURL(f);v.muted=true;v.playsInline=true;v.preload='auto';
+const FILEFN=e=>{const f=e.target.files[0];e.target.value='';if(!f)return;att=null;
+ if(/^video\//.test(f.type)){att={k:'v',url:URL.createObjectURL(f),name:f.name||'video'};note('⏳ membaca video...');const v=document.createElement('video'),u=URL.createObjectURL(f);v.muted=true;v.playsInline=true;v.preload='auto';
   v.onloadeddata=()=>{try{v.currentTime=Math.min(1,(v.duration||2)/2)}catch{v.onseeked()}};
   v.onseeked=()=>{try{const k=Math.min(1,1280/Math.max(v.videoWidth,v.videoHeight)),c=document.createElement('canvas');c.width=v.videoWidth*k;c.height=v.videoHeight*k;c.getContext('2d').drawImage(v,0,0,c.width,c.height);img=c.toDataURL('image/jpeg',.85);docTxt=null;note('📎 video terlampir (dibaca dari 1 cuplikan gambar)')}catch{note('⚠️ video tidak bisa dibaca')}URL.revokeObjectURL(u)};
   v.onerror=()=>{note('⚠️ video tidak bisa dibaca');URL.revokeObjectURL(u)};v.src=u;return}
  if(/^image\//.test(f.type)){const r=new FileReader();r.onload=()=>toImg(r.result);r.readAsDataURL(f);return}
  if(/^text\//.test(f.type)||/\.(txt|md|csv|json|js|html|css|py|xml|log)$/i.test(f.name)){const r=new FileReader();r.onload=()=>{docTxt={name:f.name,text:String(r.result).slice(0,30000)};img=null;note('📎 file terlampir: '+f.name)};r.readAsText(f);return}
- if(/^audio\//.test(f.type)){note('🎵 audio dibagikan ke ruang bot');setTimeout(()=>{if($('#pv').textContent.startsWith('🎵'))note('')},3000);return}
+ if(/^audio\//.test(f.type)){att={k:'a',url:URL.createObjectURL(f),name:f.name||'audio'};note('🎵 audio terlampir: '+(f.name||'audio'));return}
  note('⚠️ jenis file ini belum didukung');setTimeout(()=>{if($('#pv').textContent.startsWith('⚠️'))note('')},3000)};
 $('#fi').onchange=FILEFN;
 $('#fc').onchange=FILEFN;
@@ -278,7 +278,7 @@ $('#tx').oninput=e=>{e.target.style.height='auto';e.target.style.height=e.target
 $('#sd').onclick=send;
 const nowStr=()=>{const tz=Intl.DateTimeFormat().resolvedOptions().timeZone;return new Intl.DateTimeFormat('id-ID',{dateStyle:'full',timeStyle:'long',timeZone:tz}).format(new Date())+' ('+tz+')'};
 const CRT='\n\n[Pembuat] Jika ada yang bertanya siapa pembuatmu / yang membuatmu / penciptamu / developer-mu, jawab bahwa kamu dibuat oleh Marta Edi Sutrisno.';
-const sysx=()=>CRT+`\n\n[Info perangkat pengguna] Waktu sekarang di perangkat pengguna: ${nowStr()}. Pakai ini (jangan menebak) untuk pertanyaan tentang tanggal, hari, atau jam.\n[Format] Jangan memberi warna pada teks kecuali pengguna secara eksplisit memintanya; jawaban biasa ditulis polos tanpa warna. Kalau diminta, tulis [c=warna]teks[/c] (merah, hijau, biru, kuning, oranye, ungu, pink, tosca, coklat, abu, putih, atau hex).\n[Tabel] Untuk tabel pakai tabel markdown standar (baris header, baris |---|---|, lalu isi). Jangan taruh tabel di dalam blok kode.\n[Diagram] Untuk diagram, alur, proses, atau hierarki JANGAN pakai ASCII art. Tulis blok kode berlabel diagram (\`\`\`diagram) berisi flowchart mermaid sederhana, satu hubungan per baris, contoh:\nA[Data] --> B[Pelatihan Model]\nB --> C[Evaluasi]\nC --> D[Deployment]\nlalu tutup dengan \`\`\`. Label singkat.\n[Sumber] Jangan menulis "Sumber: [n]" atau penanda angka seperti [1] di dalam jawaban; daftar sumber ditampilkan terpisah oleh aplikasi.`;
+const sysx=()=>CRT+`\n\n[Info perangkat pengguna] Waktu sekarang di perangkat pengguna: ${nowStr()}. Pakai ini (jangan menebak) untuk pertanyaan tentang tanggal, hari, atau jam.\n[Format] Jangan memberi warna pada teks kecuali pengguna secara eksplisit memintanya; jawaban biasa ditulis polos tanpa warna. Kalau diminta, tulis [c=warna]teks[/c] (merah, hijau, biru, kuning, oranye, ungu, pink, tosca, coklat, abu, putih, atau hex).\n[Tabel] Untuk tabel pakai tabel markdown standar (baris header, baris |---|---|, lalu isi). Jangan taruh tabel di dalam blok kode.\n[Diagram] Untuk diagram, alur, proses, atau hierarki JANGAN pakai ASCII art. Tulis blok kode berlabel diagram (\`\`\`diagram) berisi flowchart mermaid sederhana, satu hubungan per baris, contoh:\nA[Data] --> B[Pelatihan Model]\nB --> C[Evaluasi]\nC --> D[Deployment]\nlalu tutup dengan \`\`\`. Label singkat.\n[Sumber] Jangan menulis "Sumber: [n]" atau penanda angka seperti [1] di dalam jawaban; daftar sumber ditampilkan terpisah oleh aplikasi.\n[Media] Kamu BISA menampilkan foto, memutar video, dan memutar lagu langsung di chat ini. Tulis tag di baris sendiri: [foto: kata kunci], [video: kata kunci], [musik: judul lagu artis], [audio: kata kunci suara], atau URL langsung seperti [foto: https://...jpg], [video: https://...mp4], [audio: https://...mp3], atau link YouTube yang diberikan pengguna [video: https://www.youtube.com/watch?v=...]. Aplikasi yang mencarikan filenya (foto, video, dan suara dari Wikimedia Commons; lagu dari pratinjau iTunes 30 detik). Untuk foto/video/audio pakai kata kunci bahasa Inggris yang sederhana, misalnya [video: waterfall] atau [foto: Eiffel Tower]; untuk lagu tulis judul dan artis. Jangan mengarang URL atau ID YouTube. Bila pengguna minta foto, video, atau lagu, langsung tulis tagnya dengan satu kalimat pengantar singkat dan jangan menolak; untuk lagu populer sebutkan bahwa yang diputar pratinjau 30 detik. Jangan menulis tag ini di dalam blok kode.`;
 /* ===== NOTIFIKASI: suara + badge ikon + notif sistem ===== */
 let _ac=null,UNM=0;const T00=document.title;
 const audioUnlock=()=>{try{const A=window.AudioContext||window.webkitAudioContext;if(!A)return;_ac=_ac||new A();if(_ac.state==='suspended')_ac.resume()}catch(e){}};
@@ -294,11 +294,11 @@ document.addEventListener('click',e=>{if(e.target.closest('#sd'))askPerm()});
 if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js').catch(()=>{});
 async function send(){
  if(busy){stp=true;ctrl.abort();return}stp=false;
- const t=$('#tx').value.trim();if(!t&&!img&&!docTxt)return;
- const dt=docTxt;docTxt=null;const im=img,gen=/^\/gambar\s/i.test(t);$('#tx').value='';$('#tx').style.height='auto';img=null;$('#pv').textContent='';
+ const t=$('#tx').value.trim();if(!t&&!img&&!docTxt&&!att)return;
+ const dt=docTxt;docTxt=null;const at=att;att=null;const im=img,gen=/^\/gambar\s/i.test(t);$('#tx').value='';$('#tx').style.height='auto';img=null;$('#pv').textContent='';
  if(window.kbClose)kbClose();
- hist.push({role:'user',content:dt?`[File "${dt.name}"]\n${dt.text}\n\n${t||'Jelaskan isi file ini.'}`:(t||'Jelaskan foto ini.')});
- anchor(add(`<div class="um">${im?`<img src="${im}">`:''}${dt?`<div style="opacity:.75">📄 ${esc(dt.name)}</div>`:''}${esc(t)}</div>`));
+ hist.push({role:'user',content:dt?`[File "${dt.name}"]\n${dt.text}\n\n${t||'Jelaskan isi file ini.'}`:(window.MP&&at?MP.userText(t,at):(t||'Jelaskan foto ini.'))});
+ anchor(add(`<div class="um">${window.MP?MP.att(at,im):(im?`<img src="${im}">`:'')}${dt?`<div style="opacity:.75">📄 ${esc(dt.name)}</div>`:''}${esc(t)}${window.MP?MP.urls(t):''}</div>`));
  busy=true;$('#sd').textContent='■';$('#sd').dataset.b=1;ctrl=new AbortController();
  const b=cfg.bots[cur],st=add(`<div class="stt">${bot(COL[cur])}<span></span></div>`),eb=mk(st.querySelector('svg'),true,0,undefined,true);
  const stage=s=>{eb.set(s);st.querySelector('span').textContent=b.name+' '+LBL[s]+'...'};stage(im?'look':'think');
@@ -313,7 +313,7 @@ async function send(){
   if(buf.trim()){const j=JSON.parse(buf);if(!j.s)fin=j}
  }catch(e){fin=e.name=='AbortError'?{text:'(dihentikan)'}:{error:'Tidak bisa terhubung ke server: '+e.message}}
  if(fin&&!fin.error){stage('write');
-  const box=add(`<div class="bm"><div class="bt"></div></div>`);const bt=box.querySelector('.bt'),tx=window.PX?PX.eat(cur,fin.text||''):(fin.text||''),step=Math.max(2,Math.ceil(tx.length/160));
+  const box=add(`<div class="bm"><div class="bt"></div></div>`);const bt=box.querySelector('.bt'),mp=(q=>window.MP?MP.parse(q):{text:q,items:[],tags:''})(window.PX?PX.eat(cur,fin.text||''):(fin.text||'')),tx=mp.text,step=Math.max(2,Math.ceil(tx.length/160));
   if(fin.image)bt.innerHTML=`<img src="${fin.image}">`;
   const tt=document.createElement('div');bt.appendChild(tt);
   const CH=[],FD=520,fade=()=>{const now=performance.now();while(CH.length&&now-CH[0].t>FD)CH.shift();if(!CH.length)return;
@@ -328,10 +328,10 @@ async function send(){
     off=end}};
   let sh=0;for(let i=0;i<=tx.length&&!stp;i+=step){tt.innerHTML=md(tx.slice(0,i),1);const tl=tt.textContent.length;if(tl>sh){CH.push({s:sh,e:tl,t:performance.now()});sh=tl}fade();sb();await sleep(18)}
   if(!stp&&CH.length)await sleep(FD);
-  tt.innerHTML=md(tx);
+  tt.innerHTML=md(tx);if(window.MP&&mp.items.length)MP.mount(box,mp.items);
   if(fin.sources?.length)box.insertAdjacentHTML('beforeend',`<div class="src">Sumber</div>${fin.sources.map(x=>{let h='';try{h=new URL(x.url).hostname.replace(/^www\./,'')}catch{}return `<a class="sc" href="${esc(x.url)}" target="_blank" rel="noopener"><img src="https://www.google.com/s2/favicons?domain=${encodeURIComponent(h)}&sz=64" alt="" onerror="this.style.visibility='hidden'"><div><b>${esc(x.title||h||x.url)}</b><span>${esc(h)}</span></div></a>`}).join('')}`);
   box.insertAdjacentHTML('beforeend',`<div class="ac"><button data-a="c">⧉</button><button data-a="s">🔊</button><button data-a="l">👍</button><button data-a="h">↗</button></div>`);
-  box.dataset.t=tx;hist.push({role:'assistant',content:tx||'[gambar]'});eb.set('done');alertMsg(b.name,tx);
+  box.dataset.t=tx;hist.push({role:'assistant',content:(tx||'[gambar]')+(mp.tags?'\n'+mp.tags:'')});eb.set('done');alertMsg(b.name,tx);
  }else if(fin?.error)add(`<div class="bt err">⚠️ ${esc(fin.error)}</div>`);
  stOut(st,fin&&!fin.error);busy=false;$('#sd').textContent='↑';delete $('#sd').dataset.b;sb()}
 const stOut=(s,keep)=>{if(!s||!s.isConnected)return;keep=false;/* bot + tulisan status ikut menghilang bersama */if(keep){const sp=s.querySelector('span'),sv=s.querySelector('svg');if(sp){const t0=performance.now(),f=n=>{const u=Math.min(1,(n-t0)/260);sp.style.opacity=String(1-u*u*(3-2*u));if(u<1)requestAnimationFrame(f)};requestAnimationFrame(f)}if(sv)sv.replaceWith(sv.cloneNode(true));s.style.pointerEvents='none';return}const h=s.offsetHeight,m=getComputedStyle(s);s.style.cssText+=';box-sizing:border-box;overflow:hidden;pointer-events:none;height:'+h+'px;margin-top:'+m.marginTop+';margin-bottom:'+m.marginBottom;void s.offsetHeight;s.style.transition='height .24s ease,margin .24s ease,opacity .16s ease';s.style.height='0';s.style.marginTop='0';s.style.marginBottom='0';s.style.opacity='0';setTimeout(()=>s.remove(),300)};
@@ -700,7 +700,7 @@ ms.addEventListener('click',e=>{
 (()=>{const o={passive:false};
 ['gesturestart','gesturechange','gestureend'].forEach(e=>document.addEventListener(e,v=>v.preventDefault(),o));
 document.addEventListener('touchmove',v=>{if(v.touches&&v.touches.length>1)v.preventDefault()},o);
-let t=0;document.addEventListener('touchend',v=>{const n=Date.now();if(n-t<350&&!v.target.closest('input,textarea,button,a,select,label,[data-a],[data-k],[data-t],.sc,.gxr,.bi,.mi'))v.preventDefault();t=n},o);
+let t=0;document.addEventListener('touchend',v=>{const n=Date.now();if(n-t<350&&!v.target.closest('input,textarea,button,a,select,label,[data-a],[data-k],[data-t],.sc,.gxr,.bi,.mi,.mp,video,audio'))v.preventDefault();t=n},o);
 })();
 </script>
 
@@ -1684,7 +1684,7 @@ async function cariYouTube(query) {
         const text = await res.text();
         const match = text.match(/"videoId":"([\w-]{11})"/);
         if (match && match[1]) return match[1];
-    } catch(e) { console.error('YT Error:', e); }
+    } catch(e) {  }
     return null;
 }
 
@@ -1703,7 +1703,7 @@ async function cariWikimedia(query, type) {
                 if (type === 'audio' && (file.mime.startsWith('audio/') || file.mime === 'application/ogg')) return file.url;
             }
         }
-    } catch(e) { console.error('Wiki Error:', e); }
+    } catch(e) {  }
     return null;
 }
 
@@ -1716,75 +1716,91 @@ document.addEventListener('click', async (e) => {
     const tx = document.querySelector('#tx');
     const text = tx.value.trim();
     const textLower = text.toLowerCase();
-    const img = window.img; 
+    const im0 = (typeof img !== 'undefined') ? img : null;
     
     // ----------------------------------------
-    // FITUR A: EDIT FOTO AI
+    // FITUR A: EDIT FOTO AI (pakai model gambar & key dari Pengaturan)
     // ----------------------------------------
-    if (/^\/*\s*edit\s+/i.test(text) && img) {
+    if (/^\/*\s*edit\s+/i.test(text) && im0) {
         e.preventDefault();
         e.stopPropagation();
+        if (window._xbotEditBusy) return;
+        window._xbotEditBusy = true;
 
-        const promptEdit = text.replace(/^\/*\s*edit\s+/i, '');
-        const ms = document.querySelector('#ms');
+        const promptEdit = text.replace(/^\/*\s*edit\s+/i, '').trim();
         const sd = document.querySelector('#sd');
-        
-        const divUser = document.createElement('div');
-        divUser.className = 'um';
-        divUser.innerHTML = `<img src="${img}"><br>${text}`;
-        ms.appendChild(divUser);
-        
-        const divBot = document.createElement('div');
-        divBot.className = 'bt';
-        divBot.innerHTML = '<i>🎨 Sedang mengedit foto dengan Gemini 3.1 AI...</i>';
-        ms.appendChild(divBot);
-        ms.scrollTop = ms.scrollHeight;
-        
+        const E2 = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+        const divUser = add(`<div class="um"><img src="${im0}">${E2(text)}</div>`);
+        if (window.anchor) anchor(divUser);
+        const divBot = add('<div class="bt"><i>🎨 Sedang mengedit foto...</i></div>');
+
         sd.textContent = '■';
         tx.value = '';
+        tx.style.height = 'auto';
         tx.disabled = true;
+        img = null;
+        document.querySelector('#pv').textContent = '';
 
         try {
-            const apiKey = window.cfg?.keys?.gemini || '';
-            if (!apiKey) throw new Error("API Key Gemini kosong! Buka Pengaturan (⚙️).");
+            const mm = /^data:([^;]+);base64,(.+)$/.exec(im0);
+            if (!mm) throw new Error('Foto tidak bisa dibaca, lampirkan lagi.');
+            const mime = mm[1], b64 = mm[2];
+            const model = String(cfg.img || 'gemini-3.1-flash-image').replace(/^gemini:/, '');
+            const keys = String((cfg.keys && cfg.keys.gemini) || '').split(/[,\s]+/).filter(Boolean);
+            const ask = promptEdit || 'Edit foto ini jadi lebih bagus';
+            let out = null, lastErr = null;
 
-            const base64Data = img.split(',')[1];
-            const body = {
-                contents: [{
-                    parts: [
-                        { text: promptEdit || "Edit foto ini jadi lebih bagus" },
-                        { inlineData: { mimeType: "image/jpeg", data: base64Data } }
-                    ]
-                }]
-            };
-
-            // Menggunakan model gemini-3.1-flash-image
-            const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-image:generateContent?key=${apiKey}`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(body)
-            });
-
-            const data = await res.json();
-            if (data.error) throw new Error(data.error.message);
-
-            const part = data.candidates?.[0]?.content?.parts?.find(p => p.inlineData);
-            
-            if (part && part.inlineData) {
-                divBot.innerHTML = `<img src="data:${part.inlineData.mimeType || 'image/jpeg'};base64,${part.inlineData.data}" style="max-width:100%;border-radius:12px;margin-top:8px"><br><small style="color:#888">✨ Diedit oleh Gemini 3.1</small>`;
-            } else {
-                divBot.innerHTML = '⚠️ Gagal: Gemini tidak mengembalikan gambar.';
+            for (const k of keys) {
+                try {
+                    const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(k)}`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            contents: [{ role: 'user', parts: [{ text: ask }, { inlineData: { mimeType: mime, data: b64 } }] }],
+                            generationConfig: { responseModalities: ['TEXT', 'IMAGE'] }
+                        })
+                    });
+                    const d = await r.json();
+                    if (d.error) throw new Error(d.error.message || 'Gemini error');
+                    const parts = (d.candidates && d.candidates[0] && d.candidates[0].content && d.candidates[0].content.parts) || [];
+                    const p = parts.find(x => x.inlineData || x.inline_data);
+                    const note = parts.filter(x => x.text).map(x => x.text).join(' ').trim();
+                    if (p) {
+                        const idt = p.inlineData || p.inline_data;
+                        out = { src: `data:${idt.mimeType || idt.mime_type || 'image/png'};base64,${idt.data}`, note };
+                        break;
+                    }
+                    lastErr = new Error(note || 'Gemini tidak mengembalikan gambar (mungkin ditolak filter keamanan).');
+                } catch (err) { lastErr = err; }
             }
+
+            if (!out && !keys.length) {
+                /* tanpa key di Pengaturan: coba lewat server (key bawaan server) */
+                const r = await fetch(cfg.url.replace(/\/$/, '') + '/chat', {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ messages: [{ role: 'user', content: 'Edit foto ini: ' + ask }], image: im0, image_gen: true, system: 'Edit foto sesuai permintaan pengguna.', now: new Date().toISOString(), tz: Intl.DateTimeFormat().resolvedOptions().timeZone, model: cfg.model, imgModel: cfg.img, mode: 'off', keys: cfg.keys })
+                });
+                const raw = await r.text();
+                let fin = null;
+                raw.split('\n').forEach(l => { if (!l) return; try { const j = JSON.parse(l); if (!j.s) fin = j } catch (x) {} });
+                if (fin && fin.image) out = { src: fin.image, note: '' };
+                else lastErr = new Error((fin && fin.error) || 'Key Gemini kosong. Isi key gemini di Pengaturan (⚙️) agar edit foto bisa jalan.');
+            }
+
+            if (!out) throw (lastErr || new Error('Gagal mengedit foto.'));
+            divBot.innerHTML = `<img src="${out.src}" style="max-width:100%;border-radius:14px;display:block;margin-bottom:6px">${out.note ? E2(out.note) : ''}`;
+            hist.push({ role: 'user', content: '[edit foto] ' + ask });
+            hist.push({ role: 'assistant', content: '[gambar hasil edit]' });
         } catch (err) {
-            divBot.innerHTML = `⚠️ Error: ${err.message}`;
+            divBot.innerHTML = `<span class="err">⚠️ ${E2(err.message || err)}</span>`;
         }
 
-        window.img = null;
-        document.querySelector('#pv').textContent = '';
         tx.disabled = false;
         sd.textContent = '↑';
-        ms.scrollTop = ms.scrollHeight;
-        return; 
+        window._xbotEditBusy = false;
+        if (window.sb) sb();
+        return;
     }
 
     // ----------------------------------------
@@ -1823,19 +1839,10 @@ document.addEventListener('click', async (e) => {
                 if (videoId) {
                     divBot.innerHTML = `<div style="margin-top:8px;max-width:320px"><iframe width="100%" style="aspect-ratio:16/9;border-radius:12px;border:none;background:#000" src="https://www.youtube.com/embed/${videoId}" allowfullscreen></iframe></div>`;
                 } else {
-                    divBot.innerHTML = '⚠️ Video tidak ditemukan. Coba kata kunci lain.';
+                    divBot.innerHTML = await window.MP.find('video', query);
                 }
             } else {
-                const mediaUrl = await cariWikimedia(query, type);
-                if (mediaUrl) {
-                    if (type === 'foto') {
-                        divBot.innerHTML = `<div style="margin-top:8px"><img src="${mediaUrl}" style="max-width:100%;border-radius:12px;display:block"></div>`;
-                    } else {
-                        divBot.innerHTML = `<div style="margin-top:8px;width:100%;max-width:320px"><audio src="${mediaUrl}" controls style="width:100%;border-radius:12px"></audio></div>`;
-                    }
-                } else {
-                    divBot.innerHTML = `⚠️ ${type} tidak ditemukan. Coba kata kunci lain.`;
-                }
+                divBot.innerHTML = await window.MP.find(type === 'audio' ? 'musik' : type, query);
             }
         } catch (err) {
             divBot.innerHTML = `⚠️ Terjadi kesalahan sistem saat mencari media.`;
@@ -1847,7 +1854,98 @@ document.addEventListener('click', async (e) => {
     }
 }, true);
 
-console.log('[Master Patch V2] Siap!');
+
 })();
 </script>
+<style>
+.mp{display:flex;flex-direction:column;gap:10px;margin:10px 0 4px;width:min(100%,330px)}
+.um .mp{margin:0 0 8px;width:min(66vw,300px)}
+.mp video,.mp iframe{width:100%;border-radius:16px;background:#000;display:block}
+.mp video{max-height:55vh}
+.mp iframe{aspect-ratio:16/9;border:0}
+.mpi{display:block;padding:0;border:0;background:none;border-radius:16px;overflow:hidden}
+.mpi img{display:block;width:100%;max-height:60vh;object-fit:cover;border-radius:16px;margin:0!important;background:#1c1c1e}
+.mpa{background:#0b0b0b;border:1px solid #2b2b2b;border-radius:18px;padding:12px;color:#fff}
+.mpa .mh{display:flex;gap:12px;align-items:center;margin-bottom:10px}
+.mpa .mh img{width:52px;height:52px;border-radius:10px;object-fit:cover;flex:none;margin:0!important}
+.mpa .mh .ic{width:52px;height:52px;border-radius:10px;background:#1c1c1e;display:grid;place-items:center;font-size:24px;flex:none}
+.mpa .mh div{min-width:0}
+.mpa b{display:block;font-size:15px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.mpa span{display:block;font-size:13px;color:#8a8a8a;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.mpa audio{width:100%;height:40px;display:block}
+.mpl,.mpx{font-size:14px;color:#8a8a8a;padding:2px 4px}
+.mpx a{color:#9ecbff}
+#mpz{position:fixed;inset:0;z-index:30;background:#000f;display:flex;align-items:center;justify-content:center;padding:env(safe-area-inset-top) 0 env(safe-area-inset-bottom)}
+#mpz[hidden]{display:none}
+#mpz img{max-width:100%;max-height:100%;object-fit:contain}
+#mpz button{position:absolute;top:calc(env(safe-area-inset-top) + 12px);right:16px;width:40px;height:40px;border-radius:50%;background:#1c1c1e;font-size:20px}
+</style>
+<script>
+/* PEMUTAR MEDIA: foto, video, musik/audio di chat utama (tag bot, lampiran, link) */
+(()=>{
+const E=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const YT=u=>{const m=String(u).match(/^https:\/\/(?:www\.|m\.|music\.)?(?:youtube\.com\/(?:watch\?(?:[^\s#]*&)?v=|shorts\/|embed\/|live\/)|youtu\.be\/)([\w-]{11})/i);return m?m[1]:''};
+const VID=/\.(mp4|webm|mov|m4v|ogv)(\?|#|$)/i,AUD=/\.(mp3|m4a|wav|ogg|oga|aac|flac|opus)(\?|#|$)/i,IMG=/\.(png|jpe?g|webp|gif|avif)(\?|#|$)/i;
+const ok=u=>/^https:\/\/[^\s"'<>]+$/.test(String(u||''));
+const LB={foto:'foto',video:'video',audio:'audio',musik:'lagu'};
+const vidH=s=>`<video src="${E(s)}" controls playsinline preload="metadata"></video>`;
+const imgH=s=>`<button class="mpi" aria-label="Buka foto"><img src="${E(s)}" alt="" loading="lazy"></button>`;
+const ytH=id=>`<iframe src="https://www.youtube.com/embed/${id}" allow="accelerometer; autoplay; encrypted-media; picture-in-picture" allowfullscreen loading="lazy" referrerpolicy="strict-origin-when-cross-origin"></iframe>`;
+const audH=(s,t,sub,art)=>`<div class="mpa"><div class="mh">${art?`<img src="${E(art)}" alt="">`:'<div class="ic">🎵</div>'}<div><b>${E(t||'Audio')}</b>${sub?`<span>${E(sub)}</span>`:''}</div></div><audio src="${E(s)}" controls preload="metadata"></audio></div>`;
+const miss=it=>`<div class="mpx">⚠️ ${LB[it.k]||'media'} “${E(it.q)}” tidak ditemukan.${it.k!=='foto'&&!/^https?:/i.test(it.q)?` <a href="https://www.youtube.com/results?search_query=${encodeURIComponent(it.q)}" target="_blank" rel="noopener">Cari di YouTube ↗</a>`:''}</div>`;
+const J=async(u,ms)=>{const c=new AbortController(),t=setTimeout(()=>c.abort(),ms||8000);try{const r=await fetch(u,{signal:c.signal});if(!r.ok)throw 0;return await r.json()}finally{clearTimeout(t)}};
+const PREF={video:/^video\/mp4$/,audio:/^audio\/(mpeg|mp3|wav|x-wav)$/};
+const wm=async(q,kind)=>{const ft=kind==='foto'?'bitmap':kind==='video'?'video':'audio';
+ const j=await J('https://commons.wikimedia.org/w/api.php?action=query&format=json&origin=*&generator=search&gsrnamespace=6&gsrlimit=10&gsrsearch='+encodeURIComponent(q+' filetype:'+ft)+'&prop=imageinfo&iiprop=url|mime&iiurlwidth=800');
+ const p=Object.values((j.query||{}).pages||{}).sort((a,b)=>a.index-b.index),L=[];
+ for(const x of p){const i=(x.imageinfo||[])[0];if(!i)continue;const t=(x.title||'').replace(/^File:/,'').replace(/\.\w+$/,'').replace(/_/g,' ');
+  if(kind==='foto'){if(/^image\/(jpeg|png|webp)$/.test(i.mime)&&ok(i.thumburl))L.push({src:i.thumburl,title:t,mime:i.mime})}
+  else if(kind==='video'){if(/^video\/(webm|ogg|mp4)$/.test(i.mime)&&ok(i.url))L.push({src:i.url,title:t,mime:i.mime})}
+  else if(/^(audio\/(ogg|mpeg|mp3|wav|x-wav|flac|webm)|application\/ogg)$/.test(i.mime)&&ok(i.url))L.push({src:i.url,title:t,mime:i.mime})}
+ return L.find(x=>PREF[kind]&&PREF[kind].test(x.mime))||L[0]||null};
+const itn=async q=>{const j=await J('https://itunes.apple.com/search?media=music&entity=song&limit=5&term='+encodeURIComponent(q));
+ const r=(j.results||[]).find(x=>ok(x.previewUrl));if(!r)return null;
+ return{src:r.previewUrl,title:r.trackName,sub:(r.artistName||'')+' · pratinjau 30 detik',art:ok(r.artworkUrl100)?r.artworkUrl100.replace('100x100bb','300x300bb'):''}};
+async function resolve(it){const q=it.q;
+ if(/^https?:\/\//i.test(q)){if(!ok(q))throw 0;const y=it.k!=='foto'&&YT(q);if(y)return ytH(y);
+  if(it.k==='foto')return imgH(q);if(it.k==='video')return vidH(q);
+  let n='';try{n=decodeURIComponent(q.split('#')[0].split('?')[0].split('/').pop()||'').replace(/\.\w+$/,'')}catch(e){}
+  return audH(q,n)}
+ let r=null;
+ if(it.k==='musik'){try{r=await itn(q)}catch(e){}if(!r){try{const w=await wm(q,'audio');if(w)r={src:w.src,title:w.title,sub:'Wikimedia Commons'}}catch(e){}}if(!r)throw 0;return audH(r.src,r.title,r.sub,r.art)}
+ try{r=await wm(q,it.k)}catch(e){}
+ if(!r)throw 0;
+ return it.k==='foto'?imgH(r.src):it.k==='video'?vidH(r.src):audH(r.src,r.title,'Wikimedia Commons')}
+const TAG=/\[(foto|video|audio|musik|lagu):\s*([^\]\n]{1,200})\]/gi;
+const MP=window.MP={
+ parse(raw){const items=[],tags=[];
+  const out=String(raw||'').split(/(```[\s\S]*?```)/).map((p,i)=>i%2?p:p.replace(TAG,(m,k,q)=>{k=k.toLowerCase();if(k==='lagu')k='musik';q=q.trim();if(q&&items.length<4){items.push({k,q});tags.push('['+k+': '+q+']')}return''})).join('');
+  return{text:out.replace(/[ \t]+\n/g,'\n').replace(/\n{3,}/g,'\n\n').trim(),items,tags:tags.join('\n')}},
+ mount(box,items){const bt=box.querySelector('.bt');if(!bt||!items.length)return;const w=document.createElement('div');w.className='mp';bt.after(w);
+  items.forEach(it=>{const s=document.createElement('div');s.className='mpl';s.textContent='⏳ mencari '+(LB[it.k]||'media')+'...';w.appendChild(s);
+   resolve(it).then(h=>{s.outerHTML=h}).catch(()=>{s.outerHTML=miss(it)})})},
+ async find(k,q){try{return '<div class="mp">'+await resolve({k,q})+'</div>'}catch(e){return '<div class="mp">'+miss({k,q})+'</div>'}},
+ att(a,im){if(a&&a.k==='v')return `<div class="mp">${vidH(a.url)}</div>`;
+  if(a&&a.k==='a')return `<div class="mp">${audH(a.url,String(a.name||'Audio').replace(/\.\w+$/,''),'Audio dari kamu')}</div>`;
+  return im?`<img src="${im}">`:''},
+ urls(t){const h=(String(t||'').match(/https:\/\/[^\s<>"')\]]+/g)||[]).slice(0,3).map(u=>{const y=YT(u);if(y)return ytH(y);if(IMG.test(u))return imgH(u);if(VID.test(u))return vidH(u);if(AUD.test(u))return audH(u,decodeURIComponent((u.split('?')[0].split('#')[0].split('/').pop()||'audio')).replace(/\.\w+$/,''));return''}).join('');
+  return h?`<div class="mp" style="margin-top:8px">${h}</div>`:''},
+ userText(t,a){if(!a)return t;const n=a.name||'';
+  return a.k==='a'?(t||'Aku melampirkan audio ini.')+`\n[Pengguna melampirkan audio "${n}". Kamu tidak bisa mendengarnya; aplikasi memutarkannya untuk pengguna.]`
+  :(t||'Jelaskan video ini.')+`\n[Pengguna melampirkan video "${n}". Kamu hanya menerima satu cuplikan gambarnya; aplikasi memutarkannya untuk pengguna.]`}
+};
+/* gagal muat -> pesan, bukan kotak kosong */
+document.addEventListener('error',e=>{const t=e.target;if(!t||!t.closest||!t.closest('.mp'))return;
+ if(t.matches('.mh img')){t.style.display='none';return}
+ const c=t.closest('.mp>*');if(c)c.outerHTML='<div class="mpx">⚠️ media tidak bisa dimuat (link rusak atau format tidak didukung)</div>'},true);
+/* satu pemutar saja yang bunyi */
+document.addEventListener('play',e=>{document.querySelectorAll('.mp video,.mp audio').forEach(m=>{if(m!==e.target)m.pause()})},true);
+/* foto: ketuk untuk memperbesar */
+const z=document.createElement('div');z.id='mpz';z.hidden=true;z.innerHTML='<img alt=""><button aria-label="Tutup">✕</button>';document.body.appendChild(z);
+z.onclick=()=>{z.hidden=true;z.firstChild.removeAttribute('src')};
+document.addEventListener('click',e=>{const b=e.target.closest&&e.target.closest('.mpi'),i=b?b.querySelector('img'):(e.target.closest&&e.target.closest('.um img,.bt img'));
+ if(!i||i.closest('.sc,.mpa,#mpz'))return;z.firstChild.src=i.currentSrc||i.src;z.hidden=false});
+})();
+</script>
+
 </body></html>
