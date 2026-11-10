@@ -278,7 +278,7 @@ $('#tx').oninput=e=>{e.target.style.height='auto';e.target.style.height=e.target
 $('#sd').onclick=send;
 const nowStr=()=>{const tz=Intl.DateTimeFormat().resolvedOptions().timeZone;return new Intl.DateTimeFormat('id-ID',{dateStyle:'full',timeStyle:'long',timeZone:tz}).format(new Date())+' ('+tz+')'};
 const CRT='\n\n[Pembuat] Jika ada yang bertanya siapa pembuatmu / yang membuatmu / penciptamu / developer-mu, jawab bahwa kamu dibuat oleh Marta Edi Sutrisno.';
-const sysx=()=>CRT+`\n\n[Info perangkat pengguna] Waktu sekarang di perangkat pengguna: ${nowStr()}. Pakai ini (jangan menebak) untuk pertanyaan tentang tanggal, hari, atau jam.\n[Format] Jangan memberi warna pada teks kecuali pengguna secara eksplisit memintanya; jawaban biasa ditulis polos tanpa warna. Kalau diminta, tulis [c=warna]teks[/c] (merah, hijau, biru, kuning, oranye, ungu, pink, tosca, coklat, abu, putih, atau hex).\n[Tabel] Untuk tabel pakai tabel markdown standar (baris header, baris |---|---|, lalu isi). Jangan taruh tabel di dalam blok kode.\n[Diagram] Untuk diagram, alur, proses, atau hierarki JANGAN pakai ASCII art. Tulis blok kode berlabel diagram (\`\`\`diagram) berisi flowchart mermaid sederhana, satu hubungan per baris, contoh:\nA[Data] --> B[Pelatihan Model]\nB --> C[Evaluasi]\nC --> D[Deployment]\nlalu tutup dengan \`\`\`. Label singkat.\n[Sumber] Jangan menulis "Sumber: [n]" atau penanda angka seperti [1] di dalam jawaban; daftar sumber ditampilkan terpisah oleh aplikasi.\n[Media] Kamu BISA menampilkan foto, memutar video, dan memutar lagu langsung di chat ini. Tulis tag di baris sendiri: [foto: kata kunci], [video: kata kunci], [musik: judul lagu artis], [audio: kata kunci suara], atau URL langsung seperti [foto: https://...jpg], [video: https://...mp4], [audio: https://...mp3], atau link YouTube yang diberikan pengguna [video: https://www.youtube.com/watch?v=...]. Aplikasi yang mencarikan filenya (foto, video, dan suara dari Wikimedia Commons; lagu dari pratinjau iTunes 30 detik). Untuk foto/video/audio pakai kata kunci bahasa Inggris yang sederhana, misalnya [video: waterfall] atau [foto: Eiffel Tower]; untuk lagu tulis judul dan artis. Jangan mengarang URL atau ID YouTube. Bila pengguna minta foto, video, atau lagu, langsung tulis tagnya dengan satu kalimat pengantar singkat dan jangan menolak; untuk lagu populer sebutkan bahwa yang diputar pratinjau 30 detik. Jangan menulis tag ini di dalam blok kode.`;
+const sysx=()=>CRT+`\n\n[Info perangkat pengguna] Waktu sekarang di perangkat pengguna: ${nowStr()}. Pakai ini (jangan menebak) untuk pertanyaan tentang tanggal, hari, atau jam.\n[Format] Jangan memberi warna pada teks kecuali pengguna secara eksplisit memintanya; jawaban biasa ditulis polos tanpa warna. Kalau diminta, tulis [c=warna]teks[/c] (merah, hijau, biru, kuning, oranye, ungu, pink, tosca, coklat, abu, putih, atau hex).\n[Tabel] Untuk tabel pakai tabel markdown standar (baris header, baris |---|---|, lalu isi). Jangan taruh tabel di dalam blok kode.\n[Diagram] Untuk diagram, alur, proses, atau hierarki JANGAN pakai ASCII art. Tulis blok kode berlabel diagram (\`\`\`diagram) berisi flowchart mermaid sederhana, satu hubungan per baris, contoh:\nA[Data] --> B[Pelatihan Model]\nB --> C[Evaluasi]\nC --> D[Deployment]\nlalu tutup dengan \`\`\`. Label singkat.\n[Sumber] Jangan menulis "Sumber: [n]" atau penanda angka seperti [1] di dalam jawaban; daftar sumber ditampilkan terpisah oleh aplikasi.\n[Media] Kamu BISA menampilkan foto, memutar video, dan memutar lagu langsung di chat ini. Tulis tag di baris sendiri: [foto: kata kunci], [video: kata kunci], [musik: judul lagu artis], [audio: kata kunci suara], atau URL langsung seperti [foto: https://...jpg], [video: https://...mp4], [audio: https://...mp3], atau link YouTube yang diberikan pengguna [video: https://www.youtube.com/watch?v=...]. Aplikasi yang mencarikan filenya (foto, video, dan suara dari Wikimedia Commons; lagu dari pratinjau iTunes 30 detik). Untuk foto/video/audio pakai kata kunci bahasa Inggris yang sederhana, misalnya [video: waterfall] atau [foto: Eiffel Tower]; untuk lagu tulis judul dan artis. Jangan mengarang URL atau ID YouTube. Bila pengguna minta foto, video, atau lagu, langsung tulis tagnya dengan satu kalimat pengantar singkat dan jangan menolak; untuk lagu populer sebutkan bahwa yang diputar pratinjau 30 detik. Jangan menulis tag ini di dalam blok kode. Untuk mengedit foto yang dilampirkan pengguna, aplikasi punya fitur sendiri (pengguna menulis edit diikuti permintaan bersama fotonya); jangan bilang kamu tidak bisa mengedit foto, arahkan ke cara itu.`;
 /* ===== NOTIFIKASI: suara + badge ikon + notif sistem ===== */
 let _ac=null,UNM=0;const T00=document.title;
 const audioUnlock=()=>{try{const A=window.AudioContext||window.webkitAudioContext;if(!A)return;_ac=_ac||new A();if(_ac.state==='suspended')_ac.resume()}catch(e){}};
@@ -1721,13 +1721,15 @@ document.addEventListener('click', async (e) => {
     // ----------------------------------------
     // FITUR A: EDIT FOTO AI (pakai model gambar & key dari Pengaturan)
     // ----------------------------------------
-    if (/^\/*\s*edit\s+/i.test(text) && im0) {
+    const EDRX = /^\/*\s*edit(?:kan)?\b[\s,:-]*/i;
+    const NATRX = /^\/*\s*(?:ubah(?:lah)?|ganti(?:kan)?|hilangkan|hapus(?:kan)?|tambahkan|percantik|perbaiki|bersihkan|retouch|jadikan)\b/i;
+    if (im0 && (EDRX.test(text) || NATRX.test(text))) {
         e.preventDefault();
         e.stopPropagation();
         if (window._xbotEditBusy) return;
         window._xbotEditBusy = true;
 
-        const promptEdit = text.replace(/^\/*\s*edit\s+/i, '').trim();
+        const promptEdit = (EDRX.test(text) ? text.replace(EDRX, '').replace(/^(?:foto|gambar)\s+(?:ini|itu)\b[\s,:-]*/i, '') : text).trim();
         const sd = document.querySelector('#sd');
         const E2 = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 
@@ -1748,7 +1750,7 @@ document.addEventListener('click', async (e) => {
             const mime = mm[1], b64 = mm[2];
             const model = String(cfg.img || 'gemini-3.1-flash-image').replace(/^gemini:/, '');
             const keys = String((cfg.keys && cfg.keys.gemini) || '').split(/[,\s]+/).filter(Boolean);
-            const ask = promptEdit || 'Edit foto ini jadi lebih bagus';
+            const ask = promptEdit ? 'Edit foto ini sesuai permintaan: ' + promptEdit : 'Edit foto ini jadi lebih bagus';
             let out = null, lastErr = null;
 
             for (const k of keys) {
@@ -1892,7 +1894,7 @@ const vidH=s=>`<video src="${E(s)}" controls playsinline preload="metadata"></vi
 const imgH=s=>`<button class="mpi" aria-label="Buka foto"><img src="${E(s)}" alt="" loading="lazy"></button>`;
 const ytH=id=>`<iframe src="https://www.youtube.com/embed/${id}" allow="accelerometer; autoplay; encrypted-media; picture-in-picture" allowfullscreen loading="lazy" referrerpolicy="strict-origin-when-cross-origin"></iframe>`;
 const audH=(s,t,sub,art)=>`<div class="mpa"><div class="mh">${art?`<img src="${E(art)}" alt="">`:'<div class="ic">🎵</div>'}<div><b>${E(t||'Audio')}</b>${sub?`<span>${E(sub)}</span>`:''}</div></div><audio src="${E(s)}" controls preload="metadata"></audio></div>`;
-const miss=it=>`<div class="mpx">⚠️ ${LB[it.k]||'media'} “${E(it.q)}” tidak ditemukan.${it.k!=='foto'&&!/^https?:/i.test(it.q)?` <a href="https://www.youtube.com/results?search_query=${encodeURIComponent(it.q)}" target="_blank" rel="noopener">Cari di YouTube ↗</a>`:''}</div>`;
+const miss=(it,e)=>`<div class="mpx">⚠️ ${LB[it.k]||'media'} “${E(it.q)}” ${e&&e.net?'tidak bisa dicari (iTunes tidak bisa dihubungi, cek koneksi).':'tidak ditemukan.'}${it.k!=='foto'&&!/^https?:/i.test(it.q)?` <a href="https://www.youtube.com/results?search_query=${encodeURIComponent(it.q)}" target="_blank" rel="noopener">Cari di YouTube ↗</a>`:''}</div>`;
 const J=async(u,ms)=>{const c=new AbortController(),t=setTimeout(()=>c.abort(),ms||8000);try{const r=await fetch(u,{signal:c.signal});if(!r.ok)throw 0;return await r.json()}finally{clearTimeout(t)}};
 const PREF={video:/^video\/mp4$/,audio:/^audio\/(mpeg|mp3|wav|x-wav)$/};
 const wm=async(q,kind)=>{const ft=kind==='foto'?'bitmap':kind==='video'?'video':'audio';
@@ -1903,16 +1905,19 @@ const wm=async(q,kind)=>{const ft=kind==='foto'?'bitmap':kind==='video'?'video':
   else if(kind==='video'){if(/^video\/(webm|ogg|mp4)$/.test(i.mime)&&ok(i.url))L.push({src:i.url,title:t,mime:i.mime})}
   else if(/^(audio\/(ogg|mpeg|mp3|wav|x-wav|flac|webm)|application\/ogg)$/.test(i.mime)&&ok(i.url))L.push({src:i.url,title:t,mime:i.mime})}
  return L.find(x=>PREF[kind]&&PREF[kind].test(x.mime))||L[0]||null};
-const itn=async q=>{const j=await J('https://itunes.apple.com/search?media=music&entity=song&limit=5&term='+encodeURIComponent(q));
- const r=(j.results||[]).find(x=>ok(x.previewUrl));if(!r)return null;
- return{src:r.previewUrl,title:r.trackName,sub:(r.artistName||'')+' · pratinjau 30 detik',art:ok(r.artworkUrl100)?r.artworkUrl100.replace('100x100bb','300x300bb'):''}};
+const itn=async q=>{let any=false;
+ for(const c of ['ID','US']){try{const j=await J('https://itunes.apple.com/search?media=music&entity=song&limit=8&country='+c+'&term='+encodeURIComponent(q));any=true;
+  const r=(j.results||[]).find(x=>ok(x.previewUrl));
+  if(r)return{src:r.previewUrl,title:r.trackName,sub:(r.artistName||'')+' · pratinjau 30 detik',art:ok(r.artworkUrl100)?r.artworkUrl100.replace('100x100bb','300x300bb'):''}}catch(e){}}
+ if(!any){const e=new Error('net');e.net=1;throw e}
+ return null};
 async function resolve(it){const q=it.q;
  if(/^https?:\/\//i.test(q)){if(!ok(q))throw 0;const y=it.k!=='foto'&&YT(q);if(y)return ytH(y);
   if(it.k==='foto')return imgH(q);if(it.k==='video')return vidH(q);
   let n='';try{n=decodeURIComponent(q.split('#')[0].split('?')[0].split('/').pop()||'').replace(/\.\w+$/,'')}catch(e){}
   return audH(q,n)}
  let r=null;
- if(it.k==='musik'){try{r=await itn(q)}catch(e){}if(!r){try{const w=await wm(q,'audio');if(w)r={src:w.src,title:w.title,sub:'Wikimedia Commons'}}catch(e){}}if(!r)throw 0;return audH(r.src,r.title,r.sub,r.art)}
+ if(it.k==='musik'){let net=0;try{r=await itn(q)}catch(e){net=e&&e.net?1:0}if(!r){try{const w=await wm(q,'audio');if(w)r={src:w.src,title:w.title,sub:'Wikimedia Commons'}}catch(e){}}if(!r){const e=new Error('x');e.net=net;throw e}return audH(r.src,r.title,r.sub,r.art)}
  try{r=await wm(q,it.k)}catch(e){}
  if(!r)throw 0;
  return it.k==='foto'?imgH(r.src):it.k==='video'?vidH(r.src):audH(r.src,r.title,'Wikimedia Commons')}
@@ -1923,8 +1928,8 @@ const MP=window.MP={
   return{text:out.replace(/[ \t]+\n/g,'\n').replace(/\n{3,}/g,'\n\n').trim(),items,tags:tags.join('\n')}},
  mount(box,items){const bt=box.querySelector('.bt');if(!bt||!items.length)return;const w=document.createElement('div');w.className='mp';bt.after(w);
   items.forEach(it=>{const s=document.createElement('div');s.className='mpl';s.textContent='⏳ mencari '+(LB[it.k]||'media')+'...';w.appendChild(s);
-   resolve(it).then(h=>{s.outerHTML=h}).catch(()=>{s.outerHTML=miss(it)})})},
- async find(k,q){try{return '<div class="mp">'+await resolve({k,q})+'</div>'}catch(e){return '<div class="mp">'+miss({k,q})+'</div>'}},
+   resolve(it).then(h=>{s.outerHTML=h}).catch(e=>{s.outerHTML=miss(it,e)})})},
+ async find(k,q){try{return '<div class="mp">'+await resolve({k,q})+'</div>'}catch(e){return '<div class="mp">'+miss({k,q},e)+'</div>'}},
  att(a,im){if(a&&a.k==='v')return `<div class="mp">${vidH(a.url)}</div>`;
   if(a&&a.k==='a')return `<div class="mp">${audH(a.url,String(a.name||'Audio').replace(/\.\w+$/,''),'Audio dari kamu')}</div>`;
   return im?`<img src="${im}">`:''},
