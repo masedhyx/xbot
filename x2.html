@@ -1684,7 +1684,7 @@ const jfix=s=>{let o='',q=0,e=0;for(const c of s){if(q){if(e){e=0;o+=c}else if(c
 const jp=s=>{try{return JSON.parse(s)}catch(e){try{return JSON.parse(jfix(s))}catch(e2){return null}}};
 const parseTool=t=>{for(const re of TOOL_PATTERNS){const m=re.exec(t||'');if(!m)continue;const c=jp(m[1]);if(c&&c.name)return {call:c,raw:m[0]}}return null};
 const stripTool=t=>{let s=t||'';for(const re of TOOL_PATTERNS){const m=re.exec(s);if(m){const c=jp(m[1]);if(c&&c.name){s=s.replace(m[0],'');break}}}return s.trim()};
-const origFetch=window.fetch.bind(window);
+const origFetch=window.fetch.bind(window);window.__xOrigFetch=origFetch;
 
 window.fetch=async(input,init={})=>{
   const url=typeof input==='string'?input:(input&&input.url)||'';
@@ -2409,6 +2409,7 @@ try{
 const XT=window.XT;
 if(!XT||typeof XT.run!=='function'||typeof SERVER_URL==='undefined')return;
 const MAX=()=>Math.max(1,Math.min(15,+window.XAGENT_MAX||5));
+const ON=()=>{try{return localStorage.getItem('xagent_on')!=='0'}catch(e){return true}};
 let STEP=0,READS=0,TAINT=false;
 const TRACE=[],SEEN=new Set();
 const EXT=new Set(['read','search','news','wiki']);
@@ -2510,6 +2511,7 @@ const setStatus=(name,n)=>{try{
 }catch(e){}};
 const runOrig=XT.run.bind(XT);
 XT.run=async(name,args)=>{
+ if(!ON())return runOrig(name,args);
  const a=(args&&typeof args==='object')?args:{};
  STEP++;TRACE.push(name);setStatus(name,STEP);
  try{
@@ -2546,7 +2548,7 @@ const CHATURL=SERVER_URL.replace(/\/$/,'')+'/chat',f0=window.fetch;
 window.fetch=function(input,init){
  try{
   const u=typeof input==='string'?input:(input&&input.url)||'';
-  if(u===CHATURL&&init&&typeof init.body==='string'){
+  if(u===CHATURL&&ON()&&init&&typeof init.body==='string'){
    const b=JSON.parse(init.body);
    if(!b.image_gen&&String(b.system||'').includes('[Info perangkat pengguna]')){
     STEP=0;READS=0;TAINT=false;TRACE.length=0;SEEN.clear();
@@ -2560,6 +2562,7 @@ window.fetch=function(input,init){
 
 const ms=document.getElementById('ms');
 if(ms)new MutationObserver(ml=>{for(const m of ml)for(const n of m.addedNodes){
+ if(!ON()){TRACE.length=0;continue}
  if(n.nodeType!==1||!n.classList.contains('bm')||n.classList.contains('xr')||!TRACE.length)continue;
  const seq=[];for(const t of TRACE){const s=SH[t]||t;if(seq[seq.length-1]!==s)seq.push(s)}
  const d=document.createElement('div');d.className='xtr';d.textContent='🔧 '+seq.join(' → ');n.appendChild(d);TRACE.length=0}}).observe(ms,{childList:true});
@@ -2581,7 +2584,9 @@ if(ms)new MutationObserver(ml=>{for(const m of ml)for(const n of m.addedNodes){
 
             const workerSearch = async ({q}) => {
                 if(!q) throw new Error('Query kosong');
-                const r = await fetch(SERVER_URL.replace(/\/$/, '') + '/chat', {
+                const ctl = new AbortController(), tm = setTimeout(() => ctl.abort(), 25000);
+                const r = await (window.__xOrigFetch || fetch)(SERVER_URL.replace(/\/$/, '') + '/chat', {
+                    signal: ctl.signal,
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
@@ -2596,6 +2601,7 @@ if(ms)new MutationObserver(ml=>{for(const m of ml)for(const n of m.addedNodes){
                 });
                 if (!r.ok) throw new Error('Worker HTTP ' + r.status);
                 const t = await r.text();
+                clearTimeout(tm);
                 let fin = null;
                 for (const l of t.split('\n')) {
                     if (!l.trim()) continue;
@@ -2605,39 +2611,60 @@ if(ms)new MutationObserver(ml=>{for(const m of ml)for(const n of m.addedNodes){
                 return { q, hasil: fin.text.slice(0, 3000) };
             };
 
+            const origSearch = window.XT.search;
             window.XT.search = async (args) => {
+                try { if (localStorage.getItem('xsearch_multi_on') === '0') return origSearch(args); } catch(e) {}
                 let err = null;
                 const query = args.q;
                 if (!query) throw new Error('Query kosong');
+                const LS = k => { try { return localStorage.getItem(k) || ''; } catch(e) { return ''; } };
+                const order = LS('xsearch_order') || 'google';
 
-                // Lapis 1: Worker Search
-                try {
-                    const r = await workerSearch(args);
-                    if (r && r.hasil) return r;
-                } catch(e) { err = e; console.warn("Worker search gagal, fallback ke Google..."); }
-
-                const gKey = localStorage.getItem('google_api_key') || '';
-                const gCx = localStorage.getItem('google_cx_id') || '46af32ea8cf9b4485';
-                const tKey = localStorage.getItem('tavily_api_key') || '';
-
-                // Lapis 2: Google Custom Search
-                if (gKey && gCx) {
+                // Google Custom Search (hanya jika key diisi)
+                const tryGoogle = async () => {
+                    const gKey = LS('google_api_key'), gCx = LS('google_cx_id') || '46af32ea8cf9b4485';
+                    if (!gKey || !gCx) return null;
+                    const c = new AbortController(), to = setTimeout(() => c.abort(), 10000);
                     try {
                         const gUrl = `https://www.googleapis.com/customsearch/v1?key=${encodeURIComponent(gKey)}&cx=${encodeURIComponent(gCx)}&q=${encodeURIComponent(query)}&hl=id`;
-                        const gRes = await fetch(gUrl);
-                        if (gRes.ok) {
-                            const gData = await gRes.json();
-                            if (gData.items && gData.items.length > 0) {
-                                const hasil = gData.items.map((item, idx) => 
-                                    `${idx + 1}. ${item.title}\n${item.link}\n${item.snippet || ''}`
-                                ).join('\n\n');
-                                return { q: query, sumber: 'Google Custom Search', hasil: hasil.slice(0, 3000) };
-                            }
+                        const gRes = await fetch(gUrl, { signal: c.signal });
+                        if (!gRes.ok) { console.warn('Google Search HTTP ' + gRes.status); return null; }
+                        const gData = await gRes.json();
+                        if (gData.items && gData.items.length > 0) {
+                            const hasil = gData.items.map((item, idx) =>
+                                `${idx + 1}. ${item.title}\n${item.link}\n${item.snippet || ''}`
+                            ).join('\n\n');
+                            return { q: query, sumber: 'Google Custom Search', hasil: hasil.slice(0, 3000) };
                         }
-                    } catch(e) { console.warn("Google Search error", e); }
-                }
+                    } catch(e) { console.warn('Google Search error', e); }
+                    finally { clearTimeout(to); }
+                    return null;
+                };
 
-                // Lapis 3: Tavily AI
+                // Worker (cari + ringkas oleh model)
+                const tryWorker = async () => {
+                    try {
+                        const r = await workerSearch(args);
+                        if (r && r.hasil) return r;
+                    } catch(e) { err = e; console.warn('Worker search gagal'); }
+                    return null;
+                };
+
+                let r = null;
+                if (order === 'both') {
+                    const [g, w] = await Promise.all([tryGoogle(), tryWorker()]);
+                    if (g && w) return { q: query, sumber: 'Google + Worker', hasil: (w.hasil.slice(0, 1500) + '\n\nTautan sumber (Google):\n' + g.hasil.slice(0, 1400)) };
+                    r = g || w;
+                } else if (order === 'worker') {
+                    r = (await tryWorker()) || (await tryGoogle());
+                } else {
+                    r = (await tryGoogle()) || (await tryWorker());
+                }
+                if (r) return r;
+
+                const tKey = LS('tavily_api_key');
+
+                // Cadangan: Tavily AI
                 if (tKey) {
                     try {
                         const tRes = await fetch('https://api.tavily.com/search', {
@@ -2652,10 +2679,10 @@ if(ms)new MutationObserver(ml=>{for(const m of ml)for(const n of m.addedNodes){
                                 return { q: query, sumber: 'Tavily AI', hasil: hasil.slice(0, 3000) };
                             }
                         }
-                    } catch(e) { console.warn("Tavily error", e); }
+                    } catch(e) { console.warn('Tavily error', e); }
                 }
 
-                // Lapis 4: Parallel AI (Original Fallback x2.html)
+                // Cadangan terakhir: Parallel AI (bawaan x2.html)
                 const pk = ((typeof cfg !== 'undefined' && cfg && cfg.media) || {}).parallel;
                 if (pk) {
                     try {
@@ -2681,7 +2708,7 @@ if(ms)new MutationObserver(ml=>{for(const m of ml)for(const n of m.addedNodes){
                                 return { q: query, sumber: 'Parallel', hasil: hasil.slice(0, 3000) };
                             }
                         }
-                    } catch(e) { console.warn("Parallel error", e); }
+                    } catch(e) { console.warn('Parallel error', e); }
                 }
 
                 if (err) throw err;
@@ -2695,8 +2722,13 @@ if(ms)new MutationObserver(ml=>{for(const m of ml)for(const n of m.addedNodes){
         const sm = document.getElementById('sm');
         if (sm && sm.innerHTML.includes('<h3>API key') && !document.getElementById('googleApiKeyInput')) {
             const injectHTML = `
+                <h3>Fitur tambahan (bisa dimatikan)</h3>
+                <p style="font-size:14px;color:#8a8a8a;margin:0 0 8px">Nonaktif = bot bekerja seperti semula, tanpa fitur ini.</p>
+                <select id="xAgentToggle" style="margin-bottom:8px"><option value="1">Agent AI: Aktif</option><option value="0">Agent AI: Nonaktif</option></select>
+                <select id="xSearchToggle" style="margin-bottom:8px"><option value="1">Pencarian berjenjang (Google/Tavily): Aktif</option><option value="0">Pencarian berjenjang (Google/Tavily): Nonaktif</option></select>
+                <select id="xSearchOrder" style="margin-bottom:16px"><option value="google">Urutan: Google dulu, Worker cadangan</option><option value="worker">Urutan: Worker dulu, Google cadangan</option><option value="both">Urutan: Google + Worker bareng (gabung)</option></select>
                 <h3>API Pencarian (Multi-Fallback)</h3>
-                <p style="font-size:14px;color:#8a8a8a;margin:0 0 8px">Berjenjang: Worker &rarr; Google Custom Search &rarr; Tavily &rarr; Parallel.</p>
+                <p style="font-size:14px;color:#8a8a8a;margin:0 0 8px">Urutan dipilih di atas; cadangan terakhir: Tavily &rarr; Parallel.</p>
                 <input type="password" id="googleApiKeyInput" placeholder="Google API Key" value="${localStorage.getItem('google_api_key') || ''}">
                 <input type="text" id="googleCxInput" placeholder="Google CX ID" value="${localStorage.getItem('google_cx_id') || '46af32ea8cf9b4485'}">
                 <input type="password" id="tavilyApiKeyInput" placeholder="Tavily API Key (Cadangan)" value="${localStorage.getItem('tavily_api_key') || ''}">
@@ -2705,6 +2737,16 @@ if(ms)new MutationObserver(ml=>{for(const m of ml)for(const n of m.addedNodes){
             const firstH3 = sm.querySelector('h3');
             if (firstH3) {
                 firstH3.insertAdjacentHTML('beforebegin', injectHTML);
+                try {
+                    const ag = document.getElementById('xAgentToggle'), sg = document.getElementById('xSearchToggle');
+                    ag.value = localStorage.getItem('xagent_on') === '0' ? '0' : '1';
+                    sg.value = localStorage.getItem('xsearch_multi_on') === '0' ? '0' : '1';
+                    const od = document.getElementById('xSearchOrder');
+                    od.value = localStorage.getItem('xsearch_order') || 'google';
+                    od.onchange = () => { try { localStorage.setItem('xsearch_order', od.value); } catch(e) {} };
+                    ag.onchange = () => { try { localStorage.setItem('xagent_on', ag.value); } catch(e) {} };
+                    sg.onchange = () => { try { localStorage.setItem('xsearch_multi_on', sg.value); } catch(e) {} };
+                } catch(e) {}
                 document.getElementById('saveSearchKeys').onclick = (e) => {
                     e.preventDefault();
                     localStorage.setItem('google_api_key', document.getElementById('googleApiKeyInput').value.trim());
