@@ -11,7 +11,7 @@ html{height:100%;overflow:hidden;overscroll-behavior:none}
 body{margin:0;background:#000;color:#fff;font:15.5px/1.55 -apple-system,system-ui,sans-serif;height:100dvh;overflow:hidden;overscroll-behavior:none}
 button{font:inherit;color:inherit;background:none;border:0;cursor:pointer;padding:0;touch-action:manipulation}
 button:active{opacity:.55}
-.e{fill:#000}
+.e{fill:var(--ey,#000)}
 svg{display:block;overflow:visible}
 #pn{position:fixed;inset:0 auto 0 0;width:69vw;display:flex;flex-direction:column;padding:calc(env(safe-area-inset-top) + 40px) 20px calc(env(safe-area-inset-bottom) + 24px)}
 .u{font-weight:700;font-size:20px;margin:0 0 18px}
@@ -54,7 +54,7 @@ footer{padding:6px 18px calc(env(safe-area-inset-bottom) + 12px);position:relati
  <div id="ms"><div id="wl"></div></div>
  <footer>
   <div id="pv"></div><div id="gp"></div>
-  <div id="pm" hidden><button id="m_f">Lampirkan file</button><button id="m_c">Ambil foto</button><button id="m_g"><span>Bagikan GPS</span><i class="dt" hidden></i></button><button id="m_w"><span>Cari di web</span><i class="dt" hidden></i></button><button id="m_i">Buat gambar</button></div>
+  <div id="pm" hidden><button id="m_f">Lampirkan file</button><button id="m_c">Ambil foto</button><button id="m_g"><span>Bagikan GPS</span><i class="dt" hidden></i></button><button id="m_w"><span>Cari di web</span><i class="dt" hidden></i></button><button id="m_i">Buat gambar</button><button id="m_a"><span>Agen</span><i class="dt" hidden></i></button><button id="m_v">Mikrofon</button></div>
   <div id="qc"><button data-t="m_w"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.6 2.4 4 5.5 4 9s-1.4 6.6-4 9c-2.6-2.4-4-5.5-4-9s1.4-6.6 4-9z"/></svg><span>Cari di web</span></button><button data-t="m_i"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="3.5" width="17" height="17" rx="4"/><circle cx="9" cy="9.2" r="1.5"/><path d="M20.5 15.5l-4.8-4.8L6 20.5"/></svg><span>Buat gambar</span></button><button data-t="m_f"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20.5 11.5l-8.2 8.2a5.2 5.2 0 0 1-7.4-7.4l8.5-8.5a3.5 3.5 0 0 1 5 5l-8.5 8.5a1.8 1.8 0 0 1-2.5-2.5l7.8-7.8"/></svg><span>Lampirkan file</span></button><button data-t="m_g"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s-6.8-5.9-6.8-11.2a6.8 6.8 0 0 1 13.6 0C18.8 15.1 12 21 12 21z"/><circle cx="12" cy="9.8" r="2.4"/></svg><span>Bagikan GPS</span></button></div>
   <div id="ib"><button id="pl">+</button><textarea id="tx" rows="1" placeholder="Ketik pesan..."></textarea><button id="sd">↑</button></div>
  </footer>
@@ -68,8 +68,9 @@ const FALLBACK_MODELS=[{id:'gemini:gemini-3.8-flash',label:'gemini-3.8-flash'},{
 const FALLBACK_IMG=[{id:'gemini-3.1-flash-image',label:'gemini-3.1-flash-image'}];
 const SERVER_URL='https://xbot.edhymaster70.workers.dev';
 const PW_HASH='42d5eaa7af283ddcd8f11ce357934a5ec7aa4e21f37c029a2ee047ab889d2ae9';
-const COL=['#ff1a1a','#0066ff','#a6ff00','#9b30ff','#ffe000','#ff8000','#ff2d92','#cf7a30','#00e0d0','#00c853','#ffffff'];
-const NM=['Merah','Biru','Hijau Stabilo','Ungu','Kuning','Orange','Pink','Coklat','Tosca','Hijau'];
+const COL=['#ff1a1a','#0066ff','#a6ff00','#9b30ff','#ffe000','#3a3a38','#ff2d92','#cf7a30','#00e0d0','#00c853','#ffffff'];
+const TC=i=>COL[i]==='#3a3a38'?'#9a9aa0':COL[i];/* warna teks bot gelap dibuat terbaca */
+const NM=['Merah','Biru','Hijau Stabilo','Ungu','Kuning','Hitam','Pink','Coklat','Tosca','Hijau'];
 const TRAIT=['ramah dan santai','tegas dan to the point','tenang dan analitis','ceria dan penuh semangat','lucu dan suka bercanda','bijak dan sabar','manis dan perhatian','santai ala anak tongkrongan','detail dan teliti','serius dan profesional'];
 const $=s=>document.querySelector(s),sleep=ms=>new Promise(r=>setTimeout(r,ms)),rnd=(a,b)=>a+Math.random()*(b-a);
 const esc=s=>s.replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
@@ -107,13 +108,14 @@ const md=(s,p)=>{const TB=[],T=h=>{TB.push(h);return '\u0001'+(TB.length-1)+'\u0
     return blocks(CIT(x,p&&i===PR.length-1),T)}).join('');
   return md0(s,p).replace(/(?:<br>)?\u0001(\d+)\u0002(?:<br>)?/g,(m,n)=>TB[n])};
 let BID=0;
-const bot=c=>{const k="k"+(++BID);return `<svg viewBox="114.4 21.35 411.4 411.4"><clipPath id="${k}"><circle class="cc" cx="320.1" cy="227.05" r="205.7"/></clipPath><circle class="bd" cx="320.1" cy="227.05" r="205.7" fill="${c}"/><g clip-path="url(#${k})"><path class="e"/><path class="e"/></g></svg>`};
+const bot=c=>{const k="k"+(++BID);return `<svg${c==='#3a3a38'?' style="--ey:#fff"':''} viewBox="114.4 21.35 411.4 411.4"><clipPath id="${k}"><circle class="cc" cx="320.1" cy="227.05" r="205.7"/></clipPath><circle class="bd" cx="320.1" cy="227.05" r="205.7" fill="${c}"/><g clip-path="url(#${k})"><path class="e"/><path class="e"/></g></svg>`};
 let cfg;try{cfg=JSON.parse(localStorage.getItem('xbot'))}catch{}
 cfg=Object.assign({url:SERVER_URL,keys:{},model:DEF_MODEL,img:DEF_IMG,mode:'auto',bots:NM.map((n,i)=>({name:'Bot '+n,prompt:`Kamu asisten AI yang ${TRAIT[i]}. Jawab dalam bahasa Indonesia.`}))},cfg||{});cfg.url=SERVER_URL;
 cfg.panel=Object.assign({on:true,keys:{gemini:'',groq:''},model:'',gap:'4.5-8',max:0},cfg.panel||{});cfg.panel.keys=Object.assign({gemini:'',groq:''},cfg.panel.keys);
+if(cfg.bots[5]&&/^bot orange$/i.test(cfg.bots[5].name))cfg.bots[5].name='Bot Hitam';
 if(!cfg.bots[10])cfg.bots[10]={name:'edhyx',prompt:'Kamu edhyx, asisten AI yang cerdas, ramah, dan santai. Jawab dalam bahasa Indonesia dengan jelas dan membantu.'};
 const save=()=>{try{localStorage.setItem('xbot',JSON.stringify(cfg))}catch{}};
-const HIDE=[5];/* 5 = orange, disembunyikan */
+const HIDE=[];/* bot ke-6 (dulu orange, kini #3a3a38) sudah ditampilkan */
 let stp=false,cur=10,open=false,hist=[],img=null,docTxt=null,att=null,busy=false,ctrl=null,MODELS=[],IMGS=[];
 
 /* ===== MESIN MATA: gerak disalin dari video (60 fps), diputar berulang ===== */
@@ -1010,7 +1012,7 @@ const localMsg=(f,t,k)=>{let x;
  return mkMsg(f,t>=0&&x.startsWith('@')?t:-1,x,{k})};
 function mkMsg(f,t,full,o={}){return Object.assign({f,t,full,x:clip(plainOf(full),110),files:[],k:'',ts:Date.now()},o)}
 const plainOf=s=>String(s).replace(/\s+/g,' ').trim();
-const mention=i=>`<b class="mn" style="color:${COL[i]}">@${esc(nm(i))}</b>`;
+const mention=i=>`<b class="mn" style="color:${TC(i)}">@${esc(nm(i))}</b>`;
 const clean=(raw,f,t,seed,n)=>{const E=escRe;let x=plain(raw).replace(/\bSumber\s*:?\s*(\[[\d,\s]+\]\s*)*/gi,'').replace(/\[\d+\]/g,'').replace(/\s+/g,' ').trim().replace(/^["“”]+|["“”]+$/g,'');
  x=x.replace(new RegExp('^'+E(nm(f))+'\\s*:\\s*','i'),'');
  x=x.replace(new RegExp('^@(?:'+cfg.bots.map(b=>E(b.name)).join('|')+')\\b[\\s,:]*','i'),'').replace(/^@\S+\s*/,'');
@@ -1019,7 +1021,7 @@ const clean=(raw,f,t,seed,n)=>{const E=escRe;let x=plain(raw).replace(/\bSumber\
 /* ===== STATUS & GELEMBUNG DI PANEL ===== */
 const S={};let KEEP=0,KT=0,UNB=0;const KEEPMS=10*60000;const dayK=()=>{const d=new Date();return d.getFullYear()+'-'+(d.getMonth()+1)+'-'+d.getDate()};let DAYK=dayK(),DAY0=new Date().setHours(0,0,0,0),LOG=[],gen=0,busy=0,tmr=0,fails=0,mute=0,cnt=0,on=0,sent=0,UQ=0,TASK=null,tgen=0;const ACT=new Set();
 const st=i=>S[i]||(S[i]={t:'',tc:-1,s:null,f:-1,c:''});
-const fmt=(x,n,tc)=>{const m=tc>=0?Math.min(n,('@'+nm(tc)).length):0,hit=m&&x.startsWith(('@'+nm(tc)).slice(0,m));return(hit?`<b class="mn" style="color:${COL[tc]}">${esc(x.slice(0,m))}</b>`+esc(x.slice(m,n)):esc(x.slice(0,n)))+`<span class="gh">${esc(x.slice(n))}</span>`};
+const fmt=(x,n,tc)=>{const m=tc>=0?Math.min(n,('@'+nm(tc)).length):0,hit=m&&x.startsWith(('@'+nm(tc)).slice(0,m));return(hit?`<b class="mn" style="color:${TC(tc)}">${esc(x.slice(0,m))}</b>`+esc(x.slice(m,n)):esc(x.slice(0,n)))+`<span class="gh">${esc(x.slice(n))}</span>`};
 const draw=(i,h,hf)=>{const e=document.querySelector(`.bi[data-i="${i}"] .ct`);if(e){e.innerHTML=h;e.parentElement.classList.toggle('hf',!!hf)}};
 const show=i=>{const s=st(i);draw(i,s.s?`<span class="sx">sedang ${s.s}${s.f>=0?' '+mention(s.f):''}<span class="dts"><b></b><b></b><b></b></span></span>`:fmt(s.t,s.t.length,s.tc)+s.c,s.c&&!s.s)};
 const setS=(i,l,f=-1)=>{const s=st(i);s.s=l;s.f=f;show(i);liveSet(i,l,f)},clr=i=>{st(i).s=null;show(i);liveSet(i,null)};
@@ -1222,14 +1224,14 @@ async function turn(){
 const tm=ts=>new Date(ts).toLocaleTimeString('id-ID',{hour:'2-digit',minute:'2-digit'}).replace('.',':');
 const rsOpen=()=>{const e=$('#rs');return e&&!e.hidden};
 const NAMES=()=>cfg.bots.map(b=>escRe(esc(b.name))).join('|');
-const mentionize=h=>h.replace(new RegExp('@('+NAMES()+')(?![\\w])','g'),(m,n)=>{const i=cfg.bots.findIndex(b=>esc(b.name)===n);return i<0?m:`<b class="mn" style="color:${COL[i]}">@${n}</b>`});
+const mentionize=h=>h.replace(new RegExp('@('+NAMES()+')(?![\\w])','g'),(m,n)=>{const i=cfg.bots.findIndex(b=>esc(b.name)===n);return i<0?m:`<b class="mn" style="color:${TC(i)}">@${n}</b>`});
 const chipsL=fl=>fl&&fl.length?`<div class="lf">${fl.map(f=>{if(f.data&&isYT(f.data))return `<div class="lmv lyt"><iframe src="${f.data}" allow="accelerometer; autoplay; encrypted-media; picture-in-picture" allowfullscreen loading="lazy" referrerpolicy="strict-origin-when-cross-origin"></iframe></div>`;if(f.data&&isVid(f.data))return `<div class="lmv"><video src="${f.data}" controls playsinline preload="metadata" onerror="mbad(this)"></video></div>`;if(f.data&&isAud(f.data))return `<div class="lmv"><div class="lmn">🎵 ${esc(f.name)}</div><audio src="${f.data}" controls preload="metadata" onerror="mbad(this)"></audio></div>`;if(f.data)return `<button class="fc fp" data-fid="${f.id}"><img class="lmi" src="${f.data}" alt="${esc(f.name)}" onerror="mbad(this)"></button>`;return `<button class="fc" data-fid="${f.id}">📎 ${esc(f.name)}</button>`}).join('')}</div>`:'';
 const srcL=s=>s&&s.length?`<div class="lsr">${s.slice(0,3).map(x=>{let h='';try{const u=new URL(x.url);if(!/^https?:$/.test(u.protocol))return'';h=u.hostname.replace(/^www\./,'')}catch{return''}return`<a href="${esc(x.url).replace(/"/g,'&quot;')}" target="_blank" rel="noopener" title="${esc(h)}" aria-label="${esc(h)}"><img src="https://www.google.com/s2/favicons?domain=${encodeURIComponent(h)}&sz=64" alt="" onerror="this.replaceWith(document.createTextNode('${esc(h).charAt(0).toUpperCase()}'))"></a>`}).join('')}</div>`:'';
 function logEl(m){const d=logEl0(m);if(m.f!==-2){m._el=d;if(m.rx)rxDraw(m)}return d}
 function logEl0(m){const d=document.createElement('div');d.dataset.t=m.full||'';
  if(m.f===-2){d.className='lm ls';d.textContent=m.full;return d}
  if(m.f===-1){d.className='lm lu';d.innerHTML=`<div class="lb">${m.full?`<div class="lt bt">${md(m.full)}</div>`:''}${chipsL(m.files)}</div>`;return d}
- const c=COL[m.f];d.className='lm';
+ const c=TC(m.f);d.className='lm';
  d.innerHTML=`<span class="ld"></span><div class="lb"><div class="ln"><b style="color:${c}">${esc(nm(m.f))}</b><em>${esc(roleName(m.f))}</em>${m.tag?`<em class="tg">${esc(m.tag)}</em>`:''}<span>${tm(m.ts)}</span></div><div class="lt bt">${mentionize(md(m.full))}</div>${chipsL(m.files)}${srcL(m.src)}${m.big?'<div class="la"><button data-cp>⧉ Salin</button></div>':''}</div>`;mountAv(d,m.f,m);return d}
 function logAdd(m){const l=$('#rl');if(!l)return;const e=l.querySelector('.lh');if(e)e.remove();const near=l.scrollHeight-l.scrollTop-l.clientHeight<140;const el=logEl(m),fl=l.querySelector('.lv');el.classList.add('in');fl?l.insertBefore(el,fl):l.appendChild(el);enhL(el);prune(l);if(near||m.f===-1){l.scrollTop=l.scrollHeight;setTimeout(()=>{if(l.scrollHeight-l.scrollTop-l.clientHeight<260)l.scrollTop=l.scrollHeight},420)}}
 function push(m){m.ts=Date.now();LOG.push(m);evtFrom(m);if(LOG.length>80)LOG.shift();if(m.files&&m.files.length&&!rsOpen())$('#rb').classList.add('nw');logAdd(m);rxPlan(m);notif(m)}
@@ -1284,7 +1286,7 @@ function openCfg(kind){const topic=$('#rt').value.trim();if(!topic||TASK)return;
   c.innerHTML=`<b>🎭 Debat 3 bot</b><p>Dua bot beda pendapat, satu bot menyimpulkan.<br>Topik: ${esc(clip(topic,140))}</p><label>Pro</label><select id="dp">${optsB(pro)}</select><label>Kontra</label><select id="dk">${optsB(con)}</select><label>Penyimpul</label><select id="dj">${optsB(10)}</select><div class="cr"><button id="cgo">Mulai debat</button><button id="cno">Batal</button></div><p class="ce" id="cer"></p>`;
   $('#cgo').onclick=()=>{const p=+$('#dp').value,k=+$('#dk').value,j=+$('#dj').value;if(new Set([p,k,j]).size<3)return $('#cer').textContent='Pilih tiga bot yang berbeda.';c.hidden=true;$('#rt').value='';$('#rt').style.height='auto';runDebate(topic,{pro:p,con:k,judge:j})}}
  else{let sel=nonE.filter(i=>cfg.role[i]!=='umum').slice(0,4);if(!sel.length)sel=nonE.slice(0,3);
-  const draw2=()=>{c.querySelector('.tp').innerHTML=nonE.map(i=>{const o=sel.indexOf(i);return`<button class="pl${o>=0?' on':''}" data-b="${i}"><i style="background:${COL[i]}"></i>${esc(nm(i))} · ${esc(roleName(i))}${o>=0?`<em>${o+1}</em>`:''}</button>`}).join('')};
+  const draw2=()=>{c.querySelector('.tp').innerHTML=nonE.map(i=>{const o=sel.indexOf(i);return`<button class="pl${o>=0?' on':''}" data-b="${i}"><i style="background:${TC(i)}"></i>${esc(nm(i))} · ${esc(roleName(i))}${o>=0?`<em>${o+1}</em>`:''}</button>`}).join('')};
   c.innerHTML=`<b>🛠 Tim kerja</b><p>Bot yang dipilih bekerja berurutan (sesuai urutan ketukan), lalu penyimpul merangkum.<br>Tugas: ${esc(clip(topic,140))}</p><div class="tp"></div><label>Penyimpul</label><select id="dj">${optsB(10)}</select><div class="cr"><button id="cgo">Mulai kerja</button><button id="cno">Batal</button></div><p class="ce" id="cer"></p>`;draw2();
   c.querySelector('.tp').onclick=e=>{const b=e.target.closest('[data-b]');if(!b)return;const i=+b.dataset.b,o=sel.indexOf(i);if(o>=0)sel.splice(o,1);else if(sel.length<5)sel.push(i);draw2()};
   $('#cgo').onclick=()=>{const j=+$('#dj').value,m=sel.filter(i=>i!==j);if(!m.length)return $('#cer').textContent='Pilih minimal satu bot pekerja (selain penyimpul).';c.hidden=true;$('#rt').value='';$('#rt').style.height='auto';runTeam(topic,{members:m,judge:j})}}
@@ -2395,4 +2397,402 @@ if(XT){
 </script>
 <!-- AKHIR TAMBAHAN MIKROFON -->
 
+<!-- ===== TAMBAHAN 8: Memori Pribadi, Mode Bicara Dua Arah, Analisis File Lanjutan =====
+     Berdiri sendiri. Menyadap fungsi lama (fetch, #sd, #fi) tanpa mengubah fungsi asli.
+     Hapus seluruh blok ini (sampai tanda AKHIR TAMBAHAN 8) untuk mencopotnya. -->
+<style>
+/* --- UI Memori & Grafik --- */
+.xm-box{background:#161618;border:1px solid #2b2b2e;border-radius:14px;padding:12px;margin:10px 0;font-size:14px}
+.xm-box h4{margin:0 0 8px;font-size:14px;color:#fff;display:flex;justify-content:space-between}
+.xm-box ul{margin:0;padding-left:18px;color:#d0d0d0;line-height:1.5}
+.xm-box li{margin-bottom:4px}
+.xm-box .del{color:#ff5a5a;font-size:12px;margin-left:8px;cursor:pointer;background:none;border:0}
+.xm-add{display:flex;gap:8px;margin-top:10px}
+.xm-add input{flex:1;background:#0b0b0b;border:1px solid #333;border-radius:8px;color:#fff;padding:8px;font-size:13px;outline:0}
+.xm-add button{background:#fff;color:#000;border:0;border-radius:8px;padding:0 14px;font-weight:600;font-size:13px}
+
+/* --- UI Mode Bicara --- */
+#xvoice{position:fixed;inset:0;background:rgba(0,0,0,.92);z-index:50;display:none;flex-direction:column;align-items:center;justify-content:center;padding:20px;backdrop-filter:blur(10px)}
+#xvoice.on{display:flex}
+#xv-orb{width:120px;height:120px;border-radius:50%;background:linear-gradient(135deg,#1d9bf0,#8a2be2);box-shadow:0 0 40px rgba(29,155,240,.5);margin-bottom:30px;animation:xvp 2s infinite ease-in-out;display:grid;place-items:center;font-size:40px}
+@keyframes xvp{0%,100%{transform:scale(1);opacity:.8}50%{transform:scale(1.08);opacity:1}}
+#xv-tx{color:#fff;font-size:20px;text-align:center;line-height:1.5;max-height:50vh;overflow:auto;margin-bottom:40px;font-weight:500}
+#xv-close{position:absolute;top:calc(env(safe-area-inset-top,0px) + 20px);right:20px;color:#fff;font-size:28px;background:none;border:0}
+#xv-status{position:absolute;bottom:calc(env(safe-area-inset-bottom,0px) + 40px);color:#8e8e93;font-size:14px}
+
+/* --- UI Grafik --- */
+.xchart{background:#161618;border:1px solid #2b2b2e;border-radius:14px;padding:14px;margin:12px 0;width:100%;max-width:400px}
+.xchart h5{margin:0 0 12px;font-size:14px;color:#fff}
+.xbar-row{display:flex;align-items:center;gap:8px;margin-bottom:8px;font-size:12px}
+.xbar-label{width:60px;color:#aaa;text-align:right;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.xbar-track{flex:1;background:#2c2c2e;height:16px;border-radius:8px;overflow:hidden}
+.xbar-fill{height:100%;background:#1d9bf0;border-radius:8px;transition:width .5s}
+.xbar-val{width:40px;color:#fff;font-weight:600}
+
+/* Tombol di header */
+#xh-actions{display:flex;gap:10px;margin-left:auto;margin-right:16px}
+#xh-actions button{font-size:20px;color:#fff;background:none;border:0;padding:0}
+</style>
+
+<script>
+(()=>{
+'use strict';
+const $=s=>document.querySelector(s);
+const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const toast=m=>{let t=document.getElementById('xtoast');if(!t)return;t.textContent=m;t.style.opacity='1';clearTimeout(t._t);t._t=setTimeout(()=>t.style.opacity='0',2000)};
+
+/* =====================================================================
+   4. MEMORI PRIBADI DI CHAT UTAMA
+   ===================================================================== */
+const MK='xbot_pmem';
+let MEM=[];try{MEM=JSON.parse(localStorage.getItem(MK)||'[]')}catch(e){MEM=[]}
+const saveMem=()=>{try{localStorage.setItem(MK,JSON.stringify(MEM.slice(-50)))}catch(e){}};
+const memTxt=()=>{if(!MEM.length)return'';return`\n\n[Memori Pribadi Pengguna]\nKamu mengingat fakta-fakta ini tentang pengguna dari percakapan sebelumnya. Gunakan dengan natural jika relevan, jangan sebutkan bahwa kamu punya "sistem memori".\n- ${MEM.join('\n- ')}`};
+/* Tambahkan UI di Pengaturan */
+const sm=$('#sm');
+if(sm)new MutationObserver(()=>{
+  if(sm.hidden||sm.querySelector('#xmemui'))return;
+  const d=document.createElement('div');d.id='xmemui';
+  d.innerHTML=`<h3>Memori Pribadi (Chat Utama)</h3><p style="font-size:13px;color:#8a8a8a;margin:0 0 10px">Bot chat utama akan mengingat nama, preferensi, dan proyekmu. Kelola di sini.</p><div class="xm-box" id="xmem-list"></div>`;
+  sm.appendChild(d);
+  const renderMem=()=>{
+    const w=d.querySelector('#xmem-list');
+    w.innerHTML=`<h4>Fakta Tersimpan</h4>`+
+      (MEM.length?`<ul>${MEM.map((m,i)=>`<li>${esc(m)}<button class="del" data-i="${i}">✕</button></li>`).join('')}</ul>`:`<div style="color:#8e8e93;font-size:13px">Belum ada memori.</div>`)+
+      `<div class="xm-add"><input id="xmem-in" placeholder="Tambah fakta (mis: Nama saya Budi, suka kopi)"><button id="xmem-add">+</button></div>`;
+    w.querySelectorAll('.del').forEach(b=>b.onclick=()=>{MEM.splice(+b.dataset.i,1);saveMem();renderMem()});
+    w.querySelector('#xmem-add').onclick=()=>{
+      const v=w.querySelector('#xmem-in').value.trim();
+      if(v&&!MEM.includes(v)){MEM.push(v);saveMem();renderMem()}
+    };
+  };
+  renderMem();
+}).observe(sm,{attributes:true,attributeFilter:['hidden']});
+
+/* =====================================================================
+   SADAP FETCH: Suntik Memori & Ekstraksi Fakta Otomatis
+   ===================================================================== */
+const origFetch=window.fetch;
+window.fetch=async function(input,init){
+  const url=typeof input==='string'?input:(input&&input.url)||'';
+  if(!url.includes('/chat')||!init||!init.body||String(init.body).includes('image_gen":true')) return origFetch.apply(this,arguments);
+  
+  let body;
+  try{
+    body=JSON.parse(init.body);
+    // 1. Suntik memori ke system prompt
+    body.system=(body.system||'')+memTxt()+`\n\n[Pencatat Memori] Jika pengguna menyebut fakta pribadi baru yang penting (nama, hobi, pekerjaan, proyek, preferensi), tambahkan di baris paling akhir jawabanmu: [simpan_memori: fakta singkat]. Hanya jika benar-benar baru.`;
+    init.body=JSON.stringify(body);
+  }catch(e){}
+
+  const res=await origFetch.apply(this,arguments);
+  
+  // 2. Intersepsi response untuk mengambil fakta memori
+  if(!res.body) return res;
+  const reader=res.body.getReader();
+  const stream=new ReadableStream({
+    start(controller){
+      let buf='';
+      function pump(){
+        reader.read().then(({done,value})=>{
+          if(done){controller.close();return}
+          const chunk=new TextDecoder().decode(value);
+          buf+=chunk;
+          // Cari [simpan_memori: ...] dan hapus dari teks
+          let processed=chunk;
+          const rx=/\[simpan_memori:\s*([^\]\n]+)\]/gi;
+          let m;
+          while((m=rx.exec(buf))){
+            const fact=m[1].trim();
+            if(fact&&!MEM.includes(fact)){
+              MEM.push(fact);saveMem();
+              console.log('Memori baru disimpan:',fact);
+            }
+          }
+          // Hapus tag dari output stream (hanya di teks final)
+          processed=processed.replace(rx,'');
+          controller.enqueue(new TextEncoder().encode(processed));
+          pump();
+        }).catch(e=>controller.error(e));
+      }
+      pump();
+    }
+  });
+  return new Response(stream,{headers:res.headers,status:res.status,statusText:res.statusText});
+};
+
+/* =====================================================================
+   5. INPUT SUARA PENUH (MODE BICARA DUA ARAH)
+   ===================================================================== */
+const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+const ib=$('#ib');
+if(SR&&ib){
+  // Tambahkan tombol "Mode Bicara" di header
+  const h=$('header');
+  if(h&&!document.getElementById('xvb')){
+    h.insertAdjacentHTML('beforeend',`<div id="xh-actions"><button id="xvb" aria-label="Mode Bicara">🎙️</button></div>`);
+  }
+  
+  const vbox=document.createElement('div');vbox.id='xvoice';
+  vbox.innerHTML=`<button id="xv-close">✕</button><div id="xv-orb">🎙️</div><div id="xv-tx">Ketuk orb untuk mulai bicara...</div><div id="xv-status"></div>`;
+  document.body.appendChild(vbox);
+  
+  let rec=null,isListening=false,vspeaking=false;
+  
+  const startVoice=()=>{
+    vbox.classList.add('on');
+    document.getElementById('xv-tx').textContent='Mendengarkan...';
+    if(rec)rec.abort();
+    rec=new SR();rec.lang='id-ID';rec.interimResults=true;rec.continuous=false;
+    
+    rec.onresult=e=>{
+      let t='';for(let i=e.resultIndex;i<e.results.length;i++)t+=e.results[i][0].transcript;
+      document.getElementById('xv-tx').textContent=t;
+    };
+    rec.onend=()=>{
+      isListening=false;
+      if(vspeaking)return;
+      const t=document.getElementById('xv-tx').textContent;
+      if(t&&t!=='Mendengarkan...'&&t!=='Ketuk orb untuk mulai bicara...'){
+        document.getElementById('xv-status').textContent='Memproses jawaban...';
+        const txEl=$('#tx');
+        if(txEl){
+          txEl.value=t;
+          txEl.dispatchEvent(new Event('input',{bubbles:true}));
+          if(window.send){
+            window.send();
+            listenBotResponse();
+            return;
+          }
+        }
+      }
+      document.getElementById('xv-status').textContent='';
+    };
+    rec.onerror=e=>{
+      if(e.error==='no-speech'){document.getElementById('xv-status').textContent='Tidak ada suara, coba lagi.'}
+      else{document.getElementById('xv-status').textContent='Error: '+e.error}
+      isListening=false;
+    };
+    
+    try{rec.start();isListening=true;document.getElementById('xv-status').textContent='Mendengarkan (ketuk orb lagi untuk selesai)...'}
+    catch(e){document.getElementById('xv-status').textContent='Gagal memulai mikrofon.'}
+  };
+  
+  const listenBotResponse=()=>{
+    // Tunggu sebentar sampai bot mulai menjawab (cek DOM)
+    let checks=0;
+    const iv=setInterval(()=>{
+      checks++;
+      const last=document.querySelector('#ms .bm:last-child .bt');
+      if(last&&last.textContent.trim().length>5){
+        clearInterval(iv);
+        vspeaking=true;
+        const txt=last.textContent.replace(/[*_`#]/g,'').trim().slice(0,300);
+        if(window.speechSynthesis){
+          try{speechSynthesis.cancel()}catch(e){}
+          const u=new SpeechSynthesisUtterance(txt);
+          u.lang='id-ID';u.rate=1.1;
+          u.onend=()=>{
+            vspeaking=false;
+            document.getElementById('xv-status').textContent='Selesai. Ketuk orb untuk bicara lagi.';
+            if(vbox.classList.contains('on')) setTimeout(startVoice,800);
+          };
+          u.onerror=()=>{vspeaking=false;document.getElementById('xv-status').textContent='Gagal membacakan jawaban.'};
+          speechSynthesis.speak(u);
+        }
+      }
+      if(checks>100){clearInterval(iv);vspeaking=false;document.getElementById('xv-status').textContent='Waktu habis menunggu balasan.';}
+    },200);
+  };
+  
+  document.getElementById('xvb').onclick=()=>{
+    vbox.classList.add('on');
+    startVoice();
+  };
+  document.getElementById('xv-close').onclick=()=>{
+    vbox.classList.remove('on');
+    if(rec)rec.abort();
+    try{speechSynthesis.cancel()}catch(e){}
+  };
+  document.getElementById('xv-orb').onclick=()=>{
+    if(isListening){rec.stop()}
+    else if(!vspeaking){document.getElementById('xv-status').textContent='Mendengarkan...';startVoice()}
+  };
+}
+
+/* =====================================================================
+   6. ANALISIS FILE & DATA LANJUTAN
+   ===================================================================== */
+// 6a. Cek CSV saat file dilampirkan -> tampilkan grafik
+const fi=$('#fi');
+if(fi){
+  fi.addEventListener('change',e=>{
+    const f=e.target.files&&e.target.files[0];
+    if(f&&f.name.toLowerCase().endsWith('.csv')){
+      const r=new FileReader();
+      r.onload=()=>{
+        try{
+          const lines=String(r.result).split('\n').map(l=>l.trim()).filter(Boolean);
+          if(lines.length<3)return;
+          const headers=lines[0].split(',').map(h=>h.trim().replace(/["']/g,''));
+          const rows=lines.slice(1,10).map(l=>l.split(',').map(c=>c.trim().replace(/["']/g,'')));
+          // Asumsi kolom pertama = label, kolom kedua = angka
+          const data=rows.map(r=>[r[0],parseFloat(r[1])||0]).filter(x=>!isNaN(x[1]));
+          if(data.length<2)return;
+          const max=Math.max(...data.map(d=>d[1]));
+          
+          const chart=document.createElement('div');chart.className='xchart';
+          chart.innerHTML=`<h5>📊 ${esc(f.name)} (Preview)</h5>`+data.map(d=>`
+            <div class="xbar-row">
+              <div class="xbar-label" title="${esc(d[0])}">${esc(d[0])}</div>
+              <div class="xbar-track"><div class="xbar-fill" style="width:${(d[1]/max)*100}%"></div></div>
+              <div class="xbar-val">${d[1]}</div>
+            </div>`).join('');
+          
+          const ms=$('#ms');
+          const div=document.createElement('div');
+          div.className='bm';
+          const inner=document.createElement('div');
+          inner.className='bt';
+          inner.appendChild(chart);
+          div.appendChild(inner);
+          ms.appendChild(div);
+          ms.scrollTop=ms.scrollHeight;
+          toast('📊 Grafik otomatis dibuat dari CSV');
+        }catch(e){}
+      };
+      r.readAsText(f);
+    }
+  },true);
+}
+
+// 6b. Ekstraksi jawaban AI ke file (Excel/Docx/CSV)
+const origFetch2=window.fetch;
+window.fetch=async function(input,init){
+  const res=await origFetch2.apply(this,arguments);
+  const url=typeof input==='string'?input:(input&&input.url)||'';
+  if(!url.includes('/chat')||!res.body) return res;
+  
+  // Clone response untuk discan tanpa mengganggu stream asli
+  const clone=res.clone();
+  clone.text().then(text=>{
+    // Cek apakah AI memberi instruksi ekspor (misal user: "ekspor ke excel")
+    // Kita lihat di pesan user terakhir
+    const lastUser=(window.hist||[]).filter(m=>m.role==='user').pop();
+    if(!lastUser)return;
+    const prompt=lastUser.content.toLowerCase();
+    
+    if(/ekspor|simpan|download|buat file/.test(prompt)){
+      let fin=null;
+      text.split('\n').forEach(l=>{if(!l.trim())return;try{const j=JSON.parse(l);if(!j.s&&j.text)fin=j}catch(e){}});
+      if(!fin||!fin.text)return;
+      
+      // Bersihkan teks dari markdown berlebih untuk file
+      const clean=fin.text.replace(/[*_`#]/g,'').trim();
+      
+      if(/excel|xlsx|csv/.test(prompt)){
+        // Buat CSV (karena bikin XLSX di client butuh library besar, CSV lebih aman & cepat)
+        const blob=new Blob(['\ufeff'+clean],{type:'text/csv;charset=utf-8'});
+        const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='Data_AI.csv';a.click();
+        setTimeout(()=>toast('✓ File CSV diunduh'),500);
+      }
+      else if(/word|docx|doc/.test(prompt)){
+        const html=`<html><head><meta charset="utf-8"></head><body><pre style="font-family:sans-serif;white-space:pre-wrap">${esc(clean)}</pre></body></html>`;
+        const blob=new Blob([html],{type:'application/msword'});
+        const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='Dokumen_AI.doc';a.click();
+        setTimeout(()=>toast('✓ File Word (.doc) diunduh'),500);
+      }
+    }
+  }).catch(()=>{});
+  
+  return res;
+};
+
+})();
+</script>
+<!-- AKHIR TAMBAHAN 8 -->
+
+
+<!-- ===== TAMBAHAN 9 FINAL (Aman, Tanpa Python) ===== -->
+<style>
+#xh-actions{display:none!important}
+#bl .bi[data-i="10"]{display:none!important}
+#bl .bi[data-i="5"]{order:-2}
+#rs .rh{justify-content:flex-start;gap:0}
+#rs .rh .rhb,#rs .rh .xexp{display:flex;align-items:center;gap:0}
+#rs .rh .rhb{margin-right:auto}
+#rs .rh .xexp{margin-left:auto}
+#rs .rh{padding:8px 8px}
+#rs .rh button{width:36px;height:40px;display:grid;place-items:center;padding:0;font-size:20px;line-height:1}
+#rs .rh #rx{font-size:28px!important;padding:0 0 3px!important}
+#rs .rh .xexp button{background:none;border:0;border-radius:0}
+#xprint-area{display:none}
+@media print{body>*{display:none!important}#xprint-area{display:block!important;background:#fff;color:#000;padding:20px}#xprint-area .pm{margin-bottom:14px;border-bottom:1px solid #ddd;padding-bottom:10px}#xprint-area .pm b{display:block;margin-bottom:4px}#xprint-area pre{white-space:pre-wrap;font-size:12px}}
+</style>
+
+<script>
+(()=>{
+'use strict';
+const $=s=>document.querySelector(s);
+const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const toast=m=>{let t=document.getElementById('xtoast9');if(!t){t=document.createElement('div');t.id='xtoast9';t.style.cssText='position:fixed;left:50%;bottom:90px;transform:translateX(-50%);background:#1c1c1e;color:#fff;padding:10px 18px;border-radius:14px;font-size:13px;z-index:99;box-shadow:0 8px 30px #000a;opacity:0;transition:opacity .2s;pointer-events:none;max-width:80vw;text-align:center';document.body.appendChild(t)}
+t.textContent=m;t.style.opacity='1';clearTimeout(t._t);t._t=setTimeout(()=>t.style.opacity='0',2500)};
+
+let AGENT_ON=false;
+try{AGENT_ON=localStorage.getItem('xbot_agent9')==='1'}catch(e){}
+const AGENT_SYS='\n\n[MODE AGEN AKTIF]\nKamu agen otonom. Cari info di web, baca halaman, verifikasi minimal 2 sumber, lalu susun laporan (Ringkasan, Poin, Sumber dengan judul & URL).';
+const origFetch9=window.fetch;
+window.fetch=async function(input,init){
+  const url=typeof input==='string'?input:(input&&input.url)||'';
+  if(AGENT_ON&&url.includes('/chat')&&init&&init.body){
+    try{const b=JSON.parse(init.body);b.system=(b.system||'')+AGENT_SYS;init.body=JSON.stringify(b)}catch(e){}
+  }
+  return origFetch9.apply(this,arguments);
+};
+
+function initMenu(){
+  const pm=$('#pm'),ma=$('#m_a'),mv=$('#m_v');
+  if(!pm)return;
+  const dot=ma&&ma.querySelector('.dt');
+  const sync=()=>{if(dot)dot.hidden=!AGENT_ON};
+  sync();
+  if(ma)ma.onclick=()=>{pm.hidden=true;AGENT_ON=!AGENT_ON;sync();try{localStorage.setItem('xbot_agent9',AGENT_ON?'1':'0')}catch(e){}toast(AGENT_ON?'Mode Agen AKTIF':'Mode Agen mati')};
+  if(mv)mv.onclick=()=>{pm.hidden=true;const b=document.getElementById('xvb');if(b)b.click();else toast('Mikrofon tidak didukung di browser ini')};
+}
+
+function getMsgs(){
+  const out=[];
+  document.querySelectorAll('#ms .um, #ms .bm').forEach(el=>{
+    if(el.classList.contains('um')){out.push({role:'user',text:el.textContent.trim()})}
+    else{const bt=el.querySelector('.bt');if(!bt)return;const c=bt.cloneNode(true);c.querySelectorAll('.ac,.src,.sc,.mp,.xcod,.tbc,.dg,.gxr,.lsr').forEach(x=>x.remove());const t=c.textContent.trim();if(t)out.push({role:'bot',text:t})}
+  });
+  return out;
+}
+function expMD(){const msgs=getMsgs();if(!msgs.length)return toast('Chat kosong');let md='# Ekspor XBOT\n\n'+new Date().toLocaleString('id-ID')+'\n\n';msgs.forEach(m=>{md+=(m.role==='user'?'### 🧑 Pengguna\n\n':'### 🤖 Bot\n\n')+m.text+'\n\n---\n\n'});const b=new Blob([md],{type:'text/markdown;charset=utf-8'});const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='chat_xbot_'+Date.now()+'.md';a.click();toast('✓ .md diunduh')}
+function expPDF(){const msgs=getMsgs();if(!msgs.length)return toast('Chat kosong');let ar=document.getElementById('xprint-area');if(!ar){ar=document.createElement('div');ar.id='xprint-area';document.body.appendChild(ar)}ar.innerHTML='<h2>XBOT — Ekspor</h2><p style="font-size:12px;color:#666">'+new Date().toLocaleString('id-ID')+'</p>';msgs.forEach(m=>{const d=document.createElement('div');d.className='pm';d.innerHTML='<b>'+(m.role==='user'?'🧑 Pengguna':'🤖 Bot')+'</b><div>'+esc(m.text).replace(/\n/g,'<br>')+'</div>';ar.appendChild(d)});window.print();setTimeout(()=>{ar.innerHTML=''},1000)}
+async function shareImg(){const last=document.querySelector('#ms .bm:last-child .bt');if(!last)return toast('Belum ada jawaban');toast('Menyiapkan gambar...');try{if(!window.html2canvas){await new Promise((ok,no)=>{const s=document.createElement('script');s.src='https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js';s.onload=ok;s.onerror=()=>no(new Error('gagal'));document.head.appendChild(s)})}const w=document.createElement('div');w.style.cssText='position:fixed;left:-9999px;top:0;width:600px;background:#000;padding:20px;color:#fff;font:15px/1.5 sans-serif;border-radius:16px';const c=last.cloneNode(true);c.style.maxWidth='560px';w.appendChild(c);document.body.appendChild(w);const cv=await window.html2canvas(w,{backgroundColor:'#000',scale:2,useCORS:true});w.remove();cv.toBlob(async b=>{if(!b)return toast('Gagal');const f=new File([b],'x.png',{type:'image/png'});if(navigator.canShare&&navigator.canShare({files:[f]})){try{await navigator.share({files:[f]});return}catch(e){if(e.name==='AbortError')return}}const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='x.png';a.click();toast('✓ Diunduh')},'image/png',0.95)}catch(e){toast('Gagal: '+(e.message||e))}}
+function injectExp(){
+  const rh=document.getElementById('rs').querySelector('.rh');
+  if(!rh || rh.querySelector('.xexp')) return;
+  const b=document.createElement('span');
+  b.className='xexp';
+  b.innerHTML='<button id="xe-md" aria-label="Ekspor .md" title="Ekspor .md">📂</button><button id="xe-pdf" aria-label="Ekspor PDF" title="Ekspor PDF">🖨️</button><button id="xe-img" aria-label="Ekspor gambar" title="Ekspor gambar">📀</button>';
+  rh.appendChild(b);
+  const mdBtn = document.getElementById('xe-md');
+  const pdfBtn = document.getElementById('xe-pdf');
+  const imgBtn = document.getElementById('xe-img');
+  if(mdBtn) mdBtn.onclick = expMD;
+  if(pdfBtn) pdfBtn.onclick = expPDF;
+  if(imgBtn) imgBtn.onclick = shareImg;
+}
+
+function init(){
+  initMenu();
+  const rs=$('#rs');if(rs)new MutationObserver(()=>{if(!rs.hidden)injectExp()}).observe(rs,{attributes:true,attributeFilter:['hidden']});
+  setTimeout(()=>{if(rs&&!rs.hidden)injectExp()},2000);
+}
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init);else setTimeout(init,600);
+})();
+</script>
+<!-- ===== AKHIR TAMBAHAN 9 FINAL ===== -->
 </body></html>
