@@ -2415,7 +2415,7 @@ const EXT=new Set(['read','search','news','wiki']);
 const DUP=new Set(['read','search','news','wiki','weather','rate','time','calc','date','convert','code']);
 const LB={weather:'mengecek cuaca',rate:'mengecek kurs',wiki:'membaca Wikipedia',calc:'menghitung',time:'mengecek waktu',news:'mencari berita',read:'membaca halaman web',search:'mencari di web',code:'menjalankan kode',file:'membuat berkas',remind:'mengatur pengingat',reminders:'melihat pengingat',unremind:'mengubah pengingat',remember:'mencatat ingatan',recall:'mengingat-ingat',forget:'menghapus ingatan',todo:'mengatur daftar tugas',date:'menghitung tanggal',convert:'mengonversi satuan'};
 const SH={weather:'cuaca',rate:'kurs',wiki:'wiki',calc:'hitung',time:'waktu',news:'berita',read:'baca web',search:'cari web',code:'kode',file:'berkas',remind:'pengingat',reminders:'pengingat',unremind:'pengingat',remember:'ingat',recall:'ingat',forget:'lupa',todo:'tugas',date:'tanggal',convert:'satuan'};
-const SECRET=/(sk-[\w-]{12,}|AIza[\w-]{20,}|\d{12,}|(?:\d[ -]?){13,19}|kata sandi|sandi|password|api[\s_-]?key|token|otp|pin)/i;
+const SECRET=/(sk-[\w-]{12,}|AIza[\w-]{20,}|\b\d{12,}\b|\b(?:\d[ -]?){13,19}\b|kata sandi|sandi|password|api[\s_-]?key|\btoken\b|\botp\b|\bpin\b)/i;
 const DN=['Minggu','Senin','Selasa','Rabu','Kamis','Jumat','Sabtu'];
 const MN=['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
 
@@ -2447,7 +2447,7 @@ XT.forget=async a=>{a=a||{};const S=load();
  if(a.id){const n=S.mem.length;S.mem=S.mem.filter(m=>m.id!==String(a.id));if(S.mem.length===n)throw new Error('id tidak ditemukan (lihat dengan recall)');save(S);return{ok:true,dihapus:1}}
  throw new Error('Isi "id" (dari recall) atau {"semua":true}');
 };
-const tview=S=>({aktif:S.todo.filter(x=>!x.done).length,selesai:S.todo.filter(x=>!x.done).length,daftar:S.todo.map(x=>({id:x.id,teks:x.t,selesai:!!x.done}))});
+const tview=S=>({aktif:S.todo.filter(x=>!x.done).length,selesai:S.todo.filter(x=>x.done).length,daftar:S.todo.map(x=>({id:x.id,teks:x.t,selesai:!!x.done}))});
 XT.todo=async a=>{a=a||{};const ak=String(a.aksi||a.action||'daftar').toLowerCase(),S=load();
  const find=()=>S.todo.find(x=>x.id===String(a.id))||(a.teks?S.todo.find(x=>x.t.toLowerCase().includes(String(a.teks).toLowerCase())):null);
  if(ak==='tambah'){const t=String(a.teks||a.text||'').replace(/\s+/g,' ').trim().slice(0,160);
@@ -2495,7 +2495,7 @@ XT.convert=async a=>{a=a||{};const v=Number(a.nilai!=null?a.nilai:a.value);if(!i
  throw new Error('Satuan tidak dikenal atau jenisnya tidak cocok.');
 };
 
-const clean=v=>{if(typeof v==='string')return v.replace(/<\/?\s*tool[^>]*>/gi,'[tag dihapus]');
+const clean=v=>{if(typeof v==='string')return v.replace(/<\/?\s*tool\b[^>]*>/gi,'[tag dihapus]');
  if(Array.isArray(v))return v.map(clean);
  if(v&&typeof v==='object'){const o={};for(const k in v)o[k]=clean(v[k]);return o}return v};
 const blockPrivate=u=>{let h='';
@@ -2528,11 +2528,7 @@ XT.run=async(name,args)=>{
 };
 
 const agentSys=()=>{let mem='';
- try{const L=load().mem.slice(-15);if(L.length)mem='
-[Ingatan jangka panjang tentang pengguna]
-'+L.map(x=>'- '+x.t).join('
-')+'
-Pakai hanya bila relevan.'}catch(e){}
+ try{const L=load().mem.slice(-15);if(L.length)mem='\n[Ingatan jangka panjang tentang pengguna]\n'+L.map(x=>'- '+x.t).join('\n')+'\nPakai hanya bila relevan.'}catch(e){}
  return `
 
 [MODE AGENT]
@@ -2571,4 +2567,155 @@ if(ms)new MutationObserver(ml=>{for(const m of ml)for(const n of m.addedNodes){
 })();
 </script>
 <!-- ===== AGENT PATCH: SELESAI ===== -->
+
+<!-- PATCH V3: MULTI-FALLBACK SEARCH SYSTEM (Google + Tavily) -->
+<script>
+(() => {
+    if (window._xbotSearchPatch) return;
+    window._xbotSearchPatch = 1;
+
+    // 1. Override XT.search dengan Multi-Fallback Chain
+    const patchSearch = setInterval(() => {
+        if (window.XT && typeof window.XT.search === 'function') {
+            clearInterval(patchSearch);
+
+            const workerSearch = async ({q}) => {
+                if(!q) throw new Error('Query kosong');
+                const r = await fetch(SERVER_URL.replace(/\/$/, '') + '/chat', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        messages: [{ role: 'user', content: q }],
+                        image: null, image_gen: false,
+                        system: 'Cari informasi terbaru di web untuk pertanyaan ini lalu jawab ringkas dalam bahasa Indonesia.',
+                        now: new Date().toISOString(),
+                        tz: Intl.DateTimeFormat().resolvedOptions().timeZone,
+                        model: DEF_MODEL, imgModel: DEF_IMG, mode: 'on',
+                        keys: (typeof cfg !== 'undefined' && cfg && cfg.keys) || {}
+                    })
+                });
+                if (!r.ok) throw new Error('Worker HTTP ' + r.status);
+                const t = await r.text();
+                let fin = null;
+                for (const l of t.split('\n')) {
+                    if (!l.trim()) continue;
+                    try { const j = JSON.parse(l); if (!j.s) fin = j; } catch(e) {}
+                }
+                if (!fin || fin.error || !fin.text) throw new Error(fin?.error || 'Tidak ada hasil di Worker');
+                return { q, hasil: fin.text.slice(0, 3000) };
+            };
+
+            window.XT.search = async (args) => {
+                let err = null;
+                const query = args.q;
+                if (!query) throw new Error('Query kosong');
+
+                // Lapis 1: Worker Search
+                try {
+                    const r = await workerSearch(args);
+                    if (r && r.hasil) return r;
+                } catch(e) { err = e; console.warn("Worker search gagal, fallback ke Google..."); }
+
+                const gKey = localStorage.getItem('google_api_key') || '';
+                const gCx = localStorage.getItem('google_cx_id') || '46af32ea8cf9b4485';
+                const tKey = localStorage.getItem('tavily_api_key') || '';
+
+                // Lapis 2: Google Custom Search
+                if (gKey && gCx) {
+                    try {
+                        const gUrl = `https://www.googleapis.com/customsearch/v1?key=${encodeURIComponent(gKey)}&cx=${encodeURIComponent(gCx)}&q=${encodeURIComponent(query)}&hl=id`;
+                        const gRes = await fetch(gUrl);
+                        if (gRes.ok) {
+                            const gData = await gRes.json();
+                            if (gData.items && gData.items.length > 0) {
+                                const hasil = gData.items.map((item, idx) => 
+                                    `${idx + 1}. ${item.title}\n${item.link}\n${item.snippet || ''}`
+                                ).join('\n\n');
+                                return { q: query, sumber: 'Google Custom Search', hasil: hasil.slice(0, 3000) };
+                            }
+                        }
+                    } catch(e) { console.warn("Google Search error", e); }
+                }
+
+                // Lapis 3: Tavily AI
+                if (tKey) {
+                    try {
+                        const tRes = await fetch('https://api.tavily.com/search', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ api_key: tKey, query: query, max_results: 5 })
+                        });
+                        if (tRes.ok) {
+                            const tData = await tRes.json();
+                            if (tData.results && tData.results.length > 0) {
+                                const hasil = tData.results.map((r, idx) => `${idx + 1}. ${r.title}\n${r.url}\n${r.content}`).join('\n\n');
+                                return { q: query, sumber: 'Tavily AI', hasil: hasil.slice(0, 3000) };
+                            }
+                        }
+                    } catch(e) { console.warn("Tavily error", e); }
+                }
+
+                // Lapis 4: Parallel AI (Original Fallback x2.html)
+                const pk = ((typeof cfg !== 'undefined' && cfg && cfg.media) || {}).parallel;
+                if (pk) {
+                    try {
+                        const c = new AbortController();
+                        const to = setTimeout(() => c.abort(), 20000);
+                        const pRes = await fetch('https://api.parallel.ai/v1/search', {
+                            method: 'POST',
+                            signal: c.signal,
+                            headers: { 'Content-Type': 'application/json', 'x-api-key': pk },
+                            body: JSON.stringify({
+                                objective: String(query).slice(0, 500),
+                                search_queries: [String(query).slice(0, 100)],
+                                mode: 'basic',
+                                advanced_settings: { max_results: 6, excerpt_settings: { max_chars_per_result: 700 } }
+                            })
+                        });
+                        clearTimeout(to);
+                        if (pRes.ok) {
+                            const j = await pRes.json();
+                            const L = (j.results || []).filter(x => x && x.url);
+                            if (L.length > 0) {
+                                const hasil = L.map((x, i) => `${i + 1}. ${x.title || x.url}\n${x.url}\n${(x.excerpts || []).join(' ').replace(/\s+/g, ' ').slice(0, 700)}`).join('\n\n');
+                                return { q: query, sumber: 'Parallel', hasil: hasil.slice(0, 3000) };
+                            }
+                        }
+                    } catch(e) { console.warn("Parallel error", e); }
+                }
+
+                if (err) throw err;
+                return { q: query, hasil: '' };
+            };
+        }
+    }, 500);
+
+    // 2. Inject UI ke dalam Pengaturan (⚙️) x2.html
+    const observer = new MutationObserver(() => {
+        const sm = document.getElementById('sm');
+        if (sm && sm.innerHTML.includes('<h3>API key') && !document.getElementById('googleApiKeyInput')) {
+            const injectHTML = `
+                <h3>API Pencarian (Multi-Fallback)</h3>
+                <p style="font-size:14px;color:#8a8a8a;margin:0 0 8px">Berjenjang: Worker &rarr; Google Custom Search &rarr; Tavily &rarr; Parallel.</p>
+                <input type="password" id="googleApiKeyInput" placeholder="Google API Key" value="${localStorage.getItem('google_api_key') || ''}">
+                <input type="text" id="googleCxInput" placeholder="Google CX ID" value="${localStorage.getItem('google_cx_id') || '46af32ea8cf9b4485'}">
+                <input type="password" id="tavilyApiKeyInput" placeholder="Tavily API Key (Cadangan)" value="${localStorage.getItem('tavily_api_key') || ''}">
+                <button id="saveSearchKeys" class="bo" style="width:100%;margin-top:8px!important;margin-bottom:16px!important;background:#00ff96!important;color:#000;font-weight:bold;">Simpan API Pencarian</button>
+            `;
+            const firstH3 = sm.querySelector('h3');
+            if (firstH3) {
+                firstH3.insertAdjacentHTML('beforebegin', injectHTML);
+                document.getElementById('saveSearchKeys').onclick = (e) => {
+                    e.preventDefault();
+                    localStorage.setItem('google_api_key', document.getElementById('googleApiKeyInput').value.trim());
+                    localStorage.setItem('google_cx_id', document.getElementById('googleCxInput').value.trim());
+                    localStorage.setItem('tavily_api_key', document.getElementById('tavilyApiKeyInput').value.trim());
+                    alert('API Pencarian Berjenjang (Google & Tavily) berhasil disimpan!');
+                };
+            }
+        }
+    });
+    observer.observe(document.body, { childList: true, subtree: true });
+})();
+</script>
 </body></html>
