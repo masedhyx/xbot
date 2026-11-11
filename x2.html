@@ -2507,7 +2507,7 @@ const setStatus=(name,n)=>{try{
  if(typeof busy==='undefined'||!busy)return;
  const L=document.querySelectorAll('#ms .stt'),s=L[L.length-1],sp=s&&s.querySelector('span');if(!sp)return;
  let nm='Bot';try{nm=cfg.bots[cur].name}catch(e){}
- sp.textContent=nm+' sedang '+(name?(LB[name]||'memakai alat')+(MAX()>1?' (langkah '+n+')':''):'berpikir')+'...';
+ sp.textContent=nm+' sedang '+(name?(LB[name]||'memakai alat'):'berpikir')+'...';
 }catch(e){}};
 const runOrig=XT.run.bind(XT);
 XT.run=async(name,args)=>{
@@ -2571,11 +2571,13 @@ if(ms)new MutationObserver(ml=>{for(const m of ml)for(const n of m.addedNodes){
 </script>
 <!-- ===== AGENT PATCH: SELESAI ===== -->
 
-<!-- PATCH V3: MULTI-FALLBACK SEARCH SYSTEM (Google + Tavily) -->
+<!-- PATCH V3: MULTI-FALLBACK SEARCH SYSTEM (Worker + Tavily + Parallel) -->
 <script>
 (() => {
     if (window._xbotSearchPatch) return;
     window._xbotSearchPatch = 1;
+    // Bersihkan sisa pengaturan Google Search lama di browser
+    try { ['google_api_key','google_cx_id','xsearch_order'].forEach(k => localStorage.removeItem(k)); } catch(e) {}
 
     // 1. Override XT.search dengan Multi-Fallback Chain
     const patchSearch = setInterval(() => {
@@ -2618,29 +2620,6 @@ if(ms)new MutationObserver(ml=>{for(const m of ml)for(const n of m.addedNodes){
                 const query = args.q;
                 if (!query) throw new Error('Query kosong');
                 const LS = k => { try { return localStorage.getItem(k) || ''; } catch(e) { return ''; } };
-                const order = LS('xsearch_order') || 'google';
-
-                // Google Custom Search (hanya jika key diisi)
-                const tryGoogle = async () => {
-                    const gKey = LS('google_api_key'), gCx = LS('google_cx_id') || '46af32ea8cf9b4485';
-                    if (!gKey || !gCx) return null;
-                    const c = new AbortController(), to = setTimeout(() => c.abort(), 10000);
-                    try {
-                        const gUrl = `https://www.googleapis.com/customsearch/v1?key=${encodeURIComponent(gKey)}&cx=${encodeURIComponent(gCx)}&q=${encodeURIComponent(query)}&hl=id`;
-                        const gRes = await fetch(gUrl, { signal: c.signal });
-                        if (!gRes.ok) { console.warn('Google Search HTTP ' + gRes.status); return null; }
-                        const gData = await gRes.json();
-                        if (gData.items && gData.items.length > 0) {
-                            const hasil = gData.items.map((item, idx) =>
-                                `${idx + 1}. ${item.title}\n${item.link}\n${item.snippet || ''}`
-                            ).join('\n\n');
-                            return { q: query, sumber: 'Google Custom Search', hasil: hasil.slice(0, 3000) };
-                        }
-                    } catch(e) { console.warn('Google Search error', e); }
-                    finally { clearTimeout(to); }
-                    return null;
-                };
-
                 // Worker (cari + ringkas oleh model)
                 const tryWorker = async () => {
                     try {
@@ -2650,16 +2629,7 @@ if(ms)new MutationObserver(ml=>{for(const m of ml)for(const n of m.addedNodes){
                     return null;
                 };
 
-                let r = null;
-                if (order === 'both') {
-                    const [g, w] = await Promise.all([tryGoogle(), tryWorker()]);
-                    if (g && w) return { q: query, sumber: 'Google + Worker', hasil: (w.hasil.slice(0, 1500) + '\n\nTautan sumber (Google):\n' + g.hasil.slice(0, 1400)) };
-                    r = g || w;
-                } else if (order === 'worker') {
-                    r = (await tryWorker()) || (await tryGoogle());
-                } else {
-                    r = (await tryGoogle()) || (await tryWorker());
-                }
+                const r = await tryWorker();
                 if (r) return r;
 
                 const tKey = LS('tavily_api_key');
@@ -2720,17 +2690,14 @@ if(ms)new MutationObserver(ml=>{for(const m of ml)for(const n of m.addedNodes){
     // 2. Inject UI ke dalam Pengaturan (⚙️) x2.html
     const observer = new MutationObserver(() => {
         const sm = document.getElementById('sm');
-        if (sm && sm.innerHTML.includes('<h3>API key') && !document.getElementById('googleApiKeyInput')) {
+        if (sm && sm.innerHTML.includes('<h3>API key') && !document.getElementById('tavilyApiKeyInput')) {
             const injectHTML = `
                 <h3>Fitur tambahan (bisa dimatikan)</h3>
                 <p style="font-size:14px;color:#8a8a8a;margin:0 0 8px">Nonaktif = bot bekerja seperti semula, tanpa fitur ini.</p>
                 <select id="xAgentToggle" style="margin-bottom:8px"><option value="1">Agent AI: Aktif</option><option value="0">Agent AI: Nonaktif</option></select>
-                <select id="xSearchToggle" style="margin-bottom:8px"><option value="1">Pencarian berjenjang (Google/Tavily): Aktif</option><option value="0">Pencarian berjenjang (Google/Tavily): Nonaktif</option></select>
-                <select id="xSearchOrder" style="margin-bottom:16px"><option value="google">Urutan: Google dulu, Worker cadangan</option><option value="worker">Urutan: Worker dulu, Google cadangan</option><option value="both">Urutan: Google + Worker bareng (gabung)</option></select>
+                <select id="xSearchToggle" style="margin-bottom:16px"><option value="1">Pencarian berjenjang (Tavily/Parallel): Aktif</option><option value="0">Pencarian berjenjang (Tavily/Parallel): Nonaktif</option></select>
                 <h3>API Pencarian (Multi-Fallback)</h3>
-                <p style="font-size:14px;color:#8a8a8a;margin:0 0 8px">Urutan dipilih di atas; cadangan terakhir: Tavily &rarr; Parallel.</p>
-                <input type="password" id="googleApiKeyInput" placeholder="Google API Key" value="${localStorage.getItem('google_api_key') || ''}">
-                <input type="text" id="googleCxInput" placeholder="Google CX ID" value="${localStorage.getItem('google_cx_id') || '46af32ea8cf9b4485'}">
+                <p style="font-size:14px;color:#8a8a8a;margin:0 0 8px">Utama: Worker; cadangan: Tavily &rarr; Parallel.</p>
                 <input type="password" id="tavilyApiKeyInput" placeholder="Tavily API Key (Cadangan)" value="${localStorage.getItem('tavily_api_key') || ''}">
                 <button id="saveSearchKeys" class="bo" style="width:100%;margin-top:8px!important;margin-bottom:16px!important;background:#00ff96!important;color:#000;font-weight:bold;">Simpan API Pencarian</button>
             `;
@@ -2741,18 +2708,13 @@ if(ms)new MutationObserver(ml=>{for(const m of ml)for(const n of m.addedNodes){
                     const ag = document.getElementById('xAgentToggle'), sg = document.getElementById('xSearchToggle');
                     ag.value = localStorage.getItem('xagent_on') === '0' ? '0' : '1';
                     sg.value = localStorage.getItem('xsearch_multi_on') === '0' ? '0' : '1';
-                    const od = document.getElementById('xSearchOrder');
-                    od.value = localStorage.getItem('xsearch_order') || 'google';
-                    od.onchange = () => { try { localStorage.setItem('xsearch_order', od.value); } catch(e) {} };
                     ag.onchange = () => { try { localStorage.setItem('xagent_on', ag.value); } catch(e) {} };
                     sg.onchange = () => { try { localStorage.setItem('xsearch_multi_on', sg.value); } catch(e) {} };
                 } catch(e) {}
                 document.getElementById('saveSearchKeys').onclick = (e) => {
                     e.preventDefault();
-                    localStorage.setItem('google_api_key', document.getElementById('googleApiKeyInput').value.trim());
-                    localStorage.setItem('google_cx_id', document.getElementById('googleCxInput').value.trim());
                     localStorage.setItem('tavily_api_key', document.getElementById('tavilyApiKeyInput').value.trim());
-                    alert('API Pencarian Berjenjang (Google & Tavily) berhasil disimpan!');
+                    alert('API Pencarian Berjenjang (Tavily) berhasil disimpan!');
                 };
             }
         }
