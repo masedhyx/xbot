@@ -2710,4 +2710,96 @@ window.fetch=async function(input,init){
 </script>
 <!-- AKHIR TAMBAHAN 8 -->
 
+
+<!-- ===== TAMBAHAN 9 FINAL (Aman, Tanpa Python) ===== -->
+<style>
+#xq-more{display:flex;gap:8px;overflow-x:auto;padding:0 12px 8px;margin:0 -12px;scrollbar-width:none}
+#xq-more::-webkit-scrollbar{display:none}
+#xq-more button{flex:none;height:34px;padding:0 14px;border-radius:17px;background:#18181a;border:1px solid #2f3336;color:#e9e9ec;font-size:13.5px;white-space:nowrap}
+#xq-more button:active{transform:scale(.95);background:#2a2a2e}
+#xq-more .ag{border-color:#17c3e6;color:#8fd8ff}
+#xq-more .ag.on{background:#12282e}
+#rs .rh .xexp{display:flex;gap:6px}
+#rs .rh .xexp button{font-size:13px;padding:5px 10px;border-radius:10px;background:#1c1c1e;border:1px solid #2f3336;color:#fff}
+#xprint-area{display:none}
+@media print{body>*{display:none!important}#xprint-area{display:block!important;background:#fff;color:#000;padding:20px}#xprint-area .pm{margin-bottom:14px;border-bottom:1px solid #ddd;padding-bottom:10px}#xprint-area .pm b{display:block;margin-bottom:4px}#xprint-area pre{white-space:pre-wrap;font-size:12px}}
+</style>
+
+<script>
+(()=>{
+'use strict';
+const $=s=>document.querySelector(s);
+const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const toast=m=>{let t=document.getElementById('xtoast9');if(!t){t=document.createElement('div');t.id='xtoast9';t.style.cssText='position:fixed;left:50%;bottom:90px;transform:translateX(-50%);background:#1c1c1e;color:#fff;padding:10px 18px;border-radius:14px;font-size:13px;z-index:99;box-shadow:0 8px 30px #000a;opacity:0;transition:opacity .2s;pointer-events:none;max-width:80vw;text-align:center';document.body.appendChild(t)}
+t.textContent=m;t.style.opacity='1';clearTimeout(t._t);t._t=setTimeout(()=>t.style.opacity='0',2500)};
+
+let AGENT_ON=false;
+try{AGENT_ON=localStorage.getItem('xbot_agent9')==='1'}catch(e){}
+const AGENT_SYS='\n\n[MODE AGEN AKTIF]\nKamu agen otonom. Cari info di web, baca halaman, verifikasi minimal 2 sumber, lalu susun laporan (Ringkasan, Poin, Sumber dengan judul & URL).';
+const origFetch9=window.fetch;
+window.fetch=async function(input,init){
+  const url=typeof input==='string'?input:(input&&input.url)||'';
+  if(AGENT_ON&&url.includes('/chat')&&init&&init.body){
+    try{const b=JSON.parse(init.body);b.system=(b.system||'')+AGENT_SYS;init.body=JSON.stringify(b)}catch(e){}
+  }
+  return origFetch9.apply(this,arguments);
+};
+
+const QS=[
+  {t:'/ringkas',p:'Ringkas teks berikut jadi 3 poin penting:\n\n'},
+  {t:'/terjemah',p:'Terjemahkan teks berikut ke bahasa Indonesia:\n\n'},
+  {t:'/email',p:'Buat email profesional untuk:\n\n'},
+  {t:'/kode',p:'Tulis kode untuk:\n\n'},
+  {t:'/jelaskan',p:'Jelaskan dengan sederhana:\n\n'},
+];
+let FAV=[];try{FAV=JSON.parse(localStorage.getItem('xbot_fav9')||'[]')}catch(e){FAV=[]}
+const saveFav=()=>{try{localStorage.setItem('xbot_fav9',JSON.stringify(FAV.slice(-20)))}catch(e){}};
+
+function buildMore(){
+  let bar=document.getElementById('xq-more');
+  if(!bar){bar=document.createElement('div');bar.id='xq-more';const qc=$('#qc');if(qc)qc.parentNode.insertBefore(bar,qc.nextSibling);else return}
+  bar.innerHTML='';
+  const ag=document.createElement('button');ag.className='ag'+(AGENT_ON?' on':'');ag.textContent='🤖 Agen';
+  ag.onclick=()=>{AGENT_ON=!AGENT_ON;ag.classList.toggle('on',AGENT_ON);try{localStorage.setItem('xbot_agent9',AGENT_ON?'1':'0')}catch(e){}toast(AGENT_ON?'Mode Agen AKTIF':'Mode Agen mati')};
+  bar.appendChild(ag);
+  QS.forEach(q=>{const b=document.createElement('button');b.textContent=q.t;b.onclick=()=>{const tx=$('#tx');if(!tx)return;tx.value=q.p;tx.dispatchEvent(new Event('input',{bubbles:true}));tx.focus()};bar.appendChild(b)});
+  FAV.forEach((f,i)=>{const b=document.createElement('button');b.textContent='⭐ '+f.n;b.onclick=()=>{const tx=$('#tx');if(tx){tx.value=f.p;tx.dispatchEvent(new Event('input',{bubbles:true}));tx.focus()}};let lt;b.addEventListener('touchstart',()=>{lt=setTimeout(()=>{if(confirm('Hapus "'+f.n+'"?')){FAV.splice(i,1);saveFav();buildMore()}},700)},{passive:true});b.addEventListener('touchend',()=>clearTimeout(lt));bar.appendChild(b)});
+  const sv=document.createElement('button');sv.textContent='💾 Simpan';sv.onclick=()=>{const tx=$('#tx'),v=tx&&tx.value.trim();if(!v)return toast('Ketik prompt dulu');const n=prompt('Nama prompt:');if(!n)return;FAV.push({n:n.slice(0,15),p:v});saveFav();buildMore();toast('✓ Tersimpan')};bar.appendChild(sv);
+}
+
+function getMsgs(){
+  const out=[];
+  document.querySelectorAll('#ms .um, #ms .bm').forEach(el=>{
+    if(el.classList.contains('um')){out.push({role:'user',text:el.textContent.trim()})}
+    else{const bt=el.querySelector('.bt');if(!bt)return;const c=bt.cloneNode(true);c.querySelectorAll('.ac,.src,.sc,.mp,.xcod,.tbc,.dg,.gxr,.lsr').forEach(x=>x.remove());const t=c.textContent.trim();if(t)out.push({role:'bot',text:t})}
+  });
+  return out;
+}
+function expMD(){const msgs=getMsgs();if(!msgs.length)return toast('Chat kosong');let md='# Ekspor XBOT\n\n'+new Date().toLocaleString('id-ID')+'\n\n';msgs.forEach(m=>{md+=(m.role==='user'?'### 🧑 Pengguna\n\n':'### 🤖 Bot\n\n')+m.text+'\n\n---\n\n'});const b=new Blob([md],{type:'text/markdown;charset=utf-8'});const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='chat_xbot_'+Date.now()+'.md';a.click();toast('✓ .md diunduh')}
+function expPDF(){const msgs=getMsgs();if(!msgs.length)return toast('Chat kosong');let ar=document.getElementById('xprint-area');if(!ar){ar=document.createElement('div');ar.id='xprint-area';document.body.appendChild(ar)}ar.innerHTML='<h2>XBOT — Ekspor</h2><p style="font-size:12px;color:#666">'+new Date().toLocaleString('id-ID')+'</p>';msgs.forEach(m=>{const d=document.createElement('div');d.className='pm';d.innerHTML='<b>'+(m.role==='user'?'🧑 Pengguna':'🤖 Bot')+'</b><div>'+esc(m.text).replace(/\n/g,'<br>')+'</div>';ar.appendChild(d)});window.print();setTimeout(()=>{ar.innerHTML=''},1000)}
+async function shareImg(){const last=document.querySelector('#ms .bm:last-child .bt');if(!last)return toast('Belum ada jawaban');toast('Menyiapkan gambar...');try{if(!window.html2canvas){await new Promise((ok,no)=>{const s=document.createElement('script');s.src='https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js';s.onload=ok;s.onerror=()=>no(new Error('gagal'));document.head.appendChild(s)})}const w=document.createElement('div');w.style.cssText='position:fixed;left:-9999px;top:0;width:600px;background:#000;padding:20px;color:#fff;font:15px/1.5 sans-serif;border-radius:16px';const c=last.cloneNode(true);c.style.maxWidth='560px';w.appendChild(c);document.body.appendChild(w);const cv=await window.html2canvas(w,{backgroundColor:'#000',scale:2,useCORS:true});w.remove();cv.toBlob(async b=>{if(!b)return toast('Gagal');const f=new File([b],'x.png',{type:'image/png'});if(navigator.canShare&&navigator.canShare({files:[f]})){try{await navigator.share({files:[f]});return}catch(e){if(e.name==='AbortError')return}}const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='x.png';a.click();toast('✓ Diunduh')},'image/png',0.95)}catch(e){toast('Gagal: '+(e.message||e))}}
+function injectExp(){
+  const rh=document.getElementById('rs').querySelector('.rh');
+  if(!rh || rh.querySelector('.xexp')) return;
+  const b=document.createElement('span');
+  b.className='xexp';
+  b.innerHTML='<button id="xe-md">📄 .md</button><button id="xe-pdf">📄 PDF</button><button id="xe-img">🖼️ Gambar</button>';
+  rh.appendChild(b);
+  const mdBtn = document.getElementById('xe-md');
+  const pdfBtn = document.getElementById('xe-pdf');
+  const imgBtn = document.getElementById('xe-img');
+  if(mdBtn) mdBtn.onclick = expMD;
+  if(pdfBtn) pdfBtn.onclick = expPDF;
+  if(imgBtn) imgBtn.onclick = shareImg;
+}
+
+function init(){
+  buildMore();
+  const rs=$('#rs');if(rs)new MutationObserver(()=>{if(!rs.hidden)injectExp()}).observe(rs,{attributes:true,attributeFilter:['hidden']});
+  setTimeout(()=>{if(rs&&!rs.hidden)injectExp()},2000);
+}
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init);else setTimeout(init,600);
+})();
+</script>
+<!-- ===== AKHIR TAMBAHAN 9 FINAL ===== -->
 </body></html>
