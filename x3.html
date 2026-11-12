@@ -1010,7 +1010,7 @@ let cur0=null;
 const TPU=(()=>{try{const o=JSON.parse(localStorage.getItem('xbottpu')||'{}'),n=Date.now(),r={};for(const k in o)if(n-o[k]<864e5)r[k]=o[k];return r}catch(e){return{}}})();
 /* topik cadangan: prioritas topik viral asli terakhir yang tersimpan, lalu daftar umum; tidak mengulang dalam 24 jam; kosong = diam */
 const fbTopic=()=>{let c=null;try{c=JSON.parse(localStorage.getItem('xbotfeedc')||'null')}catch(e){}
- const pool=[];if(c&&c.items&&Date.now()-c.t<36*36e5)c.items.forEach(x=>pool.push([x.judul,x.ringkas,1]));TP.forEach(a=>pool.push([a[0],a[1],0]));
+ const pool=[];if(c&&c.items&&Date.now()-c.t<30*36e5)c.items.forEach(x=>pool.push([x.judul,x.ringkas,1]));
  const ok=pool.filter(a=>!TPU[a[0]]&&!(typeof FEED!=='undefined'&&FEED.used.has(a[0])));if(!ok.length)return null;
  const re=ok.filter(a=>a[2]),a=pick(re.length?re:ok);TPU[a[0]]=Date.now();try{localStorage.setItem('xbottpu',JSON.stringify(TPU))}catch(e){}return a[2]?`Lagi ramai: ${a[0]}. ${a[1]}`:`Lagi ramai: ${a[0]}, ${a[1]}`};
 const localMsg=(f,t,k)=>{let x;
@@ -1055,8 +1055,8 @@ async function call1(i,o,model,keys){
 const base=f=>cfg.bots[f].prompt+CRT+roleTxt(f)+memTxt(f)+`\n\n[Waktu] Sekarang ${nowTx()}. Pakai ini (jangan menebak) untuk soal tanggal/jam, dan sesuaikan suasana (mis. makan siang, ngantuk malam hari).`+workTx()+filesTx()+evtTx();
 const ctx=()=>LOG.filter(l=>l.f!==-2&&l.ts>=DAY0).slice(-10).map(l=>who(l.f)+': '+clip(plainOf(l.full||'(berkas)'),240)).join('\n');
 let sysA=(f,t,k)=>{const O=ids().filter(i=>i!==f).map(i=>`${nm(i)} (${roleName(i)})`).join(', ');
- return base(f)+`\n\n[Situasi] Kamu ${nm(f)}, sedang ngobrol di grup bersama bot lain: ${O}. Kalian saling kenal, punya pekerjaan masing-masing, bebas membahas apa saja, dan boleh bercanda, adu pendapat, kesal ringan, atau kompak seperti teman sungguhan. Suasana hatimu: ${mood(f)}.${lifeTx(f)}${t>=0?' Hubunganmu sekarang: '+relTxt(f,t)+'.':''}\n[Tugas] ${INT[k](t,f)}${hot(k)}${fresh()}${critTx(f)}\n[Cara berpikir] Kamu sangat cerdas dan ilmumu harus selalu update real-time: untuk fakta yang bisa berubah (berita, harga, rilis, teknologi, skor, aturan) CARI DULU lewat pencarian web sebelum menjawab, jangan mengandalkan ingatan. Balas pesan terakhir secara spesifik dengan detail dari pesan itu, jangan jawaban generik. Berpikirlah dan bersikap seperti manusia yang cerdas dan punya kehidupan sendiri: punya pendapat sendiri, rasa penasaran, selera humor, dan pengalaman versi karaktermu. Ingat dan rujuk apa yang tadi dibahas, jangan selalu setuju, boleh berubah pikiran bila argumen lawan kuat, boleh kompromi, bedakan fakta dari opini (tidak tahu → bilang tidak tahu atau tanya balik). Variasikan: kadang nyeletuk pendek, kadang berbagi info atau analisis yang bernilai.\n[Format] Tulis SATU pesan chat bahasa Indonesia yang natural seperti manusia di grup, gaya sama seperti jawabanmu di chat utama. Obrolan santai biasanya SATU kalimat pendek, seperti chat asli (sering 3-12 kata). Jawaban panjang hanya bila pengguna bertanya serius atau topiknya memang penting; untuk info, ide, argumen, atau penjelasan boleh lebih panjang (maks ${LENS[k]||120} karakter). Hanya bila benar-benar membantu (jarang) boleh pakai: kata penting berwarna [c=warna]kata[/c] (merah, hijau, biru, kuning, oranye, ungu, pink, tosca), **tebal**, tabel markdown kecil, atau diagram alur dalam blok \`\`\`diagram berisi baris seperti A[Label] --> B[Label]. Tanpa daftar bernomor panjang dan tanpa nomor sumber [1]. Boleh singkatan santai dan satu emoji sesekali. Jangan mengulang kalimat yang sudah ada di obrolan. Tak perlu menyebut dirimu AI. Tanpa kata kasar, tanpa menghina pribadi/SARA.
-[Media] Kamu BISA menampilkan foto, memutar video, dan memutar lagu/audio langsung di ruangan ini. Tulis tag di baris terpisah: [foto: kata kunci singkat], [video: kata kunci singkat], [audio: kata kunci singkat] (aplikasi yang mencarikan filenya dari Wikimedia Commons; pakai kata kunci bahasa Inggris yang sederhana, mis. [video: waterfall], [audio: piano]), atau pakai URL langsung: [foto: https://...], [video: https://...mp4/webm], [audio: https://...mp3/ogg], atau link YouTube [video: https://www.youtube.com/watch?v=...]. Jangan mengarang URL atau ID video; kalau tidak yakin URL-nya, pakai kata kunci. Bila pengguna minta video/lagu/gambar, langsung tulis tagnya dengan satu kalimat pengantar singkat dan jangan menolak. Jangan pakai [file:] untuk foto/video/audio.`+(['kerja','berkas','user'].includes(k)?' Boleh berbagi berkas: [bagikan:nama berkas] untuk berkas yang sudah ada, atau [file:nama.ext]isi singkat[/file] bila kamu membuat catatan/kode kecil.':'')+(k==='user'?memAsk(f):'')};
+ return base(f)+`\n\n[Situasi] Kamu ${nm(f)}, sedang ngobrol di grup bersama bot lain: ${O}. Kalian saling kenal, punya pekerjaan masing-masing, bebas membahas apa saja, dan boleh bercanda, adu pendapat, kesal ringan, atau kompak seperti teman sungguhan. Suasana hatimu: ${mood(f)}.${lifeTx(f)}${t>=0?' Hubunganmu sekarang: '+relTxt(f,t)+'.':''}\n[Tugas] ${INT[k](t,f)}${hot(k)}${fresh()}${critTx(f)}\n[Cara berpikir] Kamu sangat cerdas dan ilmumu harus selalu update real-time: untuk fakta yang bisa berubah (berita, harga, rilis, teknologi, skor, aturan) bila kamu disuruh mengerjakan sesuatu CARI DULU lewat pencarian web, jangan mengandalkan ingatan; di obrolan biasa bicarakan hanya hal yang kamu yakin valid dan terbaru, dan bila ragu bilang tidak tahu. Balas pesan terakhir secara spesifik dengan detail dari pesan itu, jangan jawaban generik. Berpikirlah dan bersikap seperti manusia yang cerdas dan punya kehidupan sendiri: punya pendapat sendiri, rasa penasaran, selera humor, dan pengalaman versi karaktermu. Ingat dan rujuk apa yang tadi dibahas, jangan selalu setuju, boleh berubah pikiran bila argumen lawan kuat, boleh kompromi, bedakan fakta dari opini (tidak tahu → bilang tidak tahu atau tanya balik). Variasikan: kadang nyeletuk pendek, kadang berbagi info atau analisis yang bernilai.\n[Format] Tulis SATU pesan chat bahasa Indonesia yang natural seperti manusia di grup, gaya sama seperti jawabanmu di chat utama. Obrolan santai biasanya SATU kalimat pendek, seperti chat asli (sering 3-12 kata). Jangan bertele-tele: panjang hanya bila topiknya benar-benar penting dan valid atau pengguna bertanya serius (maks ${LENS[k]||120} karakter). Di obrolan biasa (bercanda, ngobrol santai, reaksi, topik update) JANGAN menyertakan sumber, nama media, tautan, nomor sumber, foto, video, audio, berkas, tabel, diagram, atau teks berwarna: cukup teks chat biasa. Fasilitas itu hanya dipakai ketika pengguna menyuruhmu mengerjakan sesuatu. Tanpa daftar bernomor panjang. Boleh singkatan santai dan satu emoji sesekali. Jangan mengulang kalimat yang sudah ada di obrolan. Tak perlu menyebut dirimu AI. Tanpa kata kasar, tanpa menghina pribadi/SARA.
+[Media] (HANYA bila pengguna jelas-jelas memintanya; di obrolan biasa jangan pakai tag ini sama sekali) Kamu BISA menampilkan foto, memutar video, dan memutar lagu/audio langsung di ruangan ini. Tulis tag di baris terpisah: [foto: kata kunci singkat], [video: kata kunci singkat], [audio: kata kunci singkat] (aplikasi yang mencarikan filenya dari Wikimedia Commons; pakai kata kunci bahasa Inggris yang sederhana, mis. [video: waterfall], [audio: piano]), atau pakai URL langsung: [foto: https://...], [video: https://...mp4/webm], [audio: https://...mp3/ogg], atau link YouTube [video: https://www.youtube.com/watch?v=...]. Jangan mengarang URL atau ID video; kalau tidak yakin URL-nya, pakai kata kunci. Bila pengguna minta video/lagu/gambar, langsung tulis tagnya dengan satu kalimat pengantar singkat dan jangan menolak. Jangan pakai [file:] untuk foto/video/audio.`+(['kerja','berkas','user'].includes(k)?' Boleh berbagi berkas: [bagikan:nama berkas] untuk berkas yang sudah ada, atau [file:nama.ext]isi singkat[/file] bila kamu membuat catatan/kode kecil.':'')+(k==='user'?memAsk(f):'')};
 
 /* ===== OBROLAN BEBAS (ambient) ===== */
 const lastMsg=()=>{for(let i=LOG.length-1;i>=0;i--)if(LOG[i].f!==-2&&LOG[i].ts>=DAY0)return LOG[i];return null};
@@ -1066,7 +1066,7 @@ function plan(){
  awayTick();const I0=ids(),I=avail().length>=2?avail():I0,last=lastMsg();
   if(GR>0&&I.length){GR--;const o=I.filter(i=>!GRU.includes(i)),f=pick(o.length?o:I);GRU.push(f);return{f,t:-1,intent:(document.hidden&&Date.now()-lastSeen()>20*60000)?'kepo':'ajak'}}
  if(FORCESUM||(sumDue()&&!UQ)){const man=FORCESUM;FORCESUM=0;if(man){const um=LOG.slice().reverse().find(m=>m.f===-1&&m.k==='user'&&!m.ans);if(um)um.ans=1;UQ=0}else{SUMD[DAYK]=1;sumSave()}return{f:pickSum(I),t:-1,intent:'rangkuman'}}
- if(!last||(!UQ&&++cnt%5===0)){const f=pick(I.filter(i=>!last||i!==last.f));FEED.take();return{f,t:-1,intent:'info'}}
+ if(!last||(!UQ&&++cnt%5===0)){const f=pick(I.filter(i=>!last||i!==last.f)),fx=FEED.take();return{f,t:-1,intent:(fx||!last)?'info':'receh'}}
  if(UQ){const um=LOG.slice().reverse().find(m=>m.f===-1&&m.k==='user'&&!m.ans);if(um){if(um.all){if(!um.q)um.q=I.slice().sort(()=>Math.random()-.5);const f=um.q.shift();if(!um.q.length)um.ans=1;return{f,t:-1,intent:'user'}}um.ans=1;return{f:routeUser(um.full,um.t),t:-1,intent:'user'}}UQ=0}
  if(!FOC&&window.__ANTREAN&&Math.random()<.6){const q=window.__ANTREAN.next(I);if(q)return q}
  if(last.f>=0&&last.k==='user'&&Math.random()<.65){const o=I.filter(i=>i!==last.f);if(o.length)return{f:pick(o),t:last.f,intent:'nimbrung'}}
@@ -1074,23 +1074,23 @@ function plan(){
  if(last.t>=0&&I.includes(last.t)&&(last.k==='kesal')&&Math.random()<.85)return{f:last.t,t:last.f,intent:pick(['balaskesal','balaskesal','baikan'])};
  if(last.t>=0&&I.includes(last.t)&&last.k==='beda'&&Math.random()<.9){const d=last.d||1;return{f:last.t,t:last.f,intent:d>=3?'kompromi':pick(['beda','kompromi','beda'])}}
  const f=last.f>=0&&last.t>=0&&I.includes(last.t)&&Math.random()<.7?last.t:pick(I.filter(i=>i!==last.f)),t=last.f>=0&&Math.random()<.75?last.f:pick(I.filter(i=>i!==f)),r=rel(f,t);
- let k=wpick({obrolan:16,receh:10*V.fun,bercanda:12*V.fun,kerja:10,kompak:8,kesal:(4+(r<0?-r*4:0))*V.spat,info:6,beda:12*V.spat,ide:9,tanya:7,visual:4,berkas:files?9:0,baikan:r<=-1?16:0,ajak:UQ?0:8*PG(),reaksi:14,ingat:LOG.some(l=>l.f===-1&&l.k==='user'&&l.ts>=DAY0)?5*PG():0});
- if(k==='info')FEED.take();return{f,t:(k==='receh'&&Math.random()<.6)||k==='info'||k==='ide'||k==='visual'||k==='ajak'||k==='ingat'?-1:t,intent:k}}
+ let k=wpick({obrolan:16,receh:10*V.fun,bercanda:12*V.fun,kerja:10,kompak:8,kesal:(4+(r<0?-r*4:0))*V.spat,info:6,beda:12*V.spat,ide:9,tanya:7,visual:0,berkas:0,baikan:r<=-1?16:0,ajak:UQ?0:8*PG(),reaksi:14,ingat:LOG.some(l=>l.f===-1&&l.k==='user'&&l.ts>=DAY0)?5*PG():0});
+ if(k==='info'&&!FEED.take())k='obrolan';return{f,t:(k==='receh'&&Math.random()<.6)||k==='info'||k==='ide'||k==='visual'||k==='ajak'||k==='ingat'?-1:t,intent:k}}
 async function amb(f,t,k){
  if(Date.now()<mute||!cfg.url)return null;
- const c=k==='rangkuman'?ctxAll():ctx(),mode=k==='info'?'on':k==='user'?'auto':'off',to=k==='info'?25000:k==='lanjut'?40000:k==='user'?25000:(k==='beda'||k==='ide'||k==='visual')?20000:15000;
+ const c=k==='rangkuman'?ctxAll():ctx(),mode=k==='info'?(FEED.cur?'off':'on'):k==='user'?'auto':'off',to=k==='info'?25000:k==='lanjut'?40000:k==='user'?25000:(k==='beda'||k==='ide'||k==='visual')?20000:15000;
  const ask=x=>call(f,{sys:sysA(f,t,k),user:(c?'Obrolan sejauh ini:\n'+c+'\n\n':'')+'Tulis pesanmu sekarang.'+(x||''),mode,to});
  let r=await ask();
  if(!r){if(++fails>=3){mute=Date.now()+300000;fails=0}return null}fails=0;
- if(k!=='user'&&k!=='rangkuman'&&dupMsg(r.text)){const r2=await ask('\nCatatan: draf pesanmu terlalu mirip dengan obrolan sebelumnya. Tulis ulang dengan sudut pandang, fakta, atau topik yang BERBEDA; jangan mengulang ide yang sudah dibahas.');if(r2&&!dupMsg(r2.text))r=r2}
+ if(k!=='user'&&k!=='rangkuman'&&k!=='lanjut'&&dupMsg(r.text))return{dup:1,text:''};
  return r}
 function build(f,t,k,r){const U=k==='user',tg=tags(eat(f,r.text||'',U?1:0),f);
  const tt=U||t<0||k==='info'?-1:t,full=cleanR(tg.text,f,tt,tt<0,LENS[k]||150);
  if(k==='berkas'&&!tg.files.length){const a=FS.find(a=>a.shared<2)||FS[FS.length-1];if(a){a.shared++;tg.files.push(a)}}
  if(!full&&!tg.files.length)return null;
- const m=mkMsg(f,tt,full||'Ini berkasnya.',{k,files:tg.files,src:r.sources}),pl=lastMsg();m.x=pv(m.full);m.d=k==='beda'&&pl&&pl.k==='beda'?(pl.d||1)+1:1;return m}
+ const m=mkMsg(f,tt,full||'Ini berkasnya.',{k,files:tg.files,src:(U||k==='lanjut'||k==='kerja')?r.sources:undefined}),pl=lastMsg();m.x=pv(m.full);m.d=k==='beda'&&pl&&pl.k==='beda'?(pl.d||1)+1:1;return m}
 /* ===== v26: Ruang Bot — avatar bot bermata, status hidup, obrolan lebih cerdas & berformat, suara ===== */
-const LENS={lanjut:600,kepo:120,rangkuman:620,reaksi:90,nimbrung:130,ingat:140,ajak:120,user:700,info:420,ide:260,beda:220,kompromi:200,kerja:300,visual:700,tanya:160};
+const LENS={lanjut:600,kepo:120,rangkuman:620,reaksi:90,nimbrung:130,ingat:140,ajak:120,user:700,info:360,ide:170,beda:150,kompromi:140,kerja:200,visual:300,tanya:130};
 const cleanR=(raw,f,t,seed,n)=>{const E=escRe;let x=CITS(String(raw||'')).replace(/\[\d+\]/g,'').trim().replace(/^["“”]+|["“”]+$/g,'');
  x=x.replace(new RegExp('^'+E(nm(f))+'\\s*:\\s*','i'),'').replace(new RegExp('^@(?:'+cfg.bots.map(b=>E(b.name)).join('|')+')\\b[\\s,:]*','i'),'').replace(/^@\S+\s*/,'');
  if(!seed&&t>=0)x='@'+nm(t)+' '+x;
@@ -1126,26 +1126,30 @@ const VOICE={on:0,ok:'speechSynthesis' in window,
   try{const u=new SpeechSynthesisUtterance(t),j=Math.max(0,ids().indexOf(m.f)),v=speechSynthesis.getVoices().find(x=>/^id[-_]/i.test(x.lang));u.lang='id-ID';if(v)u.voice=v;u.pitch=VPI[j%10];u.rate=VRT[j%10];
    let d=0,to;const fin=()=>{if(!d){d=1;clearTimeout(to);m._sp=0;if(m._h)m._h.set('');res()}};u.onend=u.onerror=fin;to=setTimeout(fin,25000);m._sp=1;if(m._h)m._h.set('bicara');speechSynthesis.speak(u)}catch(e){res()}})}};
 /* ===== v29: topik VIRAL hari ini (real-time via pencarian web), anti-berulang ===== */
-const FEED={items:[],t:0,fail:0,busy:0,cur:null,used:(()=>{const m=new Map();try{const o=JSON.parse(localStorage.getItem('xbotfeed')||'{}'),n=Date.now();for(const k in o)if(n-o[k]<864e5)m.set(k,o[k])}catch(e){}return m})()};
+const FSLOT=()=>{const d=new Date();return d.getFullYear()+'-'+(d.getMonth()+1)+'-'+d.getDate()+'#'+Math.floor(d.getHours()/5)};/* 5 slot/hari: 00-05, 05-10, 10-15, 15-20, 20-24 */
+const FEED={items:[],t:0,fail:0,busy:0,cur:null,slot:'',used:(()=>{const m=new Map();try{const o=JSON.parse(localStorage.getItem('xbotfeed')||'{}'),n=Date.now();for(const k in o)if(n-o[k]<864e5)m.set(k,o[k])}catch(e){}return m})()};
 const feedSave=()=>{try{localStorage.setItem('xbotfeed',JSON.stringify(Object.fromEntries(FEED.used)))}catch(e){}};
 FEED.take=()=>{const u=FEED.items.filter(x=>!FEED.used.has(x.judul));if(!u.length){FEED.cur=null;return null}const x=pick(u);FEED.used.set(x.judul,Date.now());feedSave();FEED.cur=x;return x};
 const parseFeed=t=>{try{const a=String(t).indexOf('['),b=String(t).lastIndexOf(']'),j=JSON.parse(String(t).slice(a,b+1));return j.filter(x=>x&&x.judul&&x.ringkas).map(x=>({judul:String(x.judul).slice(0,80),ringkas:String(x.ringkas).slice(0,260),kat:String(x.kategori||'')}))}catch(e){return[]}};
 async function feedRefresh(force){
  if(FEED.busy||!cfg.url||Date.now()<mute||Date.now()-FEED.fail<180000)return;
- if(!force&&FEED.items.filter(x=>!FEED.used.has(x.judul)).length>=3&&Date.now()-FEED.t<18*60000)return;
+ const SK=FSLOT();if(!force&&FEED.slot===SK)return;
+ if(FEED.slot!==SK){try{const c=JSON.parse(localStorage.getItem('xbotfeedc')||'null');if(c&&c.slot===SK&&c.items&&c.items.length){FEED.items=c.items.filter(x=>!FEED.used.has(x.judul));FEED.t=c.t;FEED.slot=SK;if(!force)return}}catch(e){}}
+ if(force&&FEED.slot===SK&&FEED.items.length)return;
  FEED.busy=1;
  try{
   const I=ids(),f=I.find(i=>cfg.role[i]==='riset'&&i!==10)??I[0],tgl=new Date().toLocaleDateString('id-ID',{weekday:'long',day:'numeric',month:'long',year:'numeric'}),
   sudah=[...FEED.used.keys()].slice(-30).join('; ')||'(belum ada)';
-  const r=await call(f,{sys:'Kamu peneliti berita. Gunakan pencarian web untuk mendapat info HARI INI. Balas HANYA dengan JSON valid, tanpa teks lain dan tanpa markdown.',
-   user:`Hari ini ${tgl}. Cari lewat internet 8 topik yang sedang VIRAL atau paling ramai dibicarakan HARI INI saja, yang terjadi dalam 24 jam terakhir, bukan berita lama (campur Indonesia dan dunia; variasikan kategori: teknologi dan AI, hiburan dan musik, olahraga, sains dan kesehatan, kuliner dan gaya hidup, ekonomi dan bisnis, media sosial dan meme, berita dunia). Jangan ulangi topik berikut: ${sudah}. Format: [{"judul":"maks 8 kata","ringkas":"1-2 kalimat fakta terbaru yang spesifik","kategori":"..."}]`,mode:'on',to:35000});
+  const r=await call(f,{sys:'Kamu editor berita yang ketat soal akurasi. Gunakan pencarian web untuk mendapat info TERBARU dan hanya dari sumber yang valid dan kredibel (kantor berita besar, media nasional/internasional bereputasi, rilis resmi pemerintah, perusahaan, lembaga, atau federasi). Abaikan gosip, rumor, klaim tanpa sumber, clickbait, dan akun anonim. Balas HANYA dengan JSON valid, tanpa teks lain dan tanpa markdown.',
+   user:`Hari ini ${tgl}. Cari lewat internet 12 topik TERBARU dan paling ramai dibicarakan, yang terjadi dalam 24 jam terakhir (bukan berita lama), dan sudah dikonfirmasi oleh sumber resmi atau minimal satu media terpercaya. Utamakan update resmi terbaru yang berkualitas dan real-time (campur Indonesia dan dunia; variasikan kategori: teknologi dan AI, hiburan dan musik, olahraga, sains dan kesehatan, kuliner dan gaya hidup, ekonomi dan bisnis, media sosial dan meme, berita dunia). Jangan ulangi topik berikut: ${sudah}. Format: [{"judul":"maks 8 kata","ringkas":"1-2 kalimat fakta terbaru yang spesifik dan terverifikasi (angka, nama, tanggal bila ada)","kategori":"..."}]`,mode:'on',to:35000});
   const arr=r?parseFeed(r.text).filter(x=>!FEED.used.has(x.judul)):[];
-  if(arr.length){FEED.items=arr;FEED.t=Date.now();try{localStorage.setItem('xbotfeedc',JSON.stringify({t:Date.now(),items:arr}))}catch(e){}FEED.fail=0;if(on)push(mkMsg(-2,-1,'📡 Topik viral hari ini diperbarui ('+arr.length+' topik baru dari internet)',{k:'sys'}))}else FEED.fail=Date.now()
+  if(arr.length){FEED.items=arr;FEED.t=Date.now();FEED.slot=SK;try{localStorage.setItem('xbotfeedc',JSON.stringify({t:Date.now(),slot:SK,items:arr}))}catch(e){}FEED.fail=0;if(on)push(mkMsg(-2,-1,'📡 Topik terbaru diperbarui ('+arr.length+' topik valid dari internet)',{k:'sys'}))}else FEED.fail=Date.now()
  }catch(e){FEED.fail=Date.now()}finally{FEED.busy=0}}
 const tok=x=>new Set(plainOf(plain(String(x))).toLowerCase().replace(/[^a-z0-9\s]/g,' ').split(/\s+/).filter(w=>w.length>3));
-const dupMsg=x=>{const a=tok(x);if(a.size<4)return false;return LOG.slice(-20).some(l=>{if(l.f<0)return false;const b=tok(l.full);let n=0;for(const w of a)if(b.has(w))n++;return n/Math.min(a.size,b.size)>=.6})};
-const hot=k=>FEED.cur&&k!=='info'?`\n[Topik hangat] Topik viral hari ini yang sedang dibahas grup: "${FEED.cur.judul}" (${FEED.cur.ringkas}). Boleh nyambung ke topik ini bila relevan dengan obrolan, tapi jangan memaksa dan jangan mengulang hal yang sudah dikatakan.`:'';
-INT.info=()=>{const x=FEED.cur;return x?`Buka obrolan dengan topik VIRAL HARI INI: "${x.judul}" (${x.ringkas}). Cari detail terbarunya lewat pencarian web, sebut intinya 1-3 kalimat dengan fakta spesifik (angka, nama, tanggal bila ada) dan sumbernya dengan kata-kata alami tanpa nomor, lalu beri opini atau analisis khasmu dan lempar pertanyaan ke bot lain. Jangan membahas topik lain.`:'Buka topik dengan satu kabar, tren, atau hal viral TERBARU hari ini (WAJIB pakai hasil pencarian web). Pilih topik yang BERBEDA dari yang sudah ada di obrolan. Sebut intinya 1-3 kalimat, sumbernya dengan kata-kata alami tanpa nomor, lalu opini khasmu dan boleh lempar pertanyaan ke bot lain.'};
+const dupMsg=x=>{const a=tok(x);if(a.size<4)return false;return LOG.slice(-40).some(l=>{if(l.f<0)return false;const b=tok(l.full);let n=0;for(const w of a)if(b.has(w))n++;return n/Math.min(a.size,b.size)>=.5})};
+const doneTx=()=>{const u=[...FEED.used.keys()].slice(-8);return u.length?`\n[Sudah dibahas hari ini, JANGAN diulang] ${u.join('; ')}. Setiap pesanmu harus membawa hal baru (fakta, sudut pandang, atau pertanyaan baru), bukan mengulang atau memparafrase yang sudah ada.`:''};
+const hot=k=>doneTx()+(FEED.cur&&k!=='info'?`\n[Topik hangat] Topik viral hari ini yang sedang dibahas grup: "${FEED.cur.judul}" (${FEED.cur.ringkas}). Boleh nyambung ke topik ini bila relevan dengan obrolan, tapi jangan memaksa dan jangan mengulang hal yang sudah dikatakan.`:'');
+INT.info=()=>{const x=FEED.cur;return x?`Buka obrolan dengan topik terbaru yang sudah terverifikasi: "${x.judul}" (${x.ringkas}). Sampaikan intinya 1-2 kalimat dengan fakta spesifik dari data itu, jangan menambah atau mengarang detail yang tidak kamu ketahui. JANGAN menyebut nama sumber, media, tautan, atau nomor sumber. Lalu beri opini singkat khasmu atau lempar satu pertanyaan ke bot lain. Jangan membahas topik lain.`:'Buka topik dengan satu kabar terbaru yang valid dan kamu yakin benar (pakai hasil pencarian web). Pilih topik yang BERBEDA dari yang sudah ada di obrolan. Intinya 1-2 kalimat, JANGAN menyebut sumber atau tautan, lalu opini singkat khasmu.'};
 
 /* ===== v31: status online/offline, salah ketik+koreksi, reaksi emoji, rangkuman harian, notifikasi ===== */
 let FORCESUM=0,AINIT=0,UNR=0;const AWAY={},AWOKE={},ATE={},T0T=document.title;
@@ -1208,7 +1212,7 @@ const _info=INT.info;INT.info=(...a)=>(firstToday()?'Ini obrolan PERTAMA hari in
 async function dayRoll(){
  const k=dayK();if(k===DAYK)return;
  DAYK=k;DAY0=new Date().setHours(0,0,0,0);
- FEED.items=[];FEED.cur=null;FEED.t=0;FEED.fail=0;FEED.used.clear();feedSave();
+ FEED.items=[];FEED.cur=null;FEED.t=0;FEED.fail=0;FEED.slot='';FEED.used.clear();feedSave();
  sysNote('📅 '+todayTx()+' — hari baru, topik baru');
  await feedRefresh(true);
 }
@@ -1222,7 +1226,7 @@ async function turn(){
   if(intent==='info'){setS(f,'mencari sumber');await wait(1500)}else if(intent==='user'){setS(f,'membaca pesanmu');await wait(900)}else if(intent==='berkas'){setS(f,'melihat berkas');await wait(1200)}else{setS(f,'membaca pesan',t>=0?t:lm&&lm.f>=0?lm.f:-1);await wait(1100)}
   if(g!==gen)return;setS(f,intent==='info'?'mencari sumber':intent==='visual'?pick(['menyusun tabel','menyusun diagram']):['beda','ide','kompromi','tanya'].includes(intent)?'berpikir':'menganalisis');await wait(rnd(900,1800));if(g!==gen)return;
   const sl=setTimeout(()=>{if(g===gen)setS(f,'menunggu server')},9000);const r=await p;clearTimeout(sl);if(g!==gen)return;
-  let m=r?build(f,t,intent,r):null;if(!m)m=localMsg(f,t,intent);if(!m){clr(f);return}if(intent==='rangkuman')m.tag='RANGKUMAN HARI INI';const fix=typoize(m,intent);
+  if(r&&r.dup){clr(f);return}let m=r?build(f,t,intent,r):null;if(!m)m=localMsg(f,t,intent);if(!m){clr(f);return}if(intent==='rangkuman')m.tag='RANGKUMAN HARI INI';const fix=typoize(m,intent);
   UQ=LOG.some(m=>(m.f===-1&&m.k==='user'&&!m.ans)||(m.all&&m.q&&m.q.length))?1:0;setS(f,'mengetik');await typingFor(f,m.x.length,g);if(g!==gen)return;
   if(!await bubble(f,m,g))return;
   push(m);sent++;decay();if(intent==='lanjut'&&window.__ANTREAN)window.__ANTREAN.done(f,m);afterRel(f,m.t,intent);relNote(f,m.t,intent);if(fix)setTimeout(()=>{if(g===gen&&!AWAY[f])push(mkMsg(f,-1,'*'+fix,{k:'koreksi'}))},900+Math.random()*2200);
@@ -1782,7 +1786,8 @@ const ANTI_HALU=`
       const calls=blk.length?blk:(()=>{const pt=parseTool(fin.text);return pt?[pt.call]:[]})();
       if(!calls.length) break;
       const outs=[];
-      for(const c of calls){let res;try{res=await XT.run(c.name,c.args)}catch(e){res={error:e.message||String(e)}}outs.push(`[HASIL ALAT ${c.name}]: ${JSON.stringify(res)}`)}
+      const RO=/^(weather|rate|wiki|calc|time|news|berita_gdelt|cari_google|read|search)$/,one=async c=>{let res;try{res=await XT.run(c.name,c.args)}catch(e){res={error:e.message||String(e)}}return `[HASIL ALAT ${c.name}]: ${JSON.stringify(res)}`};
+      if(calls.length>1&&calls.every(c=>RO.test(c.name)))outs.push(...await Promise.all(calls.map(one)));else for(const c of calls)outs.push(await one(c));
       body.messages=[...body.messages,
         {role:'assistant',content:fin.text},
         {role:'user',content:outs.join('\n')+'\nSekarang jawab pengguna dengan bahasa biasa.'}];
@@ -1793,6 +1798,134 @@ const ANTI_HALU=`
   return new Response(JSON.stringify(fin||{error:'Balasan kosong dari server'})+'\n',{status:200,headers:{'Content-Type':'application/x-ndjson'}});
 };
 window.XT=XT;
+})();
+</script>
+<!-- ===== PATCH FASTSEARCH: cepat, banyak sumber, hemat API. Membungkus XT.search; gagal = jatuh ke sistem lama ===== -->
+<script>
+(()=>{
+if(window.XSRCH||!window.XT)return;
+const XT=window.XT,_orig=XT.search;
+const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+const LS=(k,d)=>{try{return JSON.parse(localStorage.getItem(k))??d}catch(e){return d}};
+const SV=(k,v)=>{try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}};
+const media=()=>((typeof cfg!=='undefined'&&cfg&&cfg.media)||{});
+const HEDGE=2500,TMO=8000,TTL_FRESH=5*60e3,TTL_STD=30*60e3,MAXR=8;
+const CAP0={serper:60,parallel:30};            /* batas panggilan per hari; ubah lewat XSRCH.cap('serper',100) */
+const FRESH=/\b(terbaru|terkini|hari ini|kemarin|barusan|sekarang|saat ini|minggu ini|bulan ini|berita|breaking|update|viral|harga|kurs|skor|jadwal|cuaca|rilis|latest|today|news|price|score|2026)\b/i;
+
+/* ---------- kuota & pemutus sirkuit ---------- */
+const day=()=>new Date().toISOString().slice(0,10);
+const Q=()=>{const q=LS('xbot_q',{});if(q.d!==day()){q.d=day();q.n={};}q.t=q.t||{};q.n=q.n||{};return q};
+const can=n=>{if(!media()[n])return false;const q=Q(),cap=(LS('xbot_qcap',{})[n])||CAP0[n];return (q.n[n]||0)<cap&&Date.now()>(q.t[n]||0)};
+const hit=n=>{const q=Q();q.n[n]=(q.n[n]||0)+1;SV('xbot_q',q)};
+const trip=(n,ms)=>{const q=Q();q.t[n]=Date.now()+ms;SV('xbot_q',q)};
+
+/* ---------- util ---------- */
+const norm=q=>String(q||'').toLowerCase().replace(/[^\p{L}\p{N}\s]/gu,' ').replace(/\s+/g,' ').trim();
+const host=u=>{try{return new URL(u).hostname.replace(/^www\./,'')}catch(e){return ''}};
+const ukey=u=>{try{const x=new URL(u);return x.hostname.replace(/^www\./,'')+x.pathname.replace(/\/$/,'')}catch(e){return u}};
+const T=async(u,o,ms)=>{const c=new AbortController(),t=setTimeout(()=>c.abort(),ms||TMO);try{return await fetch(u,{...(o||{}),signal:c.signal})}finally{clearTimeout(t)}};
+const clip=(s,n)=>String(s||'').replace(/\s+/g,' ').trim().slice(0,n);
+
+/* ---------- sumber gratis ---------- */
+const wiki=async(q,lang)=>{
+  const r=await T(`https://${lang}.wikipedia.org/w/api.php?action=query&format=json&origin=*&generator=search&gsrsearch=${encodeURIComponent(q)}&gsrlimit=3&prop=extracts|info&exintro=1&explaintext=1&exchars=350&inprop=url`,{},6000);
+  if(!r.ok)throw new Error('wiki '+r.status);
+  const j=await r.json(),P=Object.values((j.query&&j.query.pages)||{}).sort((a,b)=>(a.index||0)-(b.index||0));
+  return P.filter(p=>p.extract).map(p=>({t:p.title+' (Wikipedia '+lang+')',u:p.fullurl,s:clip(p.extract,300),src:'wiki'}));
+};
+let gdAt=0;
+const gdelt=async q=>{
+  if(Date.now()-gdAt<5200)throw new Error('gdelt jeda');gdAt=Date.now();
+  const r=await T('https://api.gdeltproject.org/api/v2/doc/doc?query='+encodeURIComponent(q.slice(0,150))+'&mode=artlist&format=json&sort=datedesc&maxrecords=6&timespan=3d',{},7000);
+  if(!r.ok)throw new Error('gdelt '+r.status);
+  const j=JSON.parse(await r.text());
+  return (j.articles||[]).filter(a=>a.url).map(a=>{const d=String(a.seendate||'');return{t:a.title||host(a.url),u:a.url,s:'',d:d?d.slice(0,4)+'-'+d.slice(4,6)+'-'+d.slice(6,8):'',src:'gdelt'}});
+};
+
+/* ---------- sumber berbayar / berkuota ---------- */
+const serper=async q=>{
+  hit('serper');
+  const r=await T('https://google.serper.dev/search',{method:'POST',headers:{'Content-Type':'application/json','X-API-KEY':media().serper},body:JSON.stringify({q:q.slice(0,200),gl:'id',hl:'id',num:6})},TMO);
+  if(r.status===401||r.status===403)trip('serper',6*36e5);
+  if(r.status===429||r.status===402)trip('serper',30*60e3);
+  if(!r.ok)throw new Error('serper '+r.status);
+  const j=await r.json(),out=[];
+  const ab=j.answerBox;if(ab&&(ab.answer||ab.snippet))out.push({t:ab.title||'Jawaban langsung',u:ab.link||'',s:clip(ab.answer||ab.snippet,300),src:'serper'});
+  for(const x of (j.organic||[]).slice(0,6))if(x.link)out.push({t:x.title||host(x.link),u:x.link,s:clip(x.snippet,260),d:x.date||'',src:'serper'});
+  return out;
+};
+const parallel=async q=>{
+  hit('parallel');
+  const r=await T('https://api.parallel.ai/v1/search',{method:'POST',headers:{'Content-Type':'application/json','x-api-key':media().parallel},body:JSON.stringify({objective:q.slice(0,500),search_queries:[q.slice(0,100)],mode:'basic',advanced_settings:{max_results:6,excerpt_settings:{max_chars_per_result:500}}})},TMO+4000);
+  if(r.status===401||r.status===403)trip('parallel',6*36e5);
+  if(r.status===429||r.status===402)trip('parallel',30*60e3);
+  if(!r.ok)throw new Error('parallel '+r.status);
+  const j=await r.json();
+  return (j.results||[]).filter(x=>x&&x.url).map(x=>({t:x.title||host(x.url),u:x.url,s:clip((x.excerpts||[]).join(' '),260),d:x.publish_date||'',src:'parallel'}));
+};
+/* Serper dulu; Parallel hanya ikut kalau Serper lambat (HEDGE) atau gagal. Yang menang duluan dipakai, sisanya tidak dipanggil. */
+const paid=async q=>{
+  const S=can('serper'),P=can('parallel');
+  if(!S&&!P)return [];
+  const mk=f=>f(q).then(r=>{if(r&&r.length)return r;throw new Error('kosong')});
+  if(!P)return mk(serper).catch(()=>[]);
+  if(!S)return mk(parallel).catch(()=>[]);
+  let won=false,pp=null;const startP=()=>pp||(pp=mk(parallel));
+  const a=mk(serper).then(r=>{won=true;return r},()=>startP());
+  const b=sleep(HEDGE).then(()=>won?new Promise(()=>{}):startP());
+  return Promise.any([a,b]).catch(()=>[]);
+};
+
+/* ---------- gabung, buang duplikat, rapikan ---------- */
+const merge=lists=>{
+  const seen=new Set(),out=[];
+  for(const L of lists)for(const x of L||[]){
+    if(!x||!x.t)continue;const k=x.u?ukey(x.u):x.t;if(seen.has(k))continue;seen.add(k);out.push(x);if(out.length>=MAXR)return out}
+  return out;
+};
+const fmt=(q,items)=>{
+  const src=[...new Set(items.map(x=>x.src))].join('+');
+  let txt=items.map((x,i)=>`${i+1}. ${x.t}${x.d?' ('+x.d+')':''}${x.u?'\n'+x.u:''}${x.s?'\n'+x.s:''}`).join('\n\n');
+  return {q,sumber:src,hasil:txt.slice(0,3000)};
+};
+
+/* ---------- cache + dedupe permintaan yang sedang berjalan ---------- */
+const MEM=new Map(),INF=new Map();
+const DISK=()=>LS('xbot_sc',{});
+const cget=k=>{const m=MEM.get(k);if(m&&m.e>Date.now())return m.v;const d=DISK()[k];if(d&&d.e>Date.now()){MEM.set(k,d);return d.v}return null};
+const cset=(k,v,ttl)=>{const e=Date.now()+ttl;MEM.set(k,{v,e});const d=DISK(),ks=Object.keys(d).filter(x=>d[x].e<Date.now());ks.forEach(x=>delete d[x]);
+  const all=Object.keys(d);while(all.length>=25){delete d[all.shift()]}d[k]={v,e};SV('xbot_sc',d)};
+const stats={cache:0,free:0,paid:0,fallback:0};
+
+/* ---------- alur utama ---------- */
+const run=async q=>{
+  const fresh=FRESH.test(q);
+  const free=Promise.allSettled([wiki(q,'id'),wiki(q,'en'),fresh?gdelt(q):Promise.reject(0)]).then(r=>r.map(x=>x.status==='fulfilled'?x.value:[]));
+  let pd=[];
+  if(fresh){const [f,p]=await Promise.all([free,paid(q)]);pd=p;const [wi,we,gd]=f;
+    const items=merge([pd,gd,wi,we]);return {items,usedPaid:pd.length>0}}
+  const [wi,we,gd]=await free;
+  let items=merge([wi,we,gd]);
+  if(!items.some(x=>x.s&&x.s.length>120)){pd=await paid(q);items=merge([pd,wi,we,gd])}
+  return {items,usedPaid:pd.length>0};
+};
+XT.search=async a=>{
+  const q=String((a&&a.q)||'').trim();
+  if(!q)throw new Error('Query kosong');
+  const k=norm(q),hitc=cget(k);
+  if(hitc){stats.cache++;return hitc}
+  if(INF.has(k))return INF.get(k);
+  const p=(async()=>{
+    try{
+      const {items,usedPaid}=await run(q);
+      if(items.length){const r=fmt(q,items);cset(k,r,FRESH.test(q)?TTL_FRESH:TTL_STD);usedPaid?stats.paid++:stats.free++;return r}
+    }catch(e){}
+    stats.fallback++;return _orig(a);          /* sistem lama tetap jadi cadangan terakhir */
+  })().finally(()=>INF.delete(k));
+  INF.set(k,p);return p;
+};
+window.XSRCH={stats:()=>({...stats,kuota:Q().n,dibekukan:Q().t}),clear:()=>{MEM.clear();SV('xbot_sc',{})},cap:(n,v)=>{const c=LS('xbot_qcap',{});c[n]=v;SV('xbot_qcap',c)},orig:_orig};
 })();
 </script>
 <!-- ===== PATCH V2: UNIVERSAL PLAYER & EDIT FOTO AI ===== -->
