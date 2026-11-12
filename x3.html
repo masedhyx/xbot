@@ -43,7 +43,13 @@ footer{padding:6px 18px calc(env(safe-area-inset-bottom) + 12px);position:relati
 #sm[hidden]{display:none}#sm h3{margin:22px 0 8px;font-size:15px;color:#888;font-weight:600;text-transform:uppercase}
 #sm input,#sm select,#sm textarea{width:100%;background:#111;border:1px solid #2b2b2b;border-radius:12px;color:#fff;font:inherit;font-size:16px;padding:11px;margin:4px 0}
 #sm textarea{min-height:84px}.bo{background:#1c1c1e!important;border-radius:12px;padding:12px 14px!important;margin-top:8px!important}
-</style><style>.vc{margin:8px 0;border:1px solid #2c2c2e;border-radius:18px;background:#141416;overflow:hidden;max-width:340px}.vc .vh{display:flex;align-items:center;gap:8px;padding:10px 14px;border-bottom:1px solid #2c2c2e;font-size:14px;color:#e5e5ea}.vc .vb{display:flex;align-items:center;gap:10px;padding:12px 14px;color:#aeaeb2;font-size:12px}.vc .vp{flex:none;width:40px;height:40px;border-radius:50%;border:0;background:#3a3a3c;color:#fff;font-size:16px;line-height:1;padding:0;cursor:pointer}.vc .vr{flex:1;height:6px;border-radius:3px;background:#3a3a3c;position:relative;cursor:pointer;touch-action:manipulation}.vc .vr:before{content:'';position:absolute;left:0;right:0;top:-12px;bottom:-12px}.vc .vr i{display:block;height:100%;width:0;border-radius:3px;background:#fff}.vc .vt,.vc .vd{min-width:34px;font-variant-numeric:tabular-nums}.vc .vd{text-align:right}</style></head><body>
+</style><style>.vc{margin:8px 0;border:1px solid #2c2c2e;border-radius:18px;background:#141416;overflow:hidden;max-width:340px}.vc .vh{display:flex;align-items:center;gap:8px;padding:10px 14px;border-bottom:1px solid #2c2c2e;font-size:14px;color:#e5e5ea}.vc .vb{display:flex;align-items:center;gap:10px;padding:12px 14px;color:#aeaeb2;font-size:12px}.vc .vp{flex:none;width:40px;height:40px;border-radius:50%;border:0;background:#3a3a3c;color:#fff;font-size:16px;line-height:1;padding:0;cursor:pointer}.vc .vr{flex:1;height:6px;border-radius:3px;background:#3a3a3c;position:relative;cursor:pointer;touch-action:manipulation}.vc .vr:before{content:'';position:absolute;left:0;right:0;top:-12px;bottom:-12px}.vc .vr i{display:block;height:100%;width:0;border-radius:3px;background:#fff}.vc .vt,.vc .vd{min-width:34px;font-variant-numeric:tabular-nums}.vc .vd{text-align:right}</style><style>
+#xvoice #xv-spk{position:absolute;left:36px;bottom:calc(env(safe-area-inset-bottom,0px) + 36px);width:68px;height:68px;border-radius:50%;border:0;background:#2c2c2e;color:#fff;font-size:30px;line-height:1;display:grid;place-items:center;padding:0;cursor:pointer}
+#xvoice #xv-close{top:auto;left:auto;right:36px;transform:none;bottom:calc(env(safe-area-inset-bottom,0px) + 36px);width:68px;height:68px;border-radius:50%;border:0;background:#ff3b30;color:#fff;font-size:0;display:grid;place-items:center;padding:0;cursor:pointer}
+#xvoice #xv-close svg{width:30px;height:30px;fill:#fff;transform:rotate(135deg)}
+#xvoice #xv-status{bottom:calc(env(safe-area-inset-bottom,0px) + 130px)}
+</style>
+</head><body>
 <aside id="pn">
  <div class="u">EdhyX</div>
  <div id="bl"></div>
@@ -296,6 +302,7 @@ document.addEventListener('click',e=>{if(e.target.closest('#sd'))askPerm()});
 if('serviceWorker' in navigator){const had=!!navigator.serviceWorker.controller;let rl=0;navigator.serviceWorker.register('sw.js').then(r=>{try{r.update()}catch(e){}}).catch(()=>{});navigator.serviceWorker.addEventListener('controllerchange',()=>{if(!had||rl)return;rl=1;location.reload()})}
 /* ===== MODE BALAS PAKE SUARA: jawaban dibacakan otomatis (TTS), bukan file audio ===== */
 let VR=0;const VRHINT='\n[MODE SUARA AKTIF] Aplikasi otomatis membacakan jawabanmu dengan suara. Jawab dengan teks biasa yang singkat dan natural untuk diucapkan. JANGAN pakai tag [audio:] atau [musik:], jangan buat link audio, dan jangan bilang kamu tidak bisa bersuara.';
+const CALLHINT='\n[PANGGILAN SUARA] Kamu sedang menelepon pengguna. Bicaralah seperti manusia sungguhan: santai dan hangat; serius saat topiknya serius; bercanda ringan atau menggoda sedikit saat suasananya cair; boleh tertawa sewajarnya (tulis haha atau hehe sekali, jangan berlebihan). Pakai kalimat pendek dan lisan, boleh pakai eh, hmm, nah. Jangan membaca daftar atau format markdown. Tidak harus selalu diakhiri pertanyaan.';
 const fmtT=x=>{x=Math.max(0,Math.round(x));return Math.floor(x/60)+':'+String(x%60).padStart(2,'0')};
 function mountVC(box,raw,auto){const bt=box.querySelector('.bt');if(!bt||!window.speechSynthesis)return;const ss=window.speechSynthesis;
  const text=String(raw||'').replace(/[*`#_]/g,'').trim();if(!text)return;
@@ -334,7 +341,7 @@ async function send(){
  if(gpsOn){const fresh=gps&&Date.now()-gps.timestamp<60000,u=gpsUpdate().catch(()=>{});if(!fresh)await Promise.race([u,sleep(3000)])}
  try{
   const r=await fetch(cfg.url.replace(/\/$/,'')+'/chat',{method:'POST',headers:{'Content-Type':'application/json'},signal:ctrl.signal,
-   body:JSON.stringify({messages:hist.slice(-12),image:im,image_gen:gen,system:b.prompt+sysx()+gpsTxt()+(window.PX?PX.sys(cur,1):'')+(VR||window.XCALL?VRHINT:''),now:new Date().toISOString(),tz:Intl.DateTimeFormat().resolvedOptions().timeZone,model:cfg.model,imgModel:cfg.img,mode:webOn?'on':cfg.mode,keys:cfg.keys})});
+   body:JSON.stringify({messages:hist.slice(-12),image:im,image_gen:gen,system:b.prompt+sysx()+gpsTxt()+(window.PX?PX.sys(cur,1):'')+(VR||window.XCALL?VRHINT:'')+(window.XCALL?CALLHINT:''),now:new Date().toISOString(),tz:Intl.DateTimeFormat().resolvedOptions().timeZone,model:cfg.model,imgModel:cfg.img,mode:webOn?'on':cfg.mode,keys:cfg.keys})});
   const rd=r.body.getReader(),dc=new TextDecoder();let buf='';
   for(;;){const{done,value}=await rd.read();if(done)break;buf+=dc.decode(value,{stream:true});let i;
    while((i=buf.indexOf('\n'))>=0){const l=buf.slice(0,i);buf=buf.slice(i+1);if(!l)continue;const j=JSON.parse(l);if(j.s)stage(j.s);else fin=j}}
@@ -930,7 +937,7 @@ const memList=i=>cfg.mem[i]||(cfg.mem[i]=[]);
 const memAdd=(i,t)=>{t=String(t).replace(/\s+/g,' ').trim().slice(0,140);if(t.length<4||SECRET.test(t)||!cfg.memOn[i])return;const L=memList(i),k=t.toLowerCase();if(L.some(m=>m.t.toLowerCase()==k))return;L.push({t,d:Date.now()});while(L.length>30)L.shift();save()};
 const memTxt=i=>{if(!cfg.memOn[i])return'';const L=memList(i).slice(-12);return L.length?`\n\n[Ingatanmu tentang pengguna]\n${L.map(m=>'- '+m.t).join('\n')}\nPakai hanya bila relevan; jangan menyebut kata "ingatan" atau membacakan daftar ini.`:''};
 const memAsk=i=>cfg.memOn[i]?`\n\n[Mencatat] Jika pengguna menyebut hal penting yang awet tentang dirinya (nama, pekerjaan, proyek, preferensi, tujuan, kebiasaan), tambahkan di BARIS TERAKHIR jawabanmu persis: [ingat: fakta singkat]. Kalau tidak ada, jangan tulis apa pun. Jangan catat data sensitif (sandi, key, nomor identitas/kartu, kesehatan, keuangan rinci).`:'';
-const eat=(i,t,keep)=>String(t||'').replace(/\[ingat:\s*([^\]\n]{2,200})\]/gi,(m,x)=>{if(keep!==0)memAdd(i,x);return''}).replace(/\n{3,}/g,'\n\n').trim();
+const eat=(i,t,keep)=>String(t||'').replace(/<tool>[\s\S]*?<\/tool>/g,'').replace(/\[ingat:\s*([^\]\n]{2,200})\]/gi,(m,x)=>{if(keep!==0)memAdd(i,x);return''}).replace(/\n{3,}/g,'\n\n').trim();
 
 /* ===== WAKTU, PEKERJAAN PENGGUNA, BERKAS ===== */
 const nowTx=()=>{const d=new Date(),h=d.getHours(),p=h<4?'dini hari':h<11?'pagi':h<15?'siang':h<18?'sore':h<22?'malam':'larut malam';return nowStr()+' — '+p+([0,6].includes(d.getDay())?', akhir pekan':'')};
@@ -975,6 +982,7 @@ const afterRel=(f,t,k)=>{if(t<0)return;const a=rel(f,t),b=rel(t,f);
  else if(k==='baikan'||k==='kompak'||k==='kompromi'){setRel(f,t,Math.max(a,0)+1);setRel(t,f,Math.max(b,0)+1)}else if(k==='bercanda')setRel(f,t,a+.3);else if(k==='beda')setRel(f,t,a-.3)};
 const VIBE={tenang:{fun:.6,spat:.3,gap:1.3},seru:{fun:1,spat:1,gap:1},ramai:{fun:1.5,spat:1.8,gap:.8}};
 const INT={
+ lanjut:()=>(window.__ANTREAN?window.__ANTREAN.tugasTx():''),
  info:()=>'Buka topik dengan satu info/berita/tren TERBARU hari ini (pakai hasil pencarian web): sebut intinya, lalu komentar singkat khasmu.',
  user:()=>'Pengguna baru saja menulis di grup. Tanggapi langsung dan berguna sesuai spesialisasimu, dengan gaya temanmu. Kalau butuh jawaban panjang, beri inti dulu.',
  obrolan:t=>`Balas pesan terakhir secara natural dan awali dengan @${nm(t)}. Boleh setuju, membantah halus, atau menambah sudut pandang/info.`,
@@ -1060,6 +1068,7 @@ function plan(){
  if(FORCESUM||(sumDue()&&!UQ)){const man=FORCESUM;FORCESUM=0;if(man){const um=LOG.slice().reverse().find(m=>m.f===-1&&m.k==='user'&&!m.ans);if(um)um.ans=1;UQ=0}else{SUMD[DAYK]=1;sumSave()}return{f:pickSum(I),t:-1,intent:'rangkuman'}}
  if(!last||(!UQ&&++cnt%5===0)){const f=pick(I.filter(i=>!last||i!==last.f));FEED.take();return{f,t:-1,intent:'info'}}
  if(UQ){const um=LOG.slice().reverse().find(m=>m.f===-1&&m.k==='user'&&!m.ans);if(um){if(um.all){if(!um.q)um.q=I.slice().sort(()=>Math.random()-.5);const f=um.q.shift();if(!um.q.length)um.ans=1;return{f,t:-1,intent:'user'}}um.ans=1;return{f:routeUser(um.full,um.t),t:-1,intent:'user'}}UQ=0}
+ if(!FOC&&window.__ANTREAN&&Math.random()<.6){const q=window.__ANTREAN.next(I);if(q)return q}
  if(last.f>=0&&last.k==='user'&&Math.random()<.65){const o=I.filter(i=>i!==last.f);if(o.length)return{f:pick(o),t:last.f,intent:'nimbrung'}}
  const files=FS.some(a=>a.shared<2),V=VIBE[P.vibe]||VIBE.seru;
  if(last.t>=0&&I.includes(last.t)&&(last.k==='kesal')&&Math.random()<.85)return{f:last.t,t:last.f,intent:pick(['balaskesal','balaskesal','baikan'])};
@@ -1069,7 +1078,7 @@ function plan(){
  if(k==='info')FEED.take();return{f,t:(k==='receh'&&Math.random()<.6)||k==='info'||k==='ide'||k==='visual'||k==='ajak'||k==='ingat'?-1:t,intent:k}}
 async function amb(f,t,k){
  if(Date.now()<mute||!cfg.url)return null;
- const c=k==='rangkuman'?ctxAll():ctx(),mode=k==='info'?'on':k==='user'?'auto':'off',to=k==='info'?25000:k==='user'?25000:(k==='beda'||k==='ide'||k==='visual')?20000:15000;
+ const c=k==='rangkuman'?ctxAll():ctx(),mode=k==='info'?'on':k==='user'?'auto':'off',to=k==='info'?25000:k==='lanjut'?40000:k==='user'?25000:(k==='beda'||k==='ide'||k==='visual')?20000:15000;
  const ask=x=>call(f,{sys:sysA(f,t,k),user:(c?'Obrolan sejauh ini:\n'+c+'\n\n':'')+'Tulis pesanmu sekarang.'+(x||''),mode,to});
  let r=await ask();
  if(!r){if(++fails>=3){mute=Date.now()+300000;fails=0}return null}fails=0;
@@ -1081,7 +1090,7 @@ function build(f,t,k,r){const U=k==='user',tg=tags(eat(f,r.text||'',U?1:0),f);
  if(!full&&!tg.files.length)return null;
  const m=mkMsg(f,tt,full||'Ini berkasnya.',{k,files:tg.files,src:r.sources}),pl=lastMsg();m.x=pv(m.full);m.d=k==='beda'&&pl&&pl.k==='beda'?(pl.d||1)+1:1;return m}
 /* ===== v26: Ruang Bot — avatar bot bermata, status hidup, obrolan lebih cerdas & berformat, suara ===== */
-const LENS={kepo:120,rangkuman:620,reaksi:90,nimbrung:130,ingat:140,ajak:120,user:700,info:420,ide:260,beda:220,kompromi:200,kerja:300,visual:700,tanya:160};
+const LENS={lanjut:600,kepo:120,rangkuman:620,reaksi:90,nimbrung:130,ingat:140,ajak:120,user:700,info:420,ide:260,beda:220,kompromi:200,kerja:300,visual:700,tanya:160};
 const cleanR=(raw,f,t,seed,n)=>{const E=escRe;let x=CITS(String(raw||'')).replace(/\[\d+\]/g,'').trim().replace(/^["“”]+|["“”]+$/g,'');
  x=x.replace(new RegExp('^'+E(nm(f))+'\\s*:\\s*','i'),'').replace(new RegExp('^@(?:'+cfg.bots.map(b=>E(b.name)).join('|')+')\\b[\\s,:]*','i'),'').replace(/^@\S+\s*/,'');
  if(!seed&&t>=0)x='@'+nm(t)+' '+x;
@@ -1206,7 +1215,7 @@ async function dayRoll(){
 const GAP={'4.5-8':[4500,8000],'15-25':[15000,25000],'30-60':[30000,60000]};
 const sched=fast=>{clearTimeout(tmr);const g=GAP[P.gap]||GAP['4.5-8'],v=(VIBE[P.vibe]||VIBE.seru).gap;let d=rnd(g[0],g[1])*v;const q=Math.random();if(fast)d=rnd(900,1600);else if(q<.18)d=Math.max(1800,d*.35);else if(q>.92)d*=2.2;tmr=setTimeout(turn,d)};
 async function turn(){
- const g=gen;if(!isO()||busy||TASK)return;const uq=UQ;
+ const g=gen;if(!isO()||busy||TASK)return;const uq=UQ;if(!uq&&FOC)return;
  if(!uq&&(P.on===false||(P.max&&sent>=P.max)))return;busy=1;
  try{
   await dayRoll();feedRefresh();const{f,t,intent}=plan(),p=amb(f,t,intent),lm=lastMsg();wakeBot(f);
@@ -1214,9 +1223,9 @@ async function turn(){
   if(g!==gen)return;setS(f,intent==='info'?'mencari sumber':intent==='visual'?pick(['menyusun tabel','menyusun diagram']):['beda','ide','kompromi','tanya'].includes(intent)?'berpikir':'menganalisis');await wait(rnd(900,1800));if(g!==gen)return;
   const sl=setTimeout(()=>{if(g===gen)setS(f,'menunggu server')},9000);const r=await p;clearTimeout(sl);if(g!==gen)return;
   let m=r?build(f,t,intent,r):null;if(!m)m=localMsg(f,t,intent);if(!m){clr(f);return}if(intent==='rangkuman')m.tag='RANGKUMAN HARI INI';const fix=typoize(m,intent);
-  UQ=LOG.some(m=>m.all&&m.q&&m.q.length)?1:0;setS(f,'mengetik');await typingFor(f,m.x.length,g);if(g!==gen)return;
+  UQ=LOG.some(m=>(m.f===-1&&m.k==='user'&&!m.ans)||(m.all&&m.q&&m.q.length))?1:0;setS(f,'mengetik');await typingFor(f,m.x.length,g);if(g!==gen)return;
   if(!await bubble(f,m,g))return;
-  push(m);sent++;decay();afterRel(f,m.t,intent);relNote(f,m.t,intent);if(fix)setTimeout(()=>{if(g===gen&&!AWAY[f])push(mkMsg(f,-1,'*'+fix,{k:'koreksi'}))},900+Math.random()*2200);
+  push(m);sent++;decay();if(intent==='lanjut'&&window.__ANTREAN)window.__ANTREAN.done(f,m);afterRel(f,m.t,intent);relNote(f,m.t,intent);if(fix)setTimeout(()=>{if(g===gen&&!AWAY[f])push(mkMsg(f,-1,'*'+fix,{k:'koreksi'}))},900+Math.random()*2200);
   if(m.t>=0)setS(m.t,'membaca pesan',f);await Promise.all([wait(m.t>=0?1300:0),(document.body.classList.contains('o')?VOICE.say(m):Promise.resolve())]);if(m.t>=0&&g===gen)clr(m.t)
  }finally{if(g===gen){busy=0;sched(UQ)}}}
 
@@ -1236,9 +1245,11 @@ function logEl0(m){const d=document.createElement('div');d.dataset.t=m.full||'';
 function logAdd(m){const l=$('#rl');if(!l)return;const e=l.querySelector('.lh');if(e)e.remove();const near=l.scrollHeight-l.scrollTop-l.clientHeight<140;const el=logEl(m),fl=l.querySelector('.lv');el.classList.add('in');fl?l.insertBefore(el,fl):l.appendChild(el);enhL(el);prune(l);if(near||m.f===-1){l.scrollTop=l.scrollHeight;setTimeout(()=>{if(l.scrollHeight-l.scrollTop-l.clientHeight<260)l.scrollTop=l.scrollHeight},420)}}
 function push(m){m.ts=Date.now();LOG.push(m);evtFrom(m);if(LOG.length>80)LOG.shift();if(m.files&&m.files.length&&!rsOpen())$('#rb').classList.add('nw');logAdd(m);rxPlan(m);notif(m)}
 function sysNote(t){const m={f:-2,full:t,ts:Date.now()};LOG.push(m);logAdd(m)}
+window.__sysNote=sysNote;
 function renderLog(){const l=$('#rl');IO.disconnect();l.innerHTML='';if(!LOG.length)l.innerHTML='<div class="lh">Obrolan para bot muncul di sini.<br>Ketik sesuatu untuk ikut ngobrol. Beri sebuah topik, lalu pilih <b>Debat 3 bot</b> atau <b>Tim kerja</b>.</div>';LOG.forEach(m=>{const e=logEl(m);l.appendChild(e);enhL(e)});LV.forEach(r=>{l.appendChild(r.el);const v=r.el.querySelector('svg');v&&IO.observe(v)});l.scrollTop=l.scrollHeight}
 function ui(){const t=$('#rt'),b=$('#rsd'),has=t.value.trim().length>1;b.textContent=TASK?'■':'↑';t.placeholder=TASK?'Tugas sedang berjalan…':'Ketik ke para bot…';t.disabled=!!TASK;$('#rm').hidden=!has||!!TASK;if(TASK)$('#rc').hidden=true}
-function userSay(x){x=x.trim();if(!x)return;remCheck(x);if(/^\/?rangkum(an)?( hari ini)?[.!]?$/i.test(x))FORCESUM=1;const I=ids(),all=/(?:^|\s)@(?:semua|all)(?:\s*bot)?(?![\w])/i.test(x),hit=all?null:I.find(i=>{const f=escRe(nm(i)),sh=escRe(nm(i).replace(/^Bot\s+/i,''));return new RegExp('(?:@(?:'+f+'|'+sh+')|(?:^|\\W)'+f+')(?![\\w])','i').test(x)});
+let FOC=0;const CLOSE_RE=/\b(cukup|terima ?kasih|makasih|thanks|thank you|thx|makasih ya)\b/i;
+function userSay(x){x=x.trim();if(!x)return;remCheck(x);FOC=(x.length<=60&&CLOSE_RE.test(x))?0:1;if(/^\/?rangkum(an)?( hari ini)?[.!]?$/i.test(x))FORCESUM=1;const I=ids(),all=/(?:^|\s)@(?:semua|all)(?:\s*bot)?(?![\w])/i.test(x),hit=all?null:I.find(i=>{const f=escRe(nm(i)),sh=escRe(nm(i).replace(/^Bot\s+/i,''));return new RegExp('(?:@(?:'+f+'|'+sh+')|(?:^|\\W)'+f+')(?![\\w])','i').test(x)});
  push({f:-1,t:hit==null?-1:hit,full:x,files:[],k:'user',all:all?1:0});UQ=1;sent=0;clearTimeout(tmr);sched(1)}
 function beginTask(title,topic){TASK={fails:0};tgen++;gen++;clearTimeout(tmr);busy=0;ids().forEach(clr);LASTTASK=topic;sysNote(title);ui()}
 function endTask(){TASK=null;ui();if(isO())sched()}
@@ -1697,7 +1708,7 @@ const TOOL_PATTERNS=[/<tool>\s*([\s\S]*?)\s*<\/tool>/,/```(?:tool|json)?\s*(\{[\
 const jfix=s=>{let o='',q=0,e=0;for(const c of s){if(q){if(e){e=0;o+=c}else if(c==='\\'){e=1;o+=c}else if(c==='"'){q=0;o+=c}else if(c==='\n')o+='\\n';else if(c==='\r')o+='\\r';else if(c==='\t')o+='\\t';else o+=c}else{if(c==='"')q=1;o+=c}}return o};
 const jp=s=>{try{return JSON.parse(s)}catch(e){try{return JSON.parse(jfix(s))}catch(e2){return null}}};
 const parseTool=t=>{for(const re of TOOL_PATTERNS){const m=re.exec(t||'');if(!m)continue;const c=jp(m[1]);if(c&&c.name)return {call:c,raw:m[0]}}return null};
-const stripTool=t=>{let s=t||'';for(const re of TOOL_PATTERNS){const m=re.exec(s);if(m){const c=jp(m[1]);if(c&&c.name){s=s.replace(m[0],'');break}}}return s.trim()};
+const stripTool=t=>{let s=String(t||'').replace(/<tool>[\s\S]*?<\/tool>/g,'');for(const re of TOOL_PATTERNS.slice(1)){const m=re.exec(s);if(m){const c=jp(m[1]);if(c&&c.name){s=s.replace(m[0],'');break}}}return s.trim()};
 const origFetch=window.fetch.bind(window);
 
 window.fetch=async(input,init={})=>{
@@ -1720,14 +1731,14 @@ const ANTI_HALU=`
       if(!r.ok) throw new Error('HTTP '+r.status);
       fin=await readFinal(r);
       if(!fin||fin.error||!fin.text) break;
-      const pt=parseTool(fin.text);
-      if(!pt) break;
-      let name='?',res;
-      try{name=pt.call.name;res=await XT.run(pt.call.name,pt.call.args)}
-      catch(e){res={error:e.message||String(e)}}
+      const blk=[...String(fin.text).matchAll(/<tool>\s*([\s\S]*?)\s*<\/tool>/g)].map(m=>jp(m[1])).filter(c=>c&&c.name);
+      const calls=blk.length?blk:(()=>{const pt=parseTool(fin.text);return pt?[pt.call]:[]})();
+      if(!calls.length) break;
+      const outs=[];
+      for(const c of calls){let res;try{res=await XT.run(c.name,c.args)}catch(e){res={error:e.message||String(e)}}outs.push(`[HASIL ALAT ${c.name}]: ${JSON.stringify(res)}`)}
       body.messages=[...body.messages,
         {role:'assistant',content:fin.text},
-        {role:'user',content:`[HASIL ALAT ${name}]: ${JSON.stringify(res)}\nSekarang jawab pengguna dengan bahasa biasa.`}];
+        {role:'user',content:outs.join('\n')+'\nSekarang jawab pengguna dengan bahasa biasa.'}];
       fin=null;
     }
   }catch(e){fin={error:'Alat gagal: '+(e.message||e)}}
@@ -2559,14 +2570,14 @@ if(SR&&ib){
     h.insertAdjacentHTML('beforeend',`<div id="xh-actions"><button id="xvb" aria-label="Mode Bicara">🎙️</button></div>`);
   }
   const vbox=document.createElement('div');vbox.id='xvoice';
-  vbox.innerHTML=`<button id="xv-close" aria-label="Tutup telepon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6.62 10.79c1.44 2.83 3.76 5.14 6.59 6.59l2.2-2.2c.27-.27.67-.36 1.02-.24 1.12.37 2.33.57 3.57.57.55 0 1 .45 1 1V20c0 .55-.45 1-1 1-9.39 0-17-7.61-17-17 0-.55.45-1 1-1h3.5c.55 0 1 .45 1 1 0 1.25.2 2.45.57 3.57.11.35.03.74-.25 1.02l-2.2 2.2z"/></svg></button><div id="xv-head"><div id="xv-name"></div><div id="xv-time">Menghubungkan…</div></div><div id="xv-orb" role="button" aria-label="Orb suara"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6.62 10.79c1.44 2.83 3.76 5.14 6.59 6.59l2.2-2.2c.27-.27.67-.36 1.02-.24 1.12.37 2.33.57 3.57.57.55 0 1 .45 1 1V20c0 .55-.45 1-1 1-9.39 0-17-7.61-17-17 0-.55.45-1 1-1h3.5c.55 0 1 .45 1 1 0 1.25.2 2.45.57 3.57.11.35.03.74-.25 1.02l-2.2 2.2z"/></svg></div><div id="xv-tx" class="dim"></div><div id="xv-status"></div>`;
+  vbox.innerHTML=`<button id="xv-close" aria-label="Tutup telepon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6.62 10.79c1.44 2.83 3.76 5.14 6.59 6.59l2.2-2.2c.27-.27.67-.36 1.02-.24 1.12.37 2.33.57 3.57.57.55 0 1 .45 1 1V20c0 .55-.45 1-1 1-9.39 0-17-7.61-17-17 0-.55.45-1 1-1h3.5c.55 0 1 .45 1 1 0 1.25.2 2.45.57 3.57.11.35.03.74-.25 1.02l-2.2 2.2z"/></svg></button><div id="xv-head"><div id="xv-name"></div><div id="xv-time">Memanggil...</div></div><div id="xv-orb" role="button" aria-label="Orb suara"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6.62 10.79c1.44 2.83 3.76 5.14 6.59 6.59l2.2-2.2c.27-.27.67-.36 1.02-.24 1.12.37 2.33.57 3.57.57.55 0 1 .45 1 1V20c0 .55-.45 1-1 1-9.39 0-17-7.61-17-17 0-.55.45-1 1-1h3.5c.55 0 1 .45 1 1 0 1.25.2 2.45.57 3.57.11.35.03.74-.25 1.02l-2.2 2.2z"/></svg></div><div id="xv-tx" class="dim"></div><div id="xv-status"></div><button id="xv-spk" type="button" aria-label="Speaker aktif">🔊</button>`;
   document.body.appendChild(vbox);
   const elTx=document.getElementById('xv-tx'),elSt=document.getElementById('xv-status'),elOrb=document.getElementById('xv-orb');
 
   /* ---- Mode telepon: dengar -> kirim ke bot -> jawaban dibacakan -> dengar lagi ---- */
   const SILENCE_MS=1500;   /* diam sekian ms setelah kata terakhir = giliran kamu selesai */
   const MAX_EMPTY=6;       /* berapa kali hening berturut-turut sebelum jeda */
-  let state='idle',rec=null,live=false,sess=0,sil=0,empties=0,svcRetry=0,micOk=false,wl=null;
+  let SPK=true,state='idle',rec=null,live=false,sess=0,sil=0,empties=0,svcRetry=0,micOk=false,wl=null;
   const ICON={idle:'🎙️',listen:'🎙️',think:'💭',speak:'🔊'};
   const wait=ms=>new Promise(r=>setTimeout(r,ms));
   const setState=(s,msg)=>{
@@ -2580,8 +2591,8 @@ if(SR&&ib){
   const elName=document.getElementById('xv-name'),elTime=document.getElementById('xv-time');
   let t0=0,tick=0;
   const fmt=n=>String(Math.floor(n/60)).padStart(2,'0')+':'+String(n%60).padStart(2,'0');
-  const startTimer=()=>{if(tick)return;t0=Date.now();const u=()=>{elTime.textContent='Tersambung · '+fmt(Math.floor((Date.now()-t0)/1000))};u();tick=setInterval(u,1000)};
-  const stopTimer=()=>{clearInterval(tick);tick=0;elTime.textContent='Menghubungkan…'};
+  const startTimer=()=>{if(tick)return;t0=Date.now();const u=()=>{elTime.textContent='Terhubung · '+fmt(Math.floor((Date.now()-t0)/1000))};u();tick=setInterval(u,1000)};
+  const stopTimer=()=>{clearInterval(tick);tick=0;elTime.textContent='Memanggil...'};
 
   /* Layar tetap menyala selama panggilan */
   const wake=async()=>{try{if(navigator.wakeLock&&!wl){wl=await navigator.wakeLock.request('screen');wl.addEventListener('release',()=>{wl=null})}}catch(e){wl=null}};
@@ -2691,11 +2702,11 @@ if(SR&&ib){
   const getVoice=()=>{try{return speechSynthesis.getVoices().find(v=>/^id[-_]/i.test(v.lang))||null}catch(e){return null}};
   const speak=(text,my)=>new Promise(res=>{
     const ss=window.speechSynthesis;
-    if(!ss||!text){res();return}
+    if(!ss||!text||!SPK){res();return}
     const q=chunk(text);let i=0,done=false;
     const fin=()=>{if(!done){done=true;res()}};
     const next=()=>{
-      if(!live||my!==sess){try{ss.cancel()}catch(e){}fin();return}
+      if(!live||my!==sess||!SPK){try{ss.cancel()}catch(e){}fin();return}
       if(i>=q.length){fin();return}
       const part=q[i++];
       const u=new SpeechSynthesisUtterance(part);
@@ -2756,7 +2767,7 @@ if(SR&&ib){
   const begin=async()=>{
     live=true;window.XCALL=true;empties=0;svcRetry=0;
     try{elName.textContent=(cfg.bots[cur].name)||'XBOT'}catch(e){elName.textContent='XBOT'}
-    elTime.textContent='Menghubungkan…';
+    elTime.textContent='Memanggil...';
     vbox.classList.add('on');
     showTx('Menyiapkan mikrofon…',true);
     setState('think','');
@@ -2765,9 +2776,19 @@ if(SR&&ib){
     wake();
     const ok=await ensureMic();
     if(!live)return;
-    if(!ok){elTime.textContent='Tidak tersambung';return}
+    if(!ok){elTime.textContent='Gagal terhubung';return}
     startTimer();
     await wait(250);
+    if(!live)return;
+    const hr=new Date().getHours(),waktu=hr>=4&&hr<11?'pagi':hr>=11&&hr<15?'siang':hr>=15&&hr<18?'sore':'malam';
+    const namaBot=(cfg.bots[cur]&&cfg.bots[cur].name)||'aku';
+    const sapa=[`Halo! Selamat ${waktu}. Ada yang bisa saya bantu?`,`Halo, selamat ${waktu}! Ini ${namaBot}. Ada yang bisa saya bantu?`,`Selamat ${waktu}! Akhirnya telponnya diangkat juga. Ada yang bisa saya bantu?`][Math.floor(Math.random()*3)];
+    const mySess=sess;
+    showTx(sapa,false);
+    setState('speak','');
+    await speak(sapa,mySess);
+    if(!live||mySess!==sess)return;
+    await wait(350);
     if(live)listen();
   };
   const end=()=>{
@@ -2793,6 +2814,10 @@ if(SR&&ib){
   };
   document.getElementById('xvb').onclick=begin;
   document.getElementById('xv-close').onclick=end;
+  const elSpk=document.getElementById('xv-spk');
+  const paintSpk=()=>{elSpk.textContent=SPK?'🔊':'🔈';elSpk.setAttribute('aria-label',SPK?'Speaker aktif':'Speaker mati')};
+  elSpk.onclick=()=>{SPK=!SPK;paintSpk();if(!SPK){try{speechSynthesis.cancel()}catch(e){}}};
+  paintSpk();
 
   /* Kalau aplikasi ke latar belakang, jeda dulu */
   document.addEventListener('visibilitychange',()=>{
@@ -3084,8 +3109,8 @@ async function withStatus(i,name,fn){
 function putFile(i,n,t,tambah){
   const d=drive(i); n=cname(n); if(!n) throw new Error('nama berkas kosong');
   const v=(tambah&&d[n]?d[n].t:'')+t;
-  if(v.length>20000) throw new Error(n+': melebihi 20.000 karakter');
-  if(!d[n]&&Object.keys(d).length>=20) throw new Error('komputer penuh (maks 20 berkas)');
+  if(v.length>80000) throw new Error(n+': melebihi 80.000 karakter');
+  if(!d[n]&&Object.keys(d).length>=30) throw new Error('komputer penuh (maks 30 berkas)');
   d[n]={t:v,ts:Date.now()};
 }
 const fnm=a=>cname(String(a==null?'':a).replace(/^(\.\/|~\/|\/home\/[^/]+\/)/,''));
@@ -3178,31 +3203,31 @@ if(XTO){
     if(!out.length) throw new Error('Tidak menemukan gambar untuk "'+q+'"');
     return {q,hasil:out,cara:'Tampilkan dengan menulis [foto: URL] di baris terpisah.'};
   };
-  XTO.berkas_baca=async({nama,mulai=0})=>{
+  XTO.berkas_baca=async({nama,mulai=0,ukuran})=>{
     const F=A.files(); if(!F.length) throw new Error('Belum ada berkas bersama');
     const k=String(nama||'').trim().toLowerCase();
     const f=(k&&(F.find(x=>x.name.toLowerCase()===k)||F.find(x=>x.name.toLowerCase().includes(k))))||(!k?F[F.length-1]:null);
     if(!f) throw new Error('Berkas "'+nama+'" tidak ada. Yang ada: '+F.map(x=>x.name).join(', '));
     if(!f.text) throw new Error(f.name+' bukan berkas teks (gambar/video/audio)');
-    const o=Math.max(0,parseInt(mulai)||0),t=f.text.slice(o,o+4000);
-    return {nama:f.name,total:f.text.length,mulai:o,teks:t,lanjut:o+4000<f.text.length?o+4000:null};
+    const o=Math.max(0,parseInt(mulai)||0),n=pageSize(ukuran),t=f.text.slice(o,o+n);
+    return {nama:f.name,total:f.text.length,mulai:o,teks:t,lanjut:o+n<f.text.length?o+n:null};
   };
   /* ----- komputer pribadi: tiap bot punya penyimpanan berkas sendiri (tersimpan di browser) ----- */
   XTO.simpan=async({nama,isi,tambah})=>{
     const i=curBot(),d=drive(i),n=cname(nama); if(!n) throw new Error('Nama berkas kosong');
     const t=(tambah&&d[n]?d[n].t:'')+String(isi==null?'':isi);
-    if(t.length>20000) throw new Error('Berkas maksimal 20.000 karakter');
-    if(!d[n]&&Object.keys(d).length>=20) throw new Error('Komputermu penuh (maks 20 berkas), hapus dulu yang tidak dipakai');
+    if(t.length>80000) throw new Error('Berkas maksimal 80.000 karakter');
+    if(!d[n]&&Object.keys(d).length>=30) throw new Error('Komputermu penuh (maks 30 berkas), hapus dulu yang tidak dipakai');
     d[n]={t,ts:Date.now()}; saveComp();
     return {ok:true,nama:n,ukuran:t.length};
   };
-  XTO.buka=async({nama,mulai=0})=>{
+  XTO.buka=async({nama,mulai=0,ukuran})=>{
     const i=curBot(),d=drive(i),n=cname(nama);
     if(!n) return {berkas:Object.keys(d).map(k=>({nama:k,ukuran:d[k].t.length}))};
     const f=d[n]||d[Object.keys(d).find(k=>k.toLowerCase().includes(n.toLowerCase()))||''];
     if(!f) throw new Error('Berkas "'+nama+'" tidak ada. Yang ada: '+(Object.keys(d).join(', ')||'(kosong)'));
-    const o=Math.max(0,parseInt(mulai)||0);
-    return {nama:n,total:f.t.length,mulai:o,teks:f.t.slice(o,o+4000),lanjut:o+4000<f.t.length?o+4000:null};
+    const o=Math.max(0,parseInt(mulai)||0),pn=pageSize(ukuran);
+    return {nama:n,total:f.t.length,mulai:o,teks:f.t.slice(o,o+pn),lanjut:o+pn<f.t.length?o+pn:null};
   };
   XTO.hapus=async({nama})=>{
     const i=curBot(),d=drive(i),n=cname(nama);
@@ -3254,8 +3279,16 @@ const alatTx=f=>{
    +'\n- cari_gambar {"q":"kata kunci"} : cari foto; tampilkan hasilnya dengan [foto: URL] di baris terpisah';
   if(A.files().some(x=>x.text)) x+='\n- berkas_baca {"nama":"data.xlsx.txt","mulai":0} : baca isi berkas bersama (Excel/PDF/Word sudah diubah jadi teks); bila ada "lanjut", panggil lagi dengan mulai itu';
   x+='\n- terminal {"cmd":"ls -l; cat data.csv | grep kopi | wc -l"} : terminal virtual di komputer pribadimu (ls cat echo > >> touch rm cp mv head tail wc grep sort uniq cut date, curl https://..., pipa | dan && ;). Hanya berkas pribadimu yang terlihat.'
-   +'\n- simpan {"nama":"catatan.md","isi":"...","tambah":false} : simpan berkas di komputer pribadimu (bertahan walau halaman dimuat ulang, maks 20 berkas); buka {"nama":"catatan.md"} membaca (tanpa nama = daftar); hapus {"nama":"..."}; kirim {"nama":"..."} membagikan berkasmu ke Ruang Bot'
+   +'\n- simpan {"nama":"catatan.md","isi":"...","tambah":false} : simpan berkas di komputer pribadimu (bertahan walau halaman dimuat ulang, maks 30 berkas, 80.000 karakter per berkas); buka {"nama":"catatan.md"} membaca (tanpa nama = daftar); hapus {"nama":"..."}; kirim {"nama":"..."} membagikan berkasmu ke Ruang Bot'
+   +'\n- rate {"dari":"USD","ke":"IDR","jumlah":50} : kurs resmi hari ini (Frankfurter), untuk perbandingan mata uang'
    +'\n- http_get {"url":"https://..."} : ambil data dari API/halaman publik (GET saja, hanya situs yang mengizinkan CORS)';
+  x+='\n- ringkas_csv {"nama":"data.csv"} : ringkas tabel CSV/teks (jumlah baris, kolom, jumlah dan rata-rata angka) dari komputer pribadimu atau ruang kerja, tanpa menulis kode'
+   +'\n- agregat {"nama":"data.csv","kolom":"penjualan","fungsi":"sum","kelompok":"kota","filter":{"kolom":"tahun","nilai":"2025","jenis":"sama"},"urut":"turun","batas":20} : hitung per kelompok. fungsi: sum, count, avg, min, max, distinct. jenis filter: sama, mengandung, lebih, kurang'
+   +'\n- ruang_daftar {} : daftar berkas di ruang kerja bersama semua bot, dengan siapa terakhir mengubah'
+   +'\n- ruang_baca {"nama":"...","mulai":0,"ukuran":8000} : baca berkas ruang kerja per potongan (maks 12000 karakter); bila ada "lanjut", panggil lagi dengan mulai itu'
+   +'\n- ruang_tulis {"nama":"...","isi":"...","tambah":false} : tulis atau tambah berkas di ruang kerja bersama; perubahanmu tercatat atas namamu'
+   +'\n- antrean_tambah {"judul":"...","langkah":["langkah 1","langkah 2"]} : buat tugas panjang (2-12 langkah). Langkah dikerjakan bergiliran di ruang bot saat pengguna tidak sedang meminta sesuatu'
+   +'\n- antrean_daftar {} : lihat progres tugas panjang';
   if(isKoding(f)) x+='\n- code {"lang":"js","code":"console.log(2**10)"} : jalankan JavaScript di browser (tanpa internet, maks 6 detik) untuk menguji kode atau menghitung. Berkas pribadimu tersedia di kode sebagai objek DATA (mis. DATA["data.csv"]); di terminal kamu juga bisa menjalankan `node berkas.js`. Khusus kamu sebagai bot koding.';
   return x;
 };
@@ -3461,6 +3494,176 @@ async function laporanKolektif(q){
     A.unlock(g);
   }
 }
+
+/* ---------- 8b. ruang kerja bersama, pengolah data (ringkas_csv, agregat), dan antrean tugas panjang ---------- */
+const RKK='xbot_ruang_kerja', ANK='xbot_antrean';
+const RMAX_F=60, RMAX_C=80000;
+const plainTeks=s=>String(s==null?'':s).replace(/\s+/g,' ').trim();
+const pickAcak=a=>a[Math.floor(Math.random()*a.length)];
+const sysNoteAman=t=>{try{ if(window.__sysNote) window.__sysNote(t) }catch(e){}};
+const pageSize=u=>Math.min(12000,Math.max(500,parseInt(u)||4000));
+const listNama=()=>{const a=[];if(CTX.length)a.push(...Object.keys(drive(CTX[CTX.length-1])));a.push(...Object.keys(RUANG));return a};
+/* ruang kerja bersama: satu penyimpanan untuk semua bot, tiap perubahan dicatat (siapa, kapan, ukuran) */
+let RUANG={}; try{ RUANG=JSON.parse(localStorage.getItem(RKK)||'{}')||{} }catch(e){ RUANG={} }
+const saveRK=()=>{ try{ localStorage.setItem(RKK,JSON.stringify(RUANG)) }catch(e){ throw new Error('Penyimpanan browser penuh (ruang kerja)') } };
+const kerjaOleh=()=>{ const i=CTX.length?CTX[CTX.length-1]:-1; return i>=0?nm(i):'Pengguna' };
+const rkName=n=>String(n==null?'':n).trim().replace(/[^\w.\- ()]/g,'_').slice(0,50);
+function rkWrite(n,isi,tambah,oleh){
+  n=rkName(n); if(!n) throw new Error('Nama berkas kosong');
+  const e=RUANG[n];
+  const t=(tambah&&e?e.t+'\n':'')+String(isi==null?'':isi);
+  if(t.length>RMAX_C) throw new Error('Berkas ruang kerja maksimal '+RMAX_C+' karakter');
+  if(!e&&Object.keys(RUANG).length>=RMAX_F) throw new Error('Ruang kerja penuh (maks '+RMAX_F+' berkas)');
+  const aksi=!e?'membuat':(tambah?'menambah':'mengubah');
+  const riw=((e&&e.riwayat)||[]).concat([{oleh,aksi,ukuran:t.length,ts:Date.now()}]).slice(-20);
+  RUANG[n]={t,ts:Date.now(),oleh,riwayat:riw}; saveRK(); return n;
+}
+XTO.ruang_daftar=async()=>({berkas:Object.keys(RUANG).map(k=>({nama:k,ukuran:RUANG[k].t.length,terakhir_diubah_oleh:RUANG[k].oleh,waktu:new Date(RUANG[k].ts).toLocaleString('id-ID')}))});
+XTO.ruang_baca=async({nama,mulai=0,ukuran})=>{
+  const k=rkName(nama),e=RUANG[k];
+  if(!e) throw new Error('Berkas "'+nama+'" tidak ada di ruang kerja. Yang ada: '+(Object.keys(RUANG).join(', ')||'(kosong)'));
+  const o=Math.max(0,parseInt(mulai)||0),n=pageSize(ukuran);
+  return {nama:k,total:e.t.length,mulai:o,teks:e.t.slice(o,o+n),lanjut:o+n<e.t.length?o+n:null,terakhir_diubah_oleh:e.oleh};
+};
+XTO.ruang_tulis=async({nama,isi,tambah})=>{ const oleh=kerjaOleh(); const n=rkWrite(nama,isi,tambah,oleh); return {ok:true,nama:n,oleh} };
+XTO.ruang_riwayat=async({nama})=>{ const k=rkName(nama),e=RUANG[k]; if(!e) throw new Error('Berkas tidak ada'); return {nama:k,riwayat:e.riwayat} };
+
+/* pengolah data: membaca CSV/teks tabel dari komputer pribadi atau ruang kerja, tanpa menulis kode */
+function parseCsv(t){
+  t=String(t||'').replace(/^\uFEFF/,'');
+  const first=t.split(/\r?\n/)[0]||'';
+  const d=first.split(';').length>first.split(',').length?';':(first.split('\t').length>first.split(',').length?'\t':',');
+  const rows=[]; let row=[],cur='',q=false;
+  for(let k=0;k<t.length;k++){
+    const c=t[k];
+    if(q){ if(c==='"'){ if(t[k+1]==='"'){cur+='"';k++} else q=false } else cur+=c; continue }
+    if(c==='"'){q=true;continue}
+    if(c===d){row.push(cur);cur='';continue}
+    if(c==='\n'){row.push(cur);rows.push(row);row=[];cur='';continue}
+    if(c==='\r')continue;
+    cur+=c;
+  }
+  if(cur!==''||row.length){row.push(cur);rows.push(row)}
+  const H=(rows.shift()||[]).map(h=>h.trim());
+  const R=rows.filter(r=>r.some(x=>String(x).trim()!==''));
+  return {d,kolom:H,baris:R};
+}
+function angka(s){
+  let v=String(s==null?'':s).trim().replace(/\s/g,'');
+  if(!v)return null;
+  if(/^-?\d{1,3}(\.\d{3})+(,\d+)?$/.test(v)) v=v.replace(/\./g,'').replace(',','.');
+  else if(/^-?\d{1,3}(,\d{3})+(\.\d+)?$/.test(v)) v=v.replace(/,/g,'');
+  else if(/^-?\d+,\d+$/.test(v)) v=v.replace(',','.');
+  else if(v.endsWith('%')) v=v.slice(0,-1);
+  const n=Number(v); return Number.isFinite(n)?n:null;
+}
+function cariBerkas(nama){
+  const q=String(nama||'').trim().toLowerCase(); if(!q)return null;
+  const sumber=[];
+  if(CTX.length){const d=drive(CTX[CTX.length-1]);Object.keys(d).forEach(k=>sumber.push({nama:k,teks:d[k].t,asal:'komputer pribadimu'}))}
+  Object.keys(RUANG).forEach(k=>sumber.push({nama:k,teks:RUANG[k].t,asal:'ruang kerja'}));
+  return sumber.find(x=>x.nama.toLowerCase()===q)||sumber.find(x=>x.nama.toLowerCase().includes(q))||null;
+}
+const cariErr=n=>new Error('Berkas "'+n+'" tidak ditemukan. Yang ada: '+(listNama().join(', ')||'(kosong)'));
+XTO.ringkas_csv=async({nama})=>{
+  const f=cariBerkas(nama); if(!f) throw cariErr(nama);
+  const {d,kolom,baris}=parseCsv(f.teks);
+  const info=kolom.map((h,j)=>{
+    const isi=baris.map(r=>String(r[j]??'').trim()).filter(x=>x!=='');
+    const ang=isi.map(angka).filter(x=>x!==null);
+    const tipe=ang.length>=Math.max(1,isi.length*0.8)?'angka':'teks';
+    const o={nama:h||('kolom'+(j+1)),tipe,terisi:isi.length,contoh:[...new Set(isi)].slice(0,3)};
+    if(tipe==='angka'&&ang.length){const jm=ang.reduce((a,b)=>a+b,0);o.jumlah=+jm.toFixed(2);o.rata2=+(jm/ang.length).toFixed(2);o.min=Math.min(...ang);o.maks=Math.max(...ang)}
+    return o;
+  });
+  return {berkas:f.nama,asal:f.asal,pemisah:d===','?'koma':d===';'?'titik koma':'tab',jumlah_baris:baris.length,kolom:info,contoh_baris:baris.slice(0,3)};
+};
+XTO.agregat=async({nama,kolom,fungsi='sum',kelompok,filter,urut='turun',batas=20})=>{
+  const f=cariBerkas(nama); if(!f) throw cariErr(nama);
+  const {kolom:H,baris}=parseCsv(f.teks);
+  const idx=h=>{const q=String(h||'').trim().toLowerCase();const j=H.findIndex(x=>x.trim().toLowerCase()===q);if(j<0)throw new Error('Kolom "'+h+'" tidak ada. Kolom yang ada: '+H.join(', '));return j};
+  const fn=String(fungsi||'sum').toLowerCase();
+  if(!['sum','count','avg','min','max','distinct'].includes(fn)) throw new Error('fungsi harus sum, count, avg, min, max, atau distinct');
+  const jk=kelompok?idx(kelompok):-1, jv=kolom?idx(kolom):-1;
+  let R=baris;
+  if(filter&&filter.kolom){
+    const jf=idx(filter.kolom),nilai=String(filter.nilai==null?'':filter.nilai).trim().toLowerCase(),jn=String(filter.jenis||'sama').toLowerCase();
+    R=R.filter(r=>{
+      const x=String(r[jf]??'').trim().toLowerCase(), xn=angka(x), vn=angka(nilai);
+      if(jn==='mengandung') return x.includes(nilai);
+      if(jn==='lebih') return xn!==null&&vn!==null&&xn>vn;
+      if(jn==='kurang') return xn!==null&&vn!==null&&xn<vn;
+      return x===nilai;
+    });
+  }
+  const grup=new Map();
+  for(const r of R){const key=jk>=0?(String(r[jk]??'').trim()||'(kosong)'):'(semua)';if(!grup.has(key))grup.set(key,[]);grup.get(key).push(r)}
+  const out=[];
+  for(const [key,rs] of grup){
+    let hasil=null;
+    if(fn==='count') hasil=rs.length;
+    else if(jv<0) throw new Error('isi "kolom" untuk fungsi '+fn);
+    else if(fn==='distinct') hasil=new Set(rs.map(r=>String(r[jv]??'').trim()).filter(Boolean)).size;
+    else{
+      const v=rs.map(r=>angka(r[jv])).filter(x=>x!==null);
+      if(v.length){
+        if(fn==='sum') hasil=v.reduce((a,b)=>a+b,0);
+        else if(fn==='avg') hasil=v.reduce((a,b)=>a+b,0)/v.length;
+        else if(fn==='min') hasil=Math.min(...v);
+        else hasil=Math.max(...v);
+      }
+    }
+    out.push({kelompok:key,nilai:typeof hasil==='number'?+hasil.toFixed(2):hasil,baris:rs.length});
+  }
+  const bobot=x=>x.nilai==null?(urut==='naik'?Infinity:-Infinity):x.nilai;
+  out.sort((a,b)=>urut==='naik'?bobot(a)-bobot(b):bobot(b)-bobot(a));
+  return {berkas:f.nama,asal:f.asal,fungsi:fn,kolom:kolom||'(jumlah baris)',kelompok:kelompok||null,baris_terpakai:R.length,jumlah_kelompok:out.length,hasil:out.slice(0,Math.min(50,Math.max(1,parseInt(batas)||20)))};
+};
+
+/* antrean tugas panjang: bot memecah pekerjaan jadi langkah; langkah dikerjakan bergiliran saat pengguna tidak sedang meminta sesuatu */
+let ANT=[]; try{ ANT=JSON.parse(localStorage.getItem(ANK)||'[]')||[] }catch(e){ ANT=[] }
+const saveAnt=()=>{ try{ localStorage.setItem(ANK,JSON.stringify(ANT.slice(-10))) }catch(e){} };
+let ANTCUR=null;
+XTO.antrean_tambah=async({judul,langkah})=>{
+  const i=CTX.length?CTX[CTX.length-1]:-1;
+  const L=(Array.isArray(langkah)?langkah:[]).map(x=>String(x==null?'':x).trim().slice(0,200)).filter(Boolean).slice(0,12);
+  if(L.length<2) throw new Error('tugas panjang perlu minimal 2 langkah');
+  if(ANT.filter(j=>j.status==='jalan').length>=5) throw new Error('antrean penuh (maks 5 tugas berjalan)');
+  const id='t'+Date.now().toString(36);
+  const job={id,judul:String(judul||'Tugas').slice(0,80),bot:i,langkah:L,i:0,hasil:[],status:'jalan',coba:0,ts:Date.now()};
+  ANT.push(job); saveAnt();
+  rkWrite('tugas-'+id+'.md','# '+job.judul+'\n'+L.map((x,k)=>(k+1)+'. '+x).join('\n')+'\n',false,kerjaOleh());
+  return {ok:true,id,judul:job.judul,langkah:L.length,berkas_hasil:'tugas-'+id+'.md',catatan:'Dikerjakan bergiliran di ruang bot. Hasil tiap langkah dicatat di berkas hasil.'};
+};
+XTO.antrean_daftar=async()=>({tugas:ANT.slice(-10).map(j=>({id:j.id,judul:j.judul,status:j.status,langkah_selesai:j.i+'/'+j.langkah.length,dibuat_oleh:j.bot>=0?nm(j.bot):'pengguna'}))});
+
+window.__ANTREAN={
+  next(I){
+    const job=ANT.find(j=>j.status==='jalan'); if(!job||!I.length) return null;
+    job.coba++;
+    if(job.coba>4){ job.status='gagal'; saveAnt(); sysNoteAman('⚠️ Tugas "'+job.judul+'" dihentikan karena belum ada kemajuan.'); return null }
+    saveAnt();
+    const f=I.includes(job.bot)?job.bot:pickAcak(I);
+    ANTCUR={job,f};
+    return {f,t:-1,intent:'lanjut'};
+  },
+  tugasTx(){
+    if(!ANTCUR) return '';
+    const {job}=ANTCUR, k=job.i;
+    const prev=job.hasil.slice(-2).map(h=>'- '+h.langkah+': '+h.teks).join('\n');
+    return '\n\n[Tugas panjang] Kamu sedang mengerjakan tugas "'+job.judul+'", langkah '+(k+1)+' dari '+job.langkah.length+'. Kerjakan HANYA langkah ini: "'+job.langkah[k]+'".'+(prev?'\nHasil langkah sebelumnya:\n'+prev:'')+'\nBeri hasil konkret dan spesifik untuk langkah ini (bukan rencana). Singkat, tanpa basa-basi. Kalau perlu, simpan hasil ke ruang kerja dengan ruang_tulis.';
+  },
+  done(f,m){
+    if(!ANTCUR) return;
+    const {job}=ANTCUR; ANTCUR=null;
+    const teks=plainTeks(m.full||'').slice(0,600);
+    const langkah=job.langkah[job.i];
+    job.hasil.push({langkah,teks,oleh:nm(f)}); job.i++; job.coba=0;
+    try{ rkWrite('tugas-'+job.id+'.md','\n## '+job.i+'. '+langkah+'\n'+teks+'\n(dikerjakan '+nm(f)+')\n',true,nm(f)) }catch(e){}
+    if(job.i>=job.langkah.length){ job.status='selesai'; sysNoteAman('✅ Tugas "'+job.judul+'" selesai. Hasil lengkap ada di ruang kerja: tugas-'+job.id+'.md') }
+    saveAnt();
+  }
+};
 
 /* ---------- 7. tampilan: bar status & daftar tugas di Ruang Bot ---------- */
 function refreshUI(){
