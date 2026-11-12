@@ -943,7 +943,7 @@ const eat=(i,t,keep)=>String(t||'').replace(/<tool>[\s\S]*?<\/tool>/g,'').replac
 const nowTx=()=>{const d=new Date(),h=d.getHours(),p=h<4?'dini hari':h<11?'pagi':h<15?'siang':h<18?'sore':h<22?'malam':'larut malam';return nowStr()+' — '+p+([0,6].includes(d.getDay())?', akhir pekan':'')};
 let LASTTASK='';
 const workTx=()=>{if(!P.know)return'';const u=hist.filter(m=>m.role==='user').slice(-3).map(m=>{const f=m.content.match(/^\[File "([^"]+)"\]/);return clip(f?'(mengirim file '+f[1]+')':m.content.replace(/\s+/g,' '),110)});const tk=LASTTASK?'Tugas terakhir di Ruang Bot: '+clip(LASTTASK,100):'';return u.length||tk?`\n\n[Yang sedang dikerjakan pengguna] ${u.join(' | ')}${tk?'\n'+tk:''}`:''};
-const FS=[];let FN=0;
+const FS=[];let FN=0;window.__FS=FS;
 const EXT={txt:'text/plain',md:'text/markdown',csv:'text/csv',json:'application/json',html:'text/html',css:'text/css',js:'text/javascript',py:'text/x-python',xml:'application/xml',log:'text/plain',sql:'text/plain',sh:'text/plain',ts:'text/plain',yaml:'text/plain',yml:'text/plain'};
 const extOf=n=>(String(n).match(/\.(\w{1,5})$/)||[])[1]?.toLowerCase();
 const cleanName=n=>{n=String(n).trim().replace(/[^\w.\- ()]/g,'_').replace(/\.{2,}/g,'.').replace(/^\.+/,'').slice(0,48)||'berkas';if(!EXT[extOf(n)])n=n.replace(/\.\w{0,5}$/,'')+'.txt';return n};
@@ -1677,6 +1677,8 @@ const TOOL_SYS=`
 [ALAT TERSEDIA]
 - weather {"kota":"Jakarta"} : cuaca sekarang dan ramalan 3 hari
 - rate {"dari":"USD","ke":"IDR","jumlah":100} : kurs mata uang
+- dokumen {"nama":"laporan.docx","isi":[{"tipe":"judul","teks":"Judul","warna":"biru"},{"tipe":"paragraf","teks":"Isi paragraf","tebal":true},{"tipe":"poin","teks":"Poin"},{"tipe":"tabel","baris":[["Nama","Nilai"],["Kopi","10"]]},{"tipe":"foto","foto":"nama gambar di chat atau URL https","lebar":10}]} : buat dokumen Word (.docx), Word lama (.doc), atau PDF. Format ditentukan dari akhiran nama. Warna teks: merah, biru, hijau, kuning, ungu, oranye, pink, coklat, abu, hitam, atau kode hex. Foto dari chat atau URL https.
+- dokumen_edit {"nama":"surat.docx","operasi":[{"aksi":"warnai","cari":"teks penanda","warna":"merah"},{"aksi":"tebal","cari":"teks penanda"},{"aksi":"ganti","cari":"lama","ganti":"baru"},{"aksi":"tambah","setelah":"teks penanda (kosong = akhir)","isi":[]}]} : edit Word (.docx) yang dikirim pengguna atau yang kamu buat sebelumnya. Hasilnya berkas baru berakhiran -edit.docx.
 - wiki {"q":"kata kunci","lang":"id"} : ringkasan Wikipedia (lang: id atau en)
 - calc {"expr":"15*100000+25000"} : hitung ekspresi matematika
 - time {"zona":"tokyo"} : waktu sekarang di kota/zona
@@ -2227,12 +2229,14 @@ const nice=e=>{const s=String((e&&e.name)||'')+' '+String((e&&e.message)||e);
  if(/password/i.test(s))return'file ini diproteksi password';
  if(/end of central directory|zip|corrupt|invalid pdf|InvalidPDF|bad xref/i.test(s))return'file rusak atau bukan format yang benar';
  return(e&&e.message)||String(e)};
+const DOCBUF=new Map();
 async function readDoc(f){
  const m=f.name.match(/\.(\w+)$/),ext=m?m[1].toLowerCase():'';
  try{
   if(f.size>MAXF)throw new Error('file terlalu besar (maksimal 25 MB)');
   note('⏳ membaca '+f.name+'...');
   const buf=await(f.arrayBuffer?f.arrayBuffer():new Promise((ok,no)=>{const r=new FileReader();r.onload=()=>ok(r.result);r.onerror=()=>no(new Error('gagal membaca file'));r.readAsArrayBuffer(f)}));
+  if(ext==='docx')DOCBUF.set(f.name,buf);
   const r=await extract(ext,buf,MAXT,0,true);
   att=null;
   if(r.img){img=r.img;docTxt=null;note('📎 '+f.name+' (PDF hasil scan: halaman 1 dikirim sebagai gambar)');return}
@@ -2326,6 +2330,281 @@ if(XT){
  const msEl=document.getElementById('ms');
  if(msEl)new MutationObserver(ml=>{for(const m of ml)for(const n of m.addedNodes)if(n.nodeType===1&&n.classList.contains('bm')&&!n.classList.contains('xr')&&XF.q.length)mountFiles(n)}).observe(msEl,{childList:true});
 
+ /* ---------- dokumen: buat Word (.docx, .doc), PDF dengan teks berwarna dan foto; edit Word (.docx) milik pengguna atau bot ---------- */
+ const MIME_DOCX='application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+ const DOCCOL={merah:'FF0000',biru:'0070C0',hijau:'00B050',kuning:'FFC000',ungu:'7030A0',oranye:'FF8000',pink:'FF66CC',coklat:'8B4513',abu:'808080',hitam:'000000',putih:'FFFFFF',tosca:'00B5AD'};
+ const hexWarna=c=>{const k=String(c==null?'':c).trim().toLowerCase();if(DOCCOL[k])return DOCCOL[k];const h=k.replace(/^#/,'');return /^[0-9a-f]{6}$/.test(h)?h.toUpperCase():null};
+ const xEsc=s=>String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+ const loadScr=u=>new Promise((ok,no)=>{const s=document.createElement('script');s.src=u;s.onload=ok;s.onerror=()=>no(new Error('gagal memuat pustaka PDF'));document.head.appendChild(s)});
+ const needJsPdf=async()=>{if(!window.jspdf)await loadScr('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js')};
+ const normBlok=isi=>{
+   const a=Array.isArray(isi)?isi:String(isi==null?'':isi).split(/\n+/).filter(x=>x.trim());
+   return a.map(b=>typeof b==='string'?{tipe:'paragraf',teks:b}:b);
+ };
+ /* ambil foto dari chat (nama gambar) atau URL https, lalu ubah ke PNG agar bisa dipakai di semua format */
+ const fotoBlob=async ref=>{
+   const r=String(ref==null?'':ref).trim(); if(!r) return null;
+   let src;
+   if(/^https:\/\//i.test(r)){ const res=await fetch(r); if(!res.ok) throw new Error('foto tidak bisa diambil (HTTP '+res.status+')'); src=await res.blob() }
+   else{
+     const F=(window.__FS||[]).filter(f=>f.data&&/^data:image\//.test(f.data));
+     const k=r.toLowerCase();
+     const f=F.find(x=>x.name.toLowerCase()===k)||F.find(x=>x.name.toLowerCase().includes(k));
+     if(!f) throw new Error('foto "'+r+'" tidak ada di chat. Pakai nama gambar yang sudah ada di chat, atau URL https');
+     src=await (await fetch(f.data)).blob();
+   }
+   const bmp=await createImageBitmap(src);
+   const cv=document.createElement('canvas');cv.width=bmp.width;cv.height=bmp.height;cv.getContext('2d').drawImage(bmp,0,0);
+   const png=await new Promise(ok=>cv.toBlob(ok,'image/png'));
+   return {w:bmp.width,h:bmp.height,bytes:new Uint8Array(await png.arrayBuffer()),dataUrl:cv.toDataURL('image/png')};
+ };
+ /* siapkan semua foto dalam dokumen: ukuran, nama berkas dalam paket, dan id relasi */
+ const bukaImg=async(blocks,prefix,baseId)=>{
+   const map=new Map(),imgs=[];let id=baseId||1;
+   for(const b of blocks){
+     const ref=b.foto||(b.tipe==='foto'?b.teks:null);
+     if(!ref||map.has(ref)) continue;
+     const f=await fotoBlob(ref);
+     const cm=Math.min(16,Math.max(2,+b.lebar||12));
+     const cx=Math.round(cm*360000), cy=Math.min(7920000,Math.round(cx*f.h/f.w));
+     const k=id++;
+     const im={id:k,rid:'rId'+prefix+k,file:'media/'+prefix+k+'.png',cx,cy,w:f.w,h:f.h,bytes:f.bytes,dataUrl:f.dataUrl};
+     imgs.push(im); map.set(ref,im);
+   }
+   return {imgs,map};
+ };
+ const runXml=(t,o)=>{
+   const rp=(o.tebal?'<w:b/>':'')+(o.miring?'<w:i/>':'')+(o.warna?'<w:color w:val="'+o.warna+'"/>':'')+(o.ukuran?'<w:sz w:val="'+Math.round(o.ukuran*2)+'"/>':'');
+   return '<w:r>'+(rp?'<w:rPr>'+rp+'</w:rPr>':'')+'<w:t xml:space="preserve">'+xEsc(t)+'</w:t></w:r>';
+ };
+ const jcDocx=r=>({tengah:'center',kanan:'right',rata:'both',kiri:'left'})[r]||null;
+ const blokDocx=b=>{
+   const warna=hexWarna(b.warna);
+   const o={tebal:!!b.tebal||b.tipe==='judul'||b.tipe==='sub',miring:!!b.miring,warna,ukuran:b.ukuran||(b.tipe==='judul'?20:b.tipe==='sub'?15:null)};
+   const jc=jcDocx(b.rata)||(b.tipe==='judul'?'center':null);
+   const pp=(b.tipe==='poin'?'<w:ind w:left="720" w:hanging="360"/>':'')+(jc?'<w:jc w:val="'+jc+'"/>':'');
+   const isi=b.tipe==='poin'?runXml('• ',o)+runXml(b.teks||'',o):runXml(b.teks||'',o);
+   return '<w:p>'+(pp?'<w:pPr>'+pp+'</w:pPr>':'')+isi+'</w:p>';
+ };
+ const tabelDocx=b=>{
+   const rows=(b.baris||[]).map(r=>Array.isArray(r)?r:[r]);
+   const n=Math.max(1,...rows.map(r=>r.length)), cw=Math.floor(9000/n), warna=hexWarna(b.warna);
+   const bd=['top','left','bottom','right','insideH','insideV'].map(s=>'<w:'+s+' w:val="single" w:sz="4" w:space="0" w:color="808080"/>').join('');
+   let x='<w:tbl><w:tblPr><w:tblW w:w="9000" w:type="dxa"/><w:tblBorders>'+bd+'</w:tblBorders></w:tblPr><w:tblGrid>'+('<w:gridCol w:w="'+cw+'"/>').repeat(n)+'</w:tblGrid>';
+   rows.forEach((r,ri)=>{
+     x+='<w:tr>';
+     for(let c=0;c<n;c++) x+='<w:tc><w:tcPr><w:tcW w:w="'+cw+'" w:type="dxa"/></w:tcPr><w:p>'+runXml(r[c]==null?'':String(r[c]),{tebal:ri===0,warna})+'</w:p></w:tc>';
+     x+='</w:tr>';
+   });
+   return x+'</w:tbl>';
+ };
+ const gambarDocx=im=>'<w:r><w:drawing><wp:inline distT="0" distB="0" distL="0" distR="0"><wp:extent cx="'+im.cx+'" cy="'+im.cy+'"/><wp:docPr id="'+im.id+'" name="Gambar '+im.id+'"/><a:graphic xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/picture"><pic:pic xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture"><pic:nvPicPr><pic:cNvPr id="'+im.id+'" name="'+im.file.replace('media/','')+'"/><pic:cNvPicPr/></pic:nvPicPr><pic:blipFill><a:blip r:embed="'+im.rid+'"/><a:stretch><a:fillRect/></a:stretch></pic:blipFill><pic:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="'+im.cx+'" cy="'+im.cy+'"/></a:xfrm><a:prstGeom prst="rect"><a:avLst/></a:prstGeom></pic:spPr></pic:pic></a:graphicData></a:graphic></wp:inline></w:drawing></w:r>';
+ const NSDOC='xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture"';
+ /* isi satu blok: teks, poin, tabel, atau foto (dengan keterangan opsional) */
+ const blokKeDocx=(blocks,map)=>{
+   let x='';
+   for(const b of blocks){
+     if(b.tipe==='tabel'){ x+=tabelDocx(b); continue }
+     const ref=b.foto||(b.tipe==='foto'?b.teks:null);
+     if(ref){ x+='<w:p><w:pPr><w:jc w:val="center"/></w:pPr>'+gambarDocx(map.get(ref))+'</w:p>'; if(b.tipe!=='foto'&&b.teks) x+=blokDocx(b); continue }
+     x+=blokDocx(b);
+   }
+   return x;
+ };
+ const RELS_NS='http://schemas.openxmlformats.org/package/2006/relationships';
+ async function buatDocx(blocks){
+   await needZip();
+   const {imgs,map}=await bukaImg(blocks,'Img',1);
+   const body=blokKeDocx(blocks,map);
+   const zip=new JSZip();
+   zip.file('[Content_Types].xml','<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Default Extension="png" ContentType="image/png"/><Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/></Types>');
+   zip.file('_rels/.rels','<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="'+RELS_NS+'"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/></Relationships>');
+   zip.file('word/document.xml','<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:document '+NSDOC+'><w:body>'+body+'<w:sectPr><w:pgSz w:w="11906" w:h="16838"/><w:pgMar w:top="1440" w:right="1440" w:bottom="1440" w:left="1440" w:header="708" w:footer="708" w:gutter="0"/></w:sectPr></w:body></w:document>');
+   zip.file('word/_rels/document.xml.rels','<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="'+RELS_NS+'">'+imgs.map(im=>'<Relationship Id="'+im.rid+'" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="'+im.file+'"/>').join('')+'</Relationships>');
+   imgs.forEach(im=>zip.file('word/'+im.file,im.bytes));
+   return await zip.generateAsync({type:'arraybuffer',mimeType:MIME_DOCX});
+ }
+ /* .doc: RTF dengan warna dan foto PNG, bisa dibuka Word */
+ async function buatRtf(blocks){
+   const {map}=await bukaImg(blocks,'Img',1);
+   const pal=[];const ci=h=>{if(!h)return 0;let i=pal.indexOf(h);if(i<0){pal.push(h);i=pal.length-1}return i+1};
+   const rt=s=>{let o='';for(const ch of String(s==null?'':s)){const c=ch.codePointAt(0);if(ch==='\\')o+='\\\\';else if(ch==='{')o+='\\{';else if(ch==='}')o+='\\}';else if(ch==='\n')o+='\\line ';else if(c>127){o+='\\u'+(c>32767?c-65536:c)+'?'}else o+=ch}return o};
+   let body='';
+   for(const b of blocks){
+     if(b.tipe==='tabel'){
+       const rows=(b.baris||[]).map(r=>Array.isArray(r)?r:[r]);
+       rows.forEach((r,ri)=>{body+='\\pard\\ql'+(ri===0?'\\b ':'')+(ci(hexWarna(b.warna))?'\\cf'+ci(hexWarna(b.warna))+' ':'')+'\\fs24 '+rt(r.join('   |   '))+'\\b0\\i0\\cf0\\par\n'});
+       continue;
+     }
+     const ref=b.foto||(b.tipe==='foto'?b.teks:null);
+     if(ref){
+       const im=map.get(ref);
+       const hex=Array.from(im.bytes,x=>x.toString(16).padStart(2,'0')).join('');
+       body+='\\pard\\qc{\\pict\\pngblip\\picwgoal'+Math.round(im.cx/635)+'\\pichgoal'+Math.round(im.cy/635)+'\n'+hex+'}\\par\n';
+       if(b.tipe==='foto'||!b.teks) continue;
+     }
+     const c=ci(hexWarna(b.warna));
+     const sz=b.ukuran?Math.round(b.ukuran*2):(b.tipe==='judul'?40:b.tipe==='sub'?30:24);
+     const al=(b.tipe==='judul'||b.rata==='tengah')?'\\qc':b.rata==='kanan'?'\\qr':b.rata==='rata'?'\\qj':'\\ql';
+     const ind=b.tipe==='poin'?'\\li360\\fi-360 \\u8226?\\tab ':'';
+     body+='\\pard'+al+ind+((b.tipe==='judul'||b.tipe==='sub'||b.tebal)?'\\b ':'')+(b.miring?'\\i ':'')+(c?'\\cf'+c+' ':'')+'\\fs'+sz+' '+rt(b.teks||'')+'\\b0\\i0\\cf0\\par\n';
+   }
+   const colors=pal.map(h=>'\\red'+parseInt(h.slice(0,2),16)+'\\green'+parseInt(h.slice(2,4),16)+'\\blue'+parseInt(h.slice(4,6),16)+';').join('');
+   return '{\\rtf1\\ansi\\ansicpg1252\\deff0{\\fonttbl{\\f0\\fswiss Arial;}}{\\colortbl;'+colors+'}\\f0\\fs24\n'+body+'}';
+ }
+ /* PDF: teks berwarna, judul, poin, tabel sederhana, dan foto */
+ async function buatPdf(blocks){
+   await needJsPdf();
+   const {map}=await bukaImg(blocks,'Img',1);
+   const pdf=new window.jspdf.jsPDF({unit:'pt',format:'a4'});
+   const W=pdf.internal.pageSize.getWidth(),H=pdf.internal.pageSize.getHeight(),M=56;
+   let y=M;
+   const cek=h=>{if(y+h>H-M){pdf.addPage();y=M}};
+   const setCol=h=>{if(h)pdf.setTextColor(parseInt(h.slice(0,2),16),parseInt(h.slice(2,4),16),parseInt(h.slice(4,6),16));else pdf.setTextColor(0,0,0)};
+   for(const b of blocks){
+     if(b.tipe==='tabel'){
+       const rows=(b.baris||[]).map(r=>Array.isArray(r)?r:[r]);
+       rows.forEach((r,ri)=>{
+         pdf.setFont('helvetica',ri===0?'bold':'normal');pdf.setFontSize(11);setCol(hexWarna(b.warna));
+         const lines=pdf.splitTextToSize(r.map(x=>x==null?'':String(x)).join('   |   '),W-2*M);
+         cek(lines.length*14+6);pdf.text(lines,M,y+11);y+=lines.length*14+6;
+       });
+       y+=8; continue;
+     }
+     const ref=b.foto||(b.tipe==='foto'?b.teks:null);
+     if(ref){
+       const im=map.get(ref);
+       const wpt=Math.min(W-2*M,im.cx/12700), hpt=wpt*im.h/im.w;
+       cek(hpt+10); pdf.addImage(im.dataUrl,'PNG',M,y,wpt,hpt); y+=hpt+10;
+       if(b.tipe==='foto'||!b.teks) continue;
+     }
+     const size=b.ukuran||(b.tipe==='judul'?20:b.tipe==='sub'?15:11);
+     const bold=b.tipe==='judul'||b.tipe==='sub'||!!b.tebal;
+     pdf.setFont('helvetica',bold?'bold':(b.miring?'italic':'normal'));
+     pdf.setFontSize(size);setCol(hexWarna(b.warna));
+     const lines=pdf.splitTextToSize((b.tipe==='poin'?'• ':'')+(b.teks||''),W-2*M);
+     const lh=size*1.35; cek(lines.length*lh+6);
+     const al=(b.tipe==='judul'||b.rata==='tengah')?'center':b.rata==='kanan'?'right':'left';
+     const x=al==='center'?W/2:al==='right'?W-M:M;
+     pdf.text(lines,x,y+size,{align:al});
+     y+=lines.length*lh+(b.tipe==='judul'?12:6);
+   }
+   return pdf.output('arraybuffer');
+ }
+ /* edit Word (.docx) yang sudah ada: warnai, tebalkan, ganti teks, tambah paragraf/tabel/foto */
+ const docxBufAsli=async(nama)=>{
+   const cari=String(nama||'').trim().toLowerCase(), keys=[...DOCBUF.keys()];
+   const key=keys.find(k=>k.toLowerCase()===cari)||keys.find(k=>k.toLowerCase().includes(cari));
+   if(!key) throw new Error('Dokumen Word "'+nama+'" tidak ditemukan. Yang tersedia: '+(keys.join(', ')||'(belum ada)'));
+   return key;
+ };
+ XT.dokumen=async a=>{
+   a=a||{};
+   let nama=String(a.nama||'dokumen.docx').trim().replace(/[\\\/:*?"<>|\u0000-\u001f]+/g,'_').replace(/^\.+/,'').slice(0,80)||'dokumen.docx';
+   const mm=nama.match(/\.(\w+)$/); if(!mm){nama+='.docx'}
+   const ext=(mm?mm[1]:'docx').toLowerCase();
+   if(!/^(docx|doc|pdf)$/.test(ext)) throw new Error('format .'+ext+' belum didukung. Pilih .docx, .doc, atau .pdf');
+   const blocks=normBlok(a.isi!=null?a.isi:(a.blok!=null?a.blok:''));
+   if(!blocks.length) throw new Error('isi dokumen kosong');
+   if(XF.q.length>=5) throw new Error('Maksimal 5 berkas per jawaban');
+   let blob;
+   if(ext==='docx'){ const buf=await buatDocx(blocks); DOCBUF.set(nama,buf); blob=new Blob([buf],{type:MIME_DOCX}) }
+   else if(ext==='doc'){ const rtf=await buatRtf(blocks); blob=new Blob([rtf],{type:'application/msword'}) }
+   else { const buf=await buatPdf(blocks); blob=new Blob([buf],{type:'application/pdf'}) }
+   XF.q.push({name:nama,blob,t:Date.now()});
+   return {ok:true,nama,ukuran:kb(blob.size),catatan:'Tombol Unduh/Bagikan sudah tampil di chat. Jangan menempelkan ulang seluruh isi; cukup jelaskan singkat.'};
+ };
+
+ /* urutan elemen rPr di Word harus dijaga agar file tetap valid */
+ const RPR_ORDER=['rStyle','rFonts','b','bCs','i','iCs','caps','smallCaps','strike','dstrike','outline','shadow','emboss','imprint','noProof','snapToGrid','vanish','webHidden','color','spacing','w','kern','position','sz','szCs','highlight','u','effect','bdr','shd','fitText','vertAlign','rtl','cs','em','lang','eastAsianLayout','specVanish','oMath'];
+ XT.dokumen_edit=async a=>{
+   a=a||{};
+   const key=await docxBufAsli(a.nama);
+   const ops=Array.isArray(a.operasi)?a.operasi:[];
+   if(!ops.length) throw new Error('operasi kosong');
+   await needZip();
+   const zip=await JSZip.loadAsync(DOCBUF.get(key));
+   const fDoc=zip.file('word/document.xml');
+   if(!fDoc) throw new Error('bukan file .docx yang valid');
+   const dom=new DOMParser().parseFromString(await fDoc.async('string'),'application/xml');
+   if(dom.getElementsByTagName('parsererror').length) throw new Error('isi dokumen tidak bisa dibaca');
+   const W='http://schemas.openxmlformats.org/wordprocessingml/2006/main';
+   const stamp='Bot'+Date.now().toString(36);
+   const fRel=zip.file('word/_rels/document.xml.rels');
+   let relXml=fRel?await fRel.async('string'):'<Relationships xmlns="'+RELS_NS+'"></Relationships>';
+   const relAdd=[];let docPrId=9000;
+   const paras=()=>Array.from(dom.getElementsByTagNameNS(W,'p'));
+   const teksP=p=>Array.from(p.getElementsByTagNameNS(W,'t')).map(t=>t.textContent).join('');
+   const cariP=s=>{const q=String(s==null?'':s).toLowerCase();return paras().find(p=>teksP(p).toLowerCase().includes(q))||null};
+   const setRPr=(r,tag,val)=>{
+     let rp=Array.from(r.childNodes).find(n=>n.localName==='rPr'&&n.namespaceURI===W);
+     if(!rp){rp=dom.createElementNS(W,'w:rPr');r.insertBefore(rp,r.firstChild)}
+     let el=Array.from(rp.childNodes).find(n=>n.localName===tag&&n.namespaceURI===W);
+     if(!el){
+       el=dom.createElementNS(W,'w:'+tag);
+       const idx=RPR_ORDER.indexOf(tag);
+       const after=Array.from(rp.childNodes).find(n=>n.nodeType===1&&RPR_ORDER.indexOf(n.localName)>idx);
+       rp.insertBefore(el,after||null);
+     }
+     if(val!==undefined) el.setAttributeNS(W,'w:val',val);
+   };
+   const hasil=[],gagal=[];
+   for(const op of ops){
+     const aksi=String(op.aksi||'').toLowerCase();
+     if(aksi==='warnai'||aksi==='tebal'||aksi==='miring'){
+       const p=cariP(op.cari);
+       if(!p){gagal.push('teks "'+op.cari+'" tidak ditemukan');continue}
+       const rgb=aksi==='warnai'?hexWarna(op.warna):null;
+       if(aksi==='warnai'&&!rgb){gagal.push('warna "'+op.warna+'" tidak dikenal');continue}
+       const runs=Array.from(p.getElementsByTagNameNS(W,'r'));
+       runs.forEach(r=>{ if(aksi==='warnai') setRPr(r,'color',rgb); else if(aksi==='tebal') setRPr(r,'b'); else setRPr(r,'i') });
+       hasil.push(aksi+': '+runs.length+' potongan teks');
+     }
+     else if(aksi==='ganti'){
+       const q=String(op.cari||''), n=Array.from(dom.getElementsByTagNameNS(W,'t')).filter(t=>t.textContent.includes(q));
+       if(!q||!n.length){gagal.push('teks "'+op.cari+'" tidak ditemukan');continue}
+       n.forEach(t=>{t.textContent=t.textContent.split(q).join(String(op.ganti==null?'':op.ganti))});
+       hasil.push('ganti: '+n.length+' tempat');
+     }
+     else if(aksi==='tambah'){
+       const blocks=normBlok(op.isi!=null?op.isi:'');
+       if(!blocks.length){gagal.push('tambah: isi kosong');continue}
+       /* penanda boleh berada di dalam tabel; sisipkan setelah blok teratas di badan dokumen */
+       const topBody=p=>{let t=p;while(t.parentNode&&t.parentNode.localName!=='body')t=t.parentNode;return t};
+       const anchorP=op.setelah?cariP(op.setelah):null;
+       const anchor=anchorP?topBody(anchorP):null;
+       if(op.setelah&&!anchor){gagal.push('penanda "'+op.setelah+'" tidak ditemukan');continue}
+       const {imgs,map}=await bukaImg(blocks,stamp,docPrId);
+       docPrId+=imgs.length+1;
+       const frag=new DOMParser().parseFromString('<root '+NSDOC+'>'+blokKeDocx(blocks,map)+'</root>','application/xml');
+       const nodes=Array.from(frag.documentElement.childNodes).filter(n=>n.nodeType===1);
+       const body=dom.getElementsByTagNameNS(W,'body')[0];
+       const sp=Array.from(body.childNodes).find(n=>n.nodeType===1&&n.localName==='sectPr');
+       const ref=anchor?anchor.nextSibling:(sp||null);
+       const parent=anchor?anchor.parentNode:body;
+       nodes.forEach(n=>parent.insertBefore(dom.importNode(n,true),ref));
+       imgs.forEach(im=>{relAdd.push(im);zip.file('word/'+im.file,im.bytes)});
+       hasil.push('tambah: '+nodes.length+' blok');
+     }
+     else gagal.push('aksi "'+op.aksi+'" tidak dikenal (pakai warnai, tebal, miring, ganti, tambah)');
+   }
+   let out=new XMLSerializer().serializeToString(dom);
+   if(!/^<\?xml/.test(out)) out='<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'+out;
+   zip.file('word/document.xml',out);
+   if(relAdd.length){
+     const add=relAdd.map(im=>'<Relationship Id="'+im.rid+'" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="'+im.file+'"/>').join('');
+     relXml=relXml.includes('</Relationships>')?relXml.replace('</Relationships>',add+'</Relationships>'):relXml.replace(/\/>\s*$/,'>')+add+'</Relationships>';
+     zip.file('word/_rels/document.xml.rels',relXml);
+     const fCt=zip.file('[Content_Types].xml');
+     if(fCt){ let ct=await fCt.async('string'); if(!/Extension="png"/i.test(ct)){ct=ct.replace(/<Types([^>]*)>/,'<Types$1><Default Extension="png" ContentType="image/png"/>');zip.file('[Content_Types].xml',ct)} }
+   }
+   const outNama=String(a.nama_baru||key.replace(/\.docx$/i,'')+'-edit.docx').replace(/[\\\/:*?"<>|\u0000-\u001f]+/g,'_').slice(0,80);
+   const buf=await zip.generateAsync({type:'arraybuffer',mimeType:MIME_DOCX});
+   if(XF.q.length>=5) throw new Error('Maksimal 5 berkas per jawaban');
+   DOCBUF.set(outNama,buf);
+   XF.q.push({name:outNama,blob:new Blob([buf],{type:MIME_DOCX}),t:Date.now()});
+   return {ok:true,nama:outNama,berhasil:hasil,gagal:gagal.length?gagal:undefined,catatan:'Tombol Unduh/Bagikan sudah tampil di chat. Jelaskan singkat apa yang diubah.'};
+ };
  /* ---------- remind / reminders / unremind: tersimpan di perangkat, berbunyi saat aplikasi hidup atau dibuka lagi ---------- */
  const RK='xbotrem2';let RM=[];
  try{RM=JSON.parse(localStorage.getItem(RK)||'[]');if(!Array.isArray(RM))RM=[]}catch(e){RM=[]}
@@ -3289,6 +3568,8 @@ const alatTx=f=>{
    +'\n- ruang_tulis {"nama":"...","isi":"...","tambah":false} : tulis atau tambah berkas di ruang kerja bersama; perubahanmu tercatat atas namamu'
    +'\n- antrean_tambah {"judul":"...","langkah":["langkah 1","langkah 2"]} : buat tugas panjang (2-12 langkah). Langkah dikerjakan bergiliran di ruang bot saat pengguna tidak sedang meminta sesuatu'
    +'\n- antrean_daftar {} : lihat progres tugas panjang';
+  x+='\n- dokumen {\"nama\":\"laporan.docx\","isi\":[{\"tipe\":\"judul\","teks\":\"Judul\","warna\":\"biru\"},{\"tipe\":\"foto\","foto\":\"nama gambar di chat\","lebar\":10}]} : buat Word (.docx, .doc) atau PDF dengan teks berwarna dan foto';
+  x+='\n- dokumen_edit {\"nama\":\"surat.docx\","operasi\":[{\"aksi\":\"warnai\","cari\":\"teks penanda\","warna\":\"merah\"}]} : edit Word (.docx) milik pengguna atau yang kamu buat: warnai, tebalkan, ganti teks, tambah paragraf, tabel, atau foto';
   if(isKoding(f)) x+='\n- code {"lang":"js","code":"console.log(2**10)"} : jalankan JavaScript di browser (tanpa internet, maks 6 detik) untuk menguji kode atau menghitung. Berkas pribadimu tersedia di kode sebagai objek DATA (mis. DATA["data.csv"]); di terminal kamu juga bisa menjalankan `node berkas.js`. Khusus kamu sebagai bot koding.';
   return x;
 };
