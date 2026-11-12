@@ -393,7 +393,7 @@ async function settings(){
  const K=['groq','gemini','tavily','exa','firecrawl'];
  $('#sm').hidden=false;$('#sm').innerHTML=`<button id="x" style="font-size:17px;color:#6ab0ff">← Kembali</button>
   <h3>API key (disimpan di browser ini saja; kosong = pakai key bawaan server)</h3>${K.map(k=>`<input type="password" id="k_${k}" placeholder="${k}" value="${esc(cfg.keys[k]||'')}">`).join('')}
- <h3>Foto gratis</h3><p style="${hint}">Key gratis dari pixabay.com/api/docs dan pexels.com/api. Urutan: Pixabay, Pexels, lalu Wikimedia. Video tetap lewat YouTube seperti biasa. Kosong = langsung pakai cadangan.</p><input type="password" id="k_pixabay" placeholder="Pixabay key" value="${esc((cfg.media||{}).pixabay||'')}"><input type="password" id="k_pexels" placeholder="Pexels key" value="${esc((cfg.media||{}).pexels||'')}"><input type="password" id="k_unsplash" placeholder="Unsplash Access Key (cadangan foto)" value="${esc((cfg.media||{}).unsplash||'')}"><p style="${hint}">Cadangan tambahan: Unsplash (pakai key di atas) dan Openverse (otomatis, tanpa key). Parallel dipakai sebagai cadangan pencarian web kalau pencarian utama gagal.</p><input type="password" id="k_parallel" placeholder="Parallel key (cadangan pencarian web)" value="${esc((cfg.media||{}).parallel||'')}">
+ <h3>Foto gratis</h3><p style="${hint}">Key gratis dari pixabay.com/api/docs dan pexels.com/api. Urutan: Pixabay, Pexels, lalu Wikimedia. Video tetap lewat YouTube seperti biasa. Kosong = langsung pakai cadangan.</p><input type="password" id="k_pixabay" placeholder="Pixabay key" value="${esc((cfg.media||{}).pixabay||'')}"><input type="password" id="k_pexels" placeholder="Pexels key" value="${esc((cfg.media||{}).pexels||'')}"><input type="password" id="k_unsplash" placeholder="Unsplash Access Key (cadangan foto)" value="${esc((cfg.media||{}).unsplash||'')}"><p style="${hint}">Cadangan tambahan: Unsplash (pakai key di atas) dan Openverse (otomatis, tanpa key). Parallel dipakai sebagai cadangan pencarian web kalau pencarian utama gagal.</p><input type="password" id="k_parallel" placeholder="Parallel key (cadangan pencarian web)" value="${esc((cfg.media||{}).parallel||'')}"><input type="password" id="k_serper" placeholder="Serper key (cari Google, opsional)" value="${esc((cfg.media||{}).serper||'')}">
  <h3>Model AI</h3><p style="${hint}">Teks dan foto. Kalau foto dikirim, otomatis diproses Gemini.</p><select id="s_model">${grp('Gemini','gemini')}${grp('Groq','groq')}</select>
  <h3>Model gambar</h3><p style="${hint}">Dipakai di "/gambar". Model gambar sering butuh akun berbayar.</p><select id="s_img">${IMGS.map(m=>opt(m,cfg.img||DEF_IMG)).join('')}</select>
  <h3>Mode pencarian web</h3><select id="s_mode">${[['auto','Otomatis'],['on','Selalu'],['off','Mati']].map(m=>`<option value="${m[0]}"${m[0]==cfg.mode?' selected':''}>${m[1]}</option>`).join('')}</select>
@@ -405,7 +405,7 @@ async function settings(){
   $('#bp').innerHTML=cfg.bots.map((b,i)=>HIDE.includes(i)?'':`<div class="bo"><div style="display:flex;gap:10px;align-items:center"><div style="width:18px;flex:none">${bot(COL[i])}</div><input id="n${i}" value="${esc(b.name)}"></div><textarea id="p${i}">${esc(b.prompt)}</textarea></div>`).join('')};
  if(AUTH)$('#ub').click();
  $('#x').onclick=()=>$('#sm').hidden=true;
- $('#sv').onclick=()=>{K.forEach(k=>cfg.keys[k]=$('#k_'+k).value.trim());cfg.media={pixabay:$('#k_pixabay').value.trim(),pexels:$('#k_pexels').value.trim(),unsplash:$('#k_unsplash').value.trim(),parallel:$('#k_parallel').value.trim()};cfg.model=$('#s_model').value;cfg.img=$('#s_img').value.trim()||DEF_IMG;cfg.mode=$('#s_mode').value;cfg.panel.on=$('#p_on').value=='1';cfg.panel.keys={gemini:$('#pk_gemini').value.trim(),groq:$('#pk_groq').value.trim()};cfg.panel.model=$('#p_model').value;cfg.panel.gap=$('#p_gap').value;cfg.panel.max=+$('#p_max').value;PX.read();
+ $('#sv').onclick=()=>{K.forEach(k=>cfg.keys[k]=$('#k_'+k).value.trim());cfg.media={pixabay:$('#k_pixabay').value.trim(),pexels:$('#k_pexels').value.trim(),unsplash:$('#k_unsplash').value.trim(),parallel:$('#k_parallel').value.trim(),serper:(($('#k_serper')||{}).value||'').trim()};cfg.model=$('#s_model').value;cfg.img=$('#s_img').value.trim()||DEF_IMG;cfg.mode=$('#s_mode').value;cfg.panel.on=$('#p_on').value=='1';cfg.panel.keys={gemini:$('#pk_gemini').value.trim(),groq:$('#pk_groq').value.trim()};cfg.panel.model=$('#p_model').value;cfg.panel.gap=$('#p_gap').value;cfg.panel.max=+$('#p_max').value;PX.read();
   if(unlocked)cfg.bots.forEach((b,i)=>{if(HIDE.includes(i))return;b.name=$('#n'+i).value||b.name;b.prompt=$('#p'+i).value});
   save();renderBots();reset();$('#sm').hidden=true;setOpen(false)}}
 let AUTH=false;
@@ -1632,6 +1632,49 @@ XT.news=async({topik='teknologi'})=>{
   const r=await XT.search({q:`berita ${topik} terbaru hari ini Indonesia`});
   return {topik,hasil:r.hasil};
 };
+/* berita dari GDELT: tanpa API key dan tanpa memakai kuota model. Gagal = error biasa, fungsi lain tidak terpengaruh */
+XT.berita_gdelt=async({topik='',hari=1,jumlah=5}={})=>{
+  const q=String(topik||'').trim();
+  if(!q) throw new Error('Topik kosong');
+  const n=Math.min(10,Math.max(1,parseInt(jumlah,10)||5));
+  const h=Math.min(7,Math.max(1,parseInt(hari,10)||1));
+  const u='https://api.gdeltproject.org/api/v2/doc/doc?query='+encodeURIComponent(q)+'&mode=artlist&format=json&sort=datedesc&maxrecords='+n+'&timespan='+h+'d';
+  const c=new AbortController(),to=setTimeout(()=>c.abort(),12000);
+  let t='';
+  try{
+    const r=await origFetch(u,{signal:c.signal});
+    if(!r.ok) throw new Error('GDELT HTTP '+r.status);
+    t=await r.text();
+  }catch(e){
+    throw new Error('GDELT gagal: '+(e&&e.name==='AbortError'?'waktu habis':((e&&e.message)||'tidak diketahui')));
+  }finally{clearTimeout(to)}
+  let j;
+  try{j=JSON.parse(t)}catch(e){throw new Error('GDELT membalas bukan JSON: '+t.slice(0,120))}
+  const L=(j&&j.articles||[]).slice(0,n);
+  if(!L.length) throw new Error('Tidak ada artikel untuk "'+q+'" dalam '+h+' hari terakhir');
+  return {topik:q,sumber:'GDELT',hasil:L.map((a,i)=>({no:i+1,judul:a.title||'',sumber:a.domain||'',tanggal:a.seendate||'',url:a.url||''}))};
+};
+/* pencarian Google lewat Serper: butuh key di Pengaturan. Tanpa key = pesan error biasa, fungsi lain tidak terpengaruh */
+XT.cari_google=async({q}={})=>{
+  const kw=String(q||'').trim();
+  if(!kw) throw new Error('Kata kunci kosong');
+  const key=((typeof cfg!=='undefined'&&cfg&&cfg.media)||{}).serper||'';
+  if(!key) throw new Error('key Serper belum diisi di Pengaturan');
+  const c=new AbortController(),to=setTimeout(()=>c.abort(),15000);
+  let j;
+  try{
+    const r=await origFetch('https://google.serper.dev/search',{method:'POST',signal:c.signal,
+      headers:{'Content-Type':'application/json','X-API-KEY':key},
+      body:JSON.stringify({q:kw.slice(0,200),gl:'id',hl:'id',num:5})});
+    if(!r.ok) throw new Error('Serper HTTP '+r.status);
+    j=await r.json();
+  }catch(e){
+    throw new Error('Serper gagal: '+(e&&e.name==='AbortError'?'waktu habis':((e&&e.message)||'tidak diketahui')));
+  }finally{clearTimeout(to)}
+  const L=((j&&j.organic)||[]).filter(x=>x&&x.link).slice(0,5);
+  if(!L.length) throw new Error('Tidak ada hasil Google untuk "'+kw+'"');
+  return {q:kw,sumber:'Google via Serper',hasil:L.map((x,i)=>({no:i+1,judul:x.title||'',tautan:x.link,cuplikan:String(x.snippet||'').slice(0,300)}))};
+};
 XT.read=async({url})=>{
   if(!url) throw new Error('URL kosong');
   if(!/^https?:\/\//i.test(url)) url='https://'+url;
@@ -1683,6 +1726,8 @@ const TOOL_SYS=`
 - calc {"expr":"15*100000+25000"} : hitung ekspresi matematika
 - time {"zona":"tokyo"} : waktu sekarang di kota/zona
 - news {"topik":"teknologi"} : berita terbaru (teknologi, umum, bisnis, olahraga)
+- berita_gdelt {"topik":"ekonomi","hari":1,"jumlah":5} : daftar artikel berita dari GDELT (judul, sumber, tanggal, tautan). Tidak memakai kuota model. Hari 1 sampai 7.
+- cari_google {"q":"kata kunci"} : hasil pencarian Google (judul, tautan, cuplikan) lewat Serper. Butuh key di Pengaturan.
 - read {"url":"https://..."} : isi halaman web
 - search {"q":"pertanyaan"} : cari informasi terbaru di web
 Untuk menampilkan foto atau video dari link yang kamu temukan di pencarian, tulis di baris terpisah [foto: https://...] atau [video: https://...]. Hanya pakai URL https langsung ke file gambar atau video yang benar-benar ada di hasil pencarian. Jangan membuat URL sendiri dan jangan pakai link YouTube atau halaman web biasa.
