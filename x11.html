@@ -4326,7 +4326,7 @@ XT.code=async a=>{
  if(!ss||window.GTTS)return;
  const MODEL='gemini-3.8-flash-tts',VOICE='Aoede',MAXCH=3000;
  const STYLE='Katakan dengan nada hangat, santai, dan alami seperti orang sungguhan yang sedang mengobrol di telepon, dengan intonasi dan jeda yang wajar: ';
- const STYLE_CALL='Katakan seperti orang Indonesia sungguhan yang sedang ngobrol santai lewat telepon: hangat, spontan, tempo bervariasi, ada jeda napas pendek yang wajar, intonasi naik turun mengikuti makna, tertawa kecil bila ada haha atau hehe, bukan seperti membaca teks atau pembawa berita: ';
+ const STYLE_CALL='Bicaralah dalam bahasa Indonesia sehari-hari seperti orang sungguhan yang sedang menelepon temannya: hangat, ramah, dan spontan. Tempo bervariasi, kadang lebih cepat saat antusias dan kadang pelan saat serius. Beri jeda singkat dan napas alami di antara frasa seperti manusia pada umumnya. Intonasi naik turun mengikuti makna kalimat. Jangan terdengar seperti pembawa berita atau membaca naskah. Jangan mengucapkan tanda baca, dan jangan mengeluarkan bunyi dengung atau suara panjang yang tidak berbentuk kata. Ucapkan teks berikut: ';
  const nat={speak:ss.speak.bind(ss),cancel:ss.cancel.bind(ss)};
  const natSpeaking=()=>{try{return Object.getOwnPropertyDescriptor(Object.getPrototypeOf(ss),'speaking').get.call(ss)}catch(e){return false}};
  const off=()=>{try{return localStorage.getItem('gtts_off')==='1'}catch(e){return false}};
