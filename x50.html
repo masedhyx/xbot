@@ -68,9 +68,10 @@ footer{padding:6px 18px calc(env(safe-area-inset-bottom) + 12px);position:relati
 </main>
 <div id="sm" hidden></div>
 <script>
+window.RAWFETCH=window.RAWFETCH||window.fetch.bind(window);
 /* daftar model */
-const DEF_MODEL='gemini:gemini-3.8-flash',DEF_IMG='gemini-3.1-flash-image';
-const FALLBACK_MODELS=[{id:'gemini:gemini-3.8-flash',label:'gemini-3.8-flash'},{id:'gemini:gemini-3.6-flash',label:'gemini-3.6-flash'},{id:'gemini:gemini-3.5-flash-lite',label:'gemini-3.5-flash-lite'},{id:'gemini:gemini-3.1-flash-lite',label:'gemini-3.1-flash-lite'},{id:'gemini:gemini-2.5-flash',label:'gemini-2.5-flash'},{id:'gemini:gemini-2.5-flash-lite',label:'gemini-2.5-flash-lite'},{id:'groq:openai/gpt-oss-120b',label:'GPT-OSS 120B — paling kuat'},{id:'groq:openai/gpt-oss-20b',label:'GPT-OSS 20B — lebih ringan & cepat'},{id:'groq:qwen/qwen3.8-27b',label:'Qwen 3.8 27B — penalaran & umum'}];
+const DEF_MODEL='gemini:gemini-3.1-flash-lite',DEF_IMG='gemini-3.1-flash-image';
+const FALLBACK_MODELS=[{id:'gemini:gemini-3.6-flash',label:'gemini-3.6-flash'},{id:'gemini:gemini-3.5-flash-lite',label:'gemini-3.5-flash-lite'},{id:'gemini:gemini-3.1-flash-lite',label:'gemini-3.1-flash-lite'},{id:'gemini:gemini-2.5-flash',label:'gemini-2.5-flash'},{id:'gemini:gemini-2.5-flash-lite',label:'gemini-2.5-flash-lite'},{id:'groq:openai/gpt-oss-120b',label:'GPT-OSS 120B — paling kuat'},{id:'groq:openai/gpt-oss-20b',label:'GPT-OSS 20B — lebih ringan & cepat'},{id:'groq:qwen/qwen3.8-27b',label:'Qwen 3.8 27B — penalaran & umum'}];
 const FALLBACK_IMG=[{id:'gemini-3.1-flash-image',label:'gemini-3.1-flash-image'}];
 const SERVER_URL='https://xbot.edhymaster70.workers.dev';
 const PW_HASH='42d5eaa7af283ddcd8f11ce357934a5ec7aa4e21f37c029a2ee047ab889d2ae9';
@@ -116,7 +117,7 @@ const md=(s,p)=>{const TB=[],T=h=>{TB.push(h);return '\u0001'+(TB.length-1)+'\u0
 let BID=0;
 const bot=c=>{const k="k"+(++BID);return `<svg${c==='#3a3a38'?' style="--ey:#fff"':''} viewBox="114.4 21.35 411.4 411.4"><clipPath id="${k}"><circle class="cc" cx="320.1" cy="227.05" r="205.7"/></clipPath><circle class="bd" cx="320.1" cy="227.05" r="205.7" fill="${c}"/><g clip-path="url(#${k})"><path class="e"/><path class="e"/></g></svg>`};
 let cfg;try{cfg=JSON.parse(localStorage.getItem('xbot'))}catch{}
-cfg=Object.assign({url:SERVER_URL,keys:{},model:DEF_MODEL,img:DEF_IMG,mode:'auto',bots:NM.map((n,i)=>({name:'Bot '+n,prompt:`Kamu asisten AI yang ${TRAIT[i]}. Jawab dalam bahasa Indonesia.`}))},cfg||{});cfg.url=SERVER_URL;
+cfg=Object.assign({url:SERVER_URL,keys:{},model:DEF_MODEL,img:DEF_IMG,mode:'auto',bots:NM.map((n,i)=>({name:'Bot '+n,prompt:`Kamu asisten AI yang ${TRAIT[i]}. Jawab dalam bahasa Indonesia.`}))},cfg||{});cfg.url=SERVER_URL;if(/3\.8-flash/.test(String(cfg.model||'')))cfg.model=DEF_MODEL;
 cfg.panel=Object.assign({on:true,keys:{gemini:'',groq:''},model:'',gap:'4.5-8',max:0},cfg.panel||{});cfg.panel.keys=Object.assign({gemini:'',groq:''},cfg.panel.keys);
 if(cfg.bots[5]&&/^bot orange$/i.test(cfg.bots[5].name))cfg.bots[5].name='Bot Hitam';
 if(!cfg.bots[10])cfg.bots[10]={name:'edhyx',prompt:'Kamu edhyx, asisten AI yang cerdas, ramah, dan santai. Jawab dalam bahasa Indonesia dengan jelas dan membantu.'};
@@ -391,8 +392,12 @@ async function settings(){
  try{IMGS=await(await fetch(cfg.url.replace(/\/$/,'')+'/image-models')).json();if(!Array.isArray(IMGS)||!IMGS.length)IMGS=FALLBACK_IMG}catch{IMGS=FALLBACK_IMG}
  const opt=(m,v)=>`<option value="${esc(m.id)}"${m.id==v?' selected':''}>${esc(m.label)}</option>`,grp=(n,p)=>{const l=MODELS.filter(m=>m.id.startsWith(p+':'));return l.length?`<optgroup label="${n}">${l.map(m=>opt(m,cfg.model)).join('')}</optgroup>`:''},hint='font-size:14px;color:#8a8a8a;margin:0 0 8px';
  const K=['groq','gemini','tavily','exa','firecrawl'];
+const akRow=m=>`<div style="display:flex;align-items:center;gap:12px;padding:9px 0;border-bottom:1px solid #2a2a2c"><button type="button" class="akd" data-m="${esc(m.id)}" aria-label="Cek ${esc(m.label)}" style="width:24px;height:24px;border-radius:50%;background:#555;border:0;padding:0;flex:none"></button><div style="flex:1;min-width:0"><div style="font-size:15px;word-break:break-word">${esc(m.label)}</div><div class="aks" style="font-size:12px;color:#8a8a8a;word-break:break-word">Belum dicek</div></div></div>`;
+ const akGrp=(n,p)=>{const l=MODELS.filter(m=>m.id.startsWith(p+':'));return l.length?`<div style="font-size:13px;color:#8a8a8a;margin:12px 0 2px;text-transform:uppercase;letter-spacing:.5px">${n}</div>${l.map(akRow).join('')}`:''};
+ const akHTML=()=>`<h3>Status API</h3><p style="${hint}">Ketuk bulatan untuk cek. Hijau = key aman, merah = kuota habis atau key salah, kuning = error lain.</p><div id="ak">${akGrp('Groq','groq')}${akGrp('Gemini','gemini')}</div><button type="button" id="ak_all" class="bo" style="width:100%;margin-top:12px!important;text-align:center">Cek semua</button>`;
  $('#sm').hidden=false;$('#sm').innerHTML=`<button id="x" style="font-size:17px;color:#6ab0ff">← Kembali</button>
   <h3>API key (disimpan di browser ini saja; kosong = pakai key bawaan server)</h3>${K.map(k=>`<input type="password" id="k_${k}" placeholder="${k}" value="${esc(cfg.keys[k]||'')}">`).join('')}
+${akHTML()}
  <h3>Foto gratis</h3><p style="${hint}">Key gratis dari pixabay.com/api/docs dan pexels.com/api. Urutan: Pixabay, Pexels, lalu Wikimedia. Video tetap lewat YouTube seperti biasa. Kosong = langsung pakai cadangan.</p><input type="password" id="k_pixabay" placeholder="Pixabay key" value="${esc((cfg.media||{}).pixabay||'')}"><input type="password" id="k_pexels" placeholder="Pexels key" value="${esc((cfg.media||{}).pexels||'')}"><input type="password" id="k_unsplash" placeholder="Unsplash Access Key (cadangan foto)" value="${esc((cfg.media||{}).unsplash||'')}"><p style="${hint}">Cadangan tambahan: Unsplash (pakai key di atas) dan Openverse (otomatis, tanpa key). Parallel dipakai sebagai cadangan pencarian web kalau pencarian utama gagal.</p><input type="password" id="k_parallel" placeholder="Parallel key (cadangan pencarian web)" value="${esc((cfg.media||{}).parallel||'')}"><input type="password" id="k_serper" placeholder="Serper key (cari Google, opsional)" value="${esc((cfg.media||{}).serper||'')}">
  <h3>Model AI</h3><p style="${hint}">Teks dan foto. Kalau foto dikirim, otomatis diproses Gemini.</p><select id="s_model">${grp('Gemini','gemini')}${grp('Groq','groq')}</select>
  <h3>Model gambar</h3><p style="${hint}">Dipakai di "/gambar". Model gambar sering butuh akun berbayar.</p><select id="s_img">${IMGS.map(m=>opt(m,cfg.img||DEF_IMG)).join('')}</select>
@@ -405,6 +410,41 @@ async function settings(){
   $('#bp').innerHTML=cfg.bots.map((b,i)=>HIDE.includes(i)?'':`<div class="bo"><div style="display:flex;gap:10px;align-items:center"><div style="width:18px;flex:none">${bot(COL[i])}</div><input id="n${i}" value="${esc(b.name)}"></div><textarea id="p${i}">${esc(b.prompt)}</textarea></div>`).join('')};
  if(AUTH)$('#ub').click();
  $('#x').onclick=()=>$('#sm').hidden=true;
+
+ const AKC={ok:'#30d158',quota:'#ff453a',key:'#ff453a',err:'#ffd60a',run:'#8a8a8a'};
+ const akKey=p=>((($('#k_'+p)||{}).value)||cfg.keys[p]||'').trim();
+ const akTO=(ms)=>{const c=new AbortController();setTimeout(()=>c.abort(),ms);return c.signal};
+ const akCls=(st,msg)=>{const m=String(msg||'');
+  if(st===429||/429|quota|rate.?limit|exhaust/i.test(m))return {s:'quota',m:'Kuota habis'+(m?': '+m.slice(0,110):'')};
+  if(st===401||st===403||/api key|invalid|unauthor|permission|API_KEY/i.test(m))return {s:'key',m:'Key salah / tidak diizinkan'};
+  if(st===404)return {s:'err',m:'Model tidak ditemukan'};
+  return {s:'err',m:(st?'HTTP '+st+': ':'')+m.slice(0,120)}};
+ const akMsg=async r=>{try{const j=await r.json();return (j.error&&(j.error.message||j.error))||''}catch{return ''}};
+ async function akCek(id){
+  const [prov,...rest]=id.split(':'),model=rest.join(':'),key=akKey(prov);
+  try{
+   if(key&&prov==='gemini'){
+    const r=await RAWFETCH('https://generativelanguage.googleapis.com/v1beta/models/'+encodeURIComponent(model)+':generateContent?key='+encodeURIComponent(key),{method:'POST',signal:akTO(25000),headers:{'Content-Type':'application/json'},body:JSON.stringify({contents:[{parts:[{text:'ok'}]}],generationConfig:{maxOutputTokens:8}})});
+    return r.ok?{s:'ok',m:'Aman'}:akCls(r.status,await akMsg(r));
+   }
+   if(key&&prov==='groq'){
+    const r=await RAWFETCH('https://api.groq.com/openai/v1/chat/completions',{method:'POST',signal:akTO(25000),headers:{'Content-Type':'application/json','Authorization':'Bearer '+key},body:JSON.stringify({model,messages:[{role:'user',content:'ok'}],max_tokens:16})});
+    return r.ok?{s:'ok',m:'Aman'}:akCls(r.status,await akMsg(r));
+   }
+   /* key kosong di browser: lewat server (memakai key bawaan server) */
+   const r=await RAWFETCH(cfg.url.replace(/\/$/,'')+'/chat',{method:'POST',signal:akTO(25000),headers:{'Content-Type':'application/json'},body:JSON.stringify({messages:[{role:'user',content:'Balas satu kata: ok'}],image:null,image_gen:false,system:'Balas singkat.',now:new Date().toISOString(),tz:Intl.DateTimeFormat().resolvedOptions().timeZone,model:id,imgModel:cfg.img||DEF_IMG,mode:'off',keys:{}})});
+   if(!r.ok)return akCls(r.status,'');
+   let fin=null;for(const l of (await r.text()).split('\n')){if(!l.trim())continue;let j;try{j=JSON.parse(l)}catch{continue}if(!j.s)fin=j}
+   if(!fin)return {s:'err',m:'Balasan kosong'};
+   if(fin.error)return akCls(0,fin.error);
+   return {s:'ok',m:'Aman (lewat key server)'};
+  }catch(e){return {s:'err',m:(e&&e.name==='AbortError')?'Timeout':'Gagal terhubung'}}
+ }
+ const akRun=async b=>{if(b.dataset.run)return;b.dataset.run='1';const st=b.parentElement.querySelector('.aks');
+  b.style.background=AKC.run;b.style.opacity='.5';st.textContent='Mengecek...';st.style.color='#8a8a8a';
+  const r=await akCek(b.dataset.m);b.style.opacity='1';b.style.background=AKC[r.s];st.textContent=r.m;st.style.color=r.s==='ok'?'#30d158':AKC[r.s];b.dataset.run='';return r};
+ document.querySelectorAll('#ak .akd').forEach(b=>b.onclick=()=>akRun(b));
+ $('#ak_all').onclick=async e=>{const t=e.target;if(t.dataset.run)return;t.dataset.run='1';t.textContent='Mengecek...';for(const b of document.querySelectorAll('#ak .akd'))await akRun(b);t.textContent='Cek semua';t.dataset.run=''};
  $('#sv').onclick=()=>{K.forEach(k=>cfg.keys[k]=$('#k_'+k).value.trim());cfg.media={pixabay:$('#k_pixabay').value.trim(),pexels:$('#k_pexels').value.trim(),unsplash:$('#k_unsplash').value.trim(),parallel:$('#k_parallel').value.trim(),serper:(($('#k_serper')||{}).value||'').trim()};cfg.model=$('#s_model').value;cfg.img=$('#s_img').value.trim()||DEF_IMG;cfg.mode=$('#s_mode').value;cfg.panel.on=$('#p_on').value=='1';cfg.panel.keys={gemini:$('#pk_gemini').value.trim(),groq:$('#pk_groq').value.trim()};cfg.panel.model=$('#p_model').value;cfg.panel.gap=$('#p_gap').value;cfg.panel.max=+$('#p_max').value;PX.read();
   if(unlocked)cfg.bots.forEach((b,i)=>{if(HIDE.includes(i))return;b.name=$('#n'+i).value||b.name;b.prompt=$('#p'+i).value});
   save();renderBots();reset();$('#sm').hidden=true;setOpen(false)}}
@@ -1688,13 +1728,12 @@ XT.read=async({url})=>{
 };
 XT.search=async({q})=>{
   if(!q) throw new Error('Query kosong');
-  const r=await origFetch(SERVER_URL.replace(/\/$/,'')+'/chat',{method:'POST',headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({messages:[{role:'user',content:q}],image:null,image_gen:false,
+  const cr=await callChain(SERVER_URL.replace(/\/$/,'')+'/chat',{method:'POST',headers:{'Content-Type':'application/json'}},
+    {messages:[{role:'user',content:q}],image:null,image_gen:false,
       system:'Cari informasi terbaru di web untuk pertanyaan ini lalu jawab ringkas dalam bahasa Indonesia.',
       now:new Date().toISOString(),tz:Intl.DateTimeFormat().resolvedOptions().timeZone,
-      model:DEF_MODEL,imgModel:DEF_IMG,mode:'on',keys:(typeof cfg!=='undefined'&&cfg&&cfg.keys)||{}})});
-  if(!r.ok) throw new Error('Pencarian gagal: HTTP '+r.status);
-  const fin=await readFinal(r);
+      model:DEF_MODEL,imgModel:DEF_IMG,mode:'on',keys:(typeof cfg!=='undefined'&&cfg&&cfg.keys)||{}});
+  const fin=cr.fin;
   if(!fin||fin.error||!fin.text) throw new Error(fin?.error||'Tidak ada hasil');
   return {q,hasil:fin.text.slice(0,3000)};
 };
@@ -1754,6 +1793,43 @@ const readFinal=async r=>{
   for(const l of t.split('\n')){if(!l.trim())continue;let j;try{j=JSON.parse(l)}catch{continue}if(!j.s)fin=j}
   return fin;
 };
+/* ---------- Rantai cadangan model: Groq (semua) -> Gemini (semua). Error baru muncul kalau SEMUA gagal ---------- */
+const XGQ=['groq:openai/gpt-oss-120b','groq:openai/gpt-oss-20b','groq:qwen/qwen3.8-27b'];
+const XGM=['gemini:gemini-3.1-flash-lite','gemini:gemini-2.5-flash-lite','gemini:gemini-3.5-flash-lite','gemini:gemini-2.5-flash','gemini:gemini-3.6-flash'];
+const XBAD=new Map();
+const xbad=k=>(XBAD.get(k)||0)>Date.now();
+const xquota=m=>/429|quota|rate.?limit|exhausted|RESOURCE_EXHAUSTED|too many/i.test(String(m||''));
+async function callChain(input,init,body,accept){
+  const first=String(body.model||'');
+  const plan=[],add=(m,mode)=>{const k=m+'|'+mode;if(m&&!plan.some(x=>x.k===k))plan.push({k,model:m,mode})};
+  const media=!!(body.image||body.image_gen);
+  if(body.image&&!body.image_gen)XGM.forEach(m=>add(m,body.mode));
+  add(first,body.mode);
+  if(!media){
+    if(first.startsWith('groq:')){add(first,'on');XGQ.forEach(m=>add(m,body.mode))}
+  }
+  XGM.forEach(m=>add(m,body.mode));
+  let soft=null,noG=0;const errs=[];let anyOk=plan.some(x=>!xbad(x.k));
+  if(!anyOk&&plan.length>1){plan.length=1;anyOk=true;plan[0].k+='|probe'}/* semua baru gagal: cukup satu percobaan, jangan membanjiri server */
+  for(const p of plan){
+    if(anyOk&&xbad(p.k))continue;
+    if(noG&&p.model.startsWith('groq:'))continue;
+    try{
+      const r=await origFetch(input,{...init,body:JSON.stringify({...body,model:p.model,mode:p.mode})});
+      let fin=null,err=null;
+      if(!r.ok)err='HTTP '+r.status;
+      else{fin=await readFinal(r);if(!fin)err='balasan kosong';else if(fin.error)err=String(fin.error)}
+      if(!err&&accept&&!accept(fin)){soft=soft||{fin,model:p.model,mode:p.mode};if(p.model.startsWith('groq:'))noG=1;errs.push(p.model.replace(/^[a-z]+:/,'')+': jawaban menolak');continue}
+      if(!err)return {fin,model:p.model,mode:p.mode};
+      errs.push(p.model.replace(/^[a-z]+:/,'')+': '+err.slice(0,120));
+      XBAD.set(p.k,Date.now()+(xquota(err)?10*60e3:3*60e3));
+    }catch(e){errs.push(p.model.replace(/^[a-z]+:/,'')+': '+String((e&&e.message)||e).slice(0,100));XBAD.set(p.k,Date.now()+3*60e3)}
+  }
+  if(soft)return soft;
+  const allQuota=errs.length&&errs.every(e=>xquota(e));
+  return {fin:{error:allQuota?'Kuota semua model habis untuk saat ini. Coba lagi nanti.':'Semua model gagal: '+errs.slice(-3).join(' | ')},model:null,mode:body.mode};
+}
+window.XCHAIN=callChain;
 /* Ambil pemanggilan tool dari balasan model. Terima: <tool>{..}</tool>, ```json {..}```, atau JSON mentah {"name":..,"args":..} */
 const TOOL_PATTERNS=[/<tool>\s*([\s\S]*?)\s*<\/tool>/,/```(?:tool|json)?\s*(\{[\s\S]*?"name"[\s\S]*?\})\s*```/,/(\{\s*"name"\s*:\s*"[^"]+"[\s\S]*?\})\s*$/];
 const jfix=s=>{let o='',q=0,e=0;for(const c of s){if(q){if(e){e=0;o+=c}else if(c==='\\'){e=1;o+=c}else if(c==='"'){q=0;o+=c}else if(c==='\n')o+='\\n';else if(c==='\r')o+='\\r';else if(c==='\t')o+='\\t';else o+=c}else{if(c==='"')q=1;o+=c}}return o};
@@ -1775,12 +1851,18 @@ const ANTI_HALU=`
 - Bedakan dengan jelas antara fakta yang terverifikasi dan dugaan pribadi.`;
   const MAINC=!body.image_gen&&String(body.system||'').includes('[Info perangkat pengguna]');
   body.system=(body.system||'')+TOOL_SYS+(MAINC?TOOL_SYS2:'')+ANTI_HALU;
+  const lastU=String([...(body.messages||[])].reverse().find(m=>m.role==='user')?.content||'').split('[HASIL ALAT')[0];
+  const FOTOQ=!body.image_gen&&/\b(foto|gambar|photo|picture|image|pic|wallpaper|tampilkan|perlihatkan)\b/i.test(lastU)&&!/\b(video|lagu|musik|audio)\b/i.test(lastU);
+  if(FOTOQ)body.system+=`
+
+[FOTO] Kamu BISA menampilkan foto di chat ini. Jika pengguna meminta foto/gambar, tulis satu kalimat pengantar lalu tag di baris sendiri: [foto: english keywords] (contoh [foto: Eiffel Tower]). Jangan menolak, jangan memakai format markdown ![](), dan jangan mengarang URL.`;
+  const FOTOREF=/(tidak|belum|nggak|gak|enggak)\s+(bisa|dapat|mampu)\s+\w*\s*(menampilkan|memberikan|mengirim|menunjukkan|memperlihatkan|menyertakan)[^.\n]{0,50}(foto|gambar)/i;
+  const acc=FOTOQ?(f=>!f||!f.text||/\[foto:|<tool>/i.test(f.text)||!FOTOREF.test(f.text)):null;
   let fin=null;
   try{
     for(let step=0;step<6;step++){
-      const r=await origFetch(input,{...init,body:JSON.stringify(body)});
-      if(!r.ok) throw new Error('HTTP '+r.status);
-      fin=await readFinal(r);
+      const cr=await callChain(input,init,body,acc);
+      fin=cr.fin;if(cr.model){body.model=cr.model;body.mode=cr.mode}
       if(!fin||fin.error||!fin.text) break;
       const blk=[...String(fin.text).matchAll(/<tool>\s*([\s\S]*?)\s*<\/tool>/g)].map(m=>jp(m[1])).filter(c=>c&&c.name);
       const calls=blk.length?blk:(()=>{const pt=parseTool(fin.text);return pt?[pt.call]:[]})();
@@ -2212,9 +2294,17 @@ const itn=async q=>{let any=false;
   if(r)return{src:r.previewUrl,title:r.trackName,sub:(r.artistName||'')+' · pratinjau 30 detik',art:ok(r.artworkUrl100)?r.artworkUrl100.replace('100x100bb','300x300bb'):''}}catch(e){}}
  if(!any){const e=new Error('net');e.net=1;throw e}
  return null};
+const imgOK=u=>new Promise(res=>{const i=new Image();let d=0;const f=v=>{if(!d){d=1;res(v)}};i.onload=()=>f(true);i.onerror=()=>f(false);setTimeout(()=>f(false),8000);i.src=u});
+const kwUrl=u=>{try{return decodeURIComponent(new URL(u).pathname.split('/').pop()||'').replace(/\.\w+$/,'').replace(/[-_+.]+/g,' ').replace(/\d{3,}/g,' ').replace(/\s+/g,' ').trim().slice(0,80)}catch(e){return ''}};
+async function fotoUrl(u){
+ if(await imgOK(u))return imgH(u);
+ const kw=kwUrl(u);
+ if(kw.length>=3){let sx=null;try{sx=await STK.find(kw,'foto')}catch(e){}if(sx)return stkH(sx);
+  try{const r=await wm(kw,'foto');if(r)return imgH(r.src)}catch(e){}}
+ throw 0}
 async function resolve(it){const q=it.q;
  if(/^https?:\/\//i.test(q)){if(!ok(q))throw 0;const y=it.k!=='foto'&&YT(q);if(y)return ytH(y);
-  if(it.k==='foto')return imgH(q);if(it.k==='video')return vidH(q);
+  if(it.k==='foto')return await fotoUrl(q);if(it.k==='video')return vidH(q);
   let n='';try{n=decodeURIComponent(q.split('#')[0].split('?')[0].split('/').pop()||'').replace(/\.\w+$/,'')}catch(e){}
   return audH(q,n)}
  if(it.k==='foto'){let sx=null;try{sx=await STK.find(q,'foto')}catch(e){}if(sx)return stkH(sx)}
@@ -2225,9 +2315,11 @@ async function resolve(it){const q=it.q;
  if(!r)throw 0;
  return it.k==='foto'?imgH(r.src):it.k==='video'?vidH(r.src):audH(r.src,r.title,'Wikimedia Commons')}
 const TAG=/\[(foto|video|audio|musik|lagu):\s*([^\]\n]{1,200})\]/gi;
+/* Bentuk lain penulisan foto (sering dari Groq) dijadikan [foto: ...]. Video/audio tidak diubah. */
+const NORMF=t=>String(t).replace(/!\[[^\]\n]*\]\((https:\/\/[^\s)]+)\)/g,'[foto: $1]').replace(/\[(?:gambar|image|images|photo|picture|pic|img|foto)\s*[:=-]\s*/gi,'[foto: ');
 const MP=window.MP={
  parse(raw){const items=[],tags=[];
-  const out=String(raw||'').split(/(```[\s\S]*?```)/).map((p,i)=>i%2?p:p.replace(TAG,(m,k,q)=>{k=k.toLowerCase();if(k==='lagu')k='musik';q=q.trim();if(q&&items.length<4){items.push({k,q});tags.push('['+k+': '+q+']')}return''})).join('');
+  const out=String(raw||'').split(/(```[\s\S]*?```)/).map((p,i)=>i%2?p:NORMF(p).replace(TAG,(m,k,q)=>{k=k.toLowerCase();if(k==='lagu')k='musik';q=q.trim();if(q&&items.length<4){items.push({k,q});tags.push('['+k+': '+q+']')}return''})).join('');
   return{text:out.replace(/[ \t]+\n/g,'\n').replace(/\n{3,}/g,'\n\n').trim(),items,tags:tags.join('\n')}},
  mount(box,items){const bt=box.querySelector('.bt');if(!bt||!items.length)return;const w=document.createElement('div');w.className='mp';bt.after(w);
   items.forEach(it=>{const s=document.createElement('div');s.className='mpl';s.textContent='⏳ mencari '+(LB[it.k]||'media')+'...';w.appendChild(s);
@@ -4364,21 +4456,38 @@ function gabung(q, lists){
 
 const XT_ASLI = (window.XT && typeof XT.search === 'function') ? XT.search.bind(XT) : null;
 
+const gabungList = ls => { const seen=new Set(), o=[]; for(const L of ls) for(const x of (L||[])){ const k=x.u?x.u.replace(/[#?].*$/,''):x.t; if(!x||!x.t||seen.has(k)) continue; seen.add(k); o.push(x) } return o };
+
 async function pencarianBertingkat(q){
   const fresh = isFresh(q);
-  const tasks = [];
-  if(CFG.WIKI_ID) tasks.push(wikiSearch(q,'id'));
-  if(CFG.WIKI_EN) tasks.push(wikiSearch(q,'en'));
-  if(CFG.GDELT_ON && fresh) tasks.push(gdeltSearch(q));
-  const hasil1 = await Promise.allSettled(tasks);
-  const L1 = hasil1.filter(r=>r.status==='fulfilled').map(r=>r.value);
-  let items = L1.flat();
-  if(items.length) STATS.searchWiki++;
-
-  if(CFG.SERPER_ON && (!items.length || (fresh && items.length < 3))){
-    await throttle();
-    const L2 = await serperSearch(q);
-    if(L2.length){ items = items.concat(L2); STATS.searchSerper++ }
+  let items = [];
+  if(fresh){
+    /* pertanyaan segar: Google (Serper) + GDELT dulu; Wikipedia hanya cadangan */
+    const t = [];
+    if(CFG.SERPER_ON){ await throttle(); t.push(serperSearch(q).then(r=>{ if(r.length) STATS.searchSerper++; return r })) }
+    if(CFG.GDELT_ON) t.push(gdeltSearch(q).then(r=>{ if(r.length) STATS.searchGdelt++; return r }));
+    const L = await Promise.allSettled(t);
+    items = L.filter(r=>r.status==='fulfilled').map(r=>r.value);
+    items = gabungList(items);
+    if(!items.length){
+      const w = [];
+      if(CFG.WIKI_ID) w.push(wikiSearch(q,'id'));
+      if(CFG.WIKI_EN) w.push(wikiSearch(q,'en'));
+      items = (await Promise.allSettled(w)).filter(r=>r.status==='fulfilled').flatMap(r=>r.value);
+      if(items.length) STATS.searchWiki++;
+    }
+  } else {
+    const tasks = [];
+    if(CFG.WIKI_ID) tasks.push(wikiSearch(q,'id'));
+    if(CFG.WIKI_EN) tasks.push(wikiSearch(q,'en'));
+    const hasil1 = await Promise.allSettled(tasks);
+    items = hasil1.filter(r=>r.status==='fulfilled').flatMap(r=>r.value);
+    if(items.length) STATS.searchWiki++;
+    if(CFG.SERPER_ON && !items.length){
+      await throttle();
+      const L2 = await serperSearch(q);
+      if(L2.length){ items = items.concat(L2); STATS.searchSerper++ }
+    }
   }
 
   if(items.length){
@@ -4464,7 +4573,7 @@ window.fetch = async function(input, init){
     const lastUser = String((b.messages||[]).filter(m=>m.role==='user').slice(-1)[0]?.content || '');
     const isHeavy = CFG.HEAVY_HINT.test(lastUser);
     const isLite = !isHeavy && lastUser.length < CFG.LITE_MAX_LEN;
-    const userChose = (typeof cfg!=='undefined') && cfg.model && cfg.model !== 'gemini:gemini-3.8-flash' && cfg.model !== CFG.GEMINI_HEAVY;
+    const userChose = (typeof cfg!=='undefined') && cfg.model && cfg.model !== CFG.GEMINI_HEAVY;
     if(!userChose){
       if(isLite && hasGroq()){ b.model = CFG.GROQ_LITE; STATS.groqLite++ }
       else if(isLite && !hasGroq() && hasGemini()){ b.model = CFG.GEMINI_LITE_FALLBACK; STATS.geminiFallback++ }
