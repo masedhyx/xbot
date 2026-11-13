@@ -3065,7 +3065,11 @@ if(SR&&ib){
       if(i>=q.length){fin();return}
       const part=q[i++];
       const u=new SpeechSynthesisUtterance(part);
-      u.lang='id-ID';u.rate=0.93;u.pitch=1.03;u.volume=1;
+      /* variasi kecil tiap kalimat supaya tidak datar seperti robot: kecepatan, nada, dan naik-turun di akhir tanya */
+      u.lang='id-ID';
+      u.rate=0.9+Math.random()*0.1;
+      u.pitch=0.98+Math.random()*0.1+(/\?\s*$/.test(part)?0.08:0);
+      u.volume=1;
       const v=getVoice();if(v)u.voice=v;
       let fired=false,wd=0;
       const go=()=>{if(fired)return;fired=true;clearTimeout(wd);next()};
