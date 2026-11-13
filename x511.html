@@ -393,7 +393,6 @@ async function settings(){
  const K=['groq','gemini','tavily','exa','firecrawl'];
  $('#sm').hidden=false;$('#sm').innerHTML=`<button id="x" style="font-size:17px;color:#6ab0ff">← Kembali</button>
   <h3>API key (disimpan di browser ini saja; kosong = pakai key bawaan server)</h3>${K.map(k=>`<input type="password" id="k_${k}" placeholder="${k}" value="${esc(cfg.keys[k]||'')}">`).join('')}
- <h3>Key suara Gemini (TTS)</h3><p style="${hint}">Otomatis = ikut key Gemini chat. Manual = pakai key di bawah (boleh lebih dari satu, pisahkan dengan koma).</p><select id="s_gtts_mode"><option value="auto" ${((cfg.media||{}).gttsMode||'auto')==='auto'?'selected':''}>Otomatis (ikut key chat)</option><option value="manual" ${(cfg.media||{}).gttsMode==='manual'?'selected':''}>Manual (key khusus TTS)</option></select><input type="password" id="k_gtts" placeholder="Key TTS manual" value="${esc((cfg.media||{}).gtts||'')}"><p style="${hint}">Status kuota: ${gttsDotHTML()}</p>
  <h3>Foto gratis</h3><p style="${hint}">Key gratis dari pixabay.com/api/docs dan pexels.com/api. Urutan: Pixabay, Pexels, lalu Wikimedia. Video tetap lewat YouTube seperti biasa. Kosong = langsung pakai cadangan.</p><input type="password" id="k_pixabay" placeholder="Pixabay key" value="${esc((cfg.media||{}).pixabay||'')}"><input type="password" id="k_pexels" placeholder="Pexels key" value="${esc((cfg.media||{}).pexels||'')}"><input type="password" id="k_unsplash" placeholder="Unsplash Access Key (cadangan foto)" value="${esc((cfg.media||{}).unsplash||'')}"><p style="${hint}">Cadangan tambahan: Unsplash (pakai key di atas) dan Openverse (otomatis, tanpa key). Parallel dipakai sebagai cadangan pencarian web kalau pencarian utama gagal.</p><input type="password" id="k_parallel" placeholder="Parallel key (cadangan pencarian web)" value="${esc((cfg.media||{}).parallel||'')}"><p style="${hint}">Serper (google.serper.dev) dipakai sebagai cadangan pencarian web setelah pencarian utama dan Parallel. Key hanya disimpan di browser kamu.</p><input type="password" id="k_serper" placeholder="Serper key (cadangan pencarian web)" value="${esc((cfg.media||{}).serper||'')}">
  <h3>Model AI</h3><p style="${hint}">Teks dan foto. Kalau foto dikirim, otomatis diproses Gemini.</p><select id="s_model">${grp('Gemini','gemini')}${grp('Groq','groq')}</select>
  <h3>Model gambar</h3><p style="${hint}">Dipakai di "/gambar". Model gambar sering butuh akun berbayar.</p><select id="s_img">${IMGS.map(m=>opt(m,cfg.img||DEF_IMG)).join('')}</select>
@@ -406,7 +405,7 @@ async function settings(){
   $('#bp').innerHTML=cfg.bots.map((b,i)=>HIDE.includes(i)?'':`<div class="bo"><div style="display:flex;gap:10px;align-items:center"><div style="width:18px;flex:none">${bot(COL[i])}</div><input id="n${i}" value="${esc(b.name)}"></div><textarea id="p${i}">${esc(b.prompt)}</textarea></div>`).join('')};
  if(AUTH)$('#ub').click();
  $('#x').onclick=()=>$('#sm').hidden=true;
- $('#sv').onclick=()=>{K.forEach(k=>cfg.keys[k]=$('#k_'+k).value.trim());cfg.media={gtts:($('#k_gtts')?$('#k_gtts').value.trim():((cfg.media||{}).gtts||'')),gttsMode:($('#s_gtts_mode')?$('#s_gtts_mode').value:((cfg.media||{}).gttsMode||'auto')),pixabay:$('#k_pixabay').value.trim(),pexels:$('#k_pexels').value.trim(),unsplash:$('#k_unsplash').value.trim(),parallel:$('#k_parallel').value.trim(),serper:(($('#k_serper')||{}).value||'').trim()};cfg.model=$('#s_model').value;cfg.img=$('#s_img').value.trim()||DEF_IMG;cfg.mode=$('#s_mode').value;cfg.panel.on=$('#p_on').value=='1';cfg.panel.keys={gemini:$('#pk_gemini').value.trim(),groq:$('#pk_groq').value.trim()};cfg.panel.model=$('#p_model').value;cfg.panel.gap=$('#p_gap').value;cfg.panel.max=+$('#p_max').value;PX.read();
+ $('#sv').onclick=()=>{K.forEach(k=>cfg.keys[k]=$('#k_'+k).value.trim());cfg.media={pixabay:$('#k_pixabay').value.trim(),pexels:$('#k_pexels').value.trim(),unsplash:$('#k_unsplash').value.trim(),parallel:$('#k_parallel').value.trim(),serper:(($('#k_serper')||{}).value||'').trim()};cfg.model=$('#s_model').value;cfg.img=$('#s_img').value.trim()||DEF_IMG;cfg.mode=$('#s_mode').value;cfg.panel.on=$('#p_on').value=='1';cfg.panel.keys={gemini:$('#pk_gemini').value.trim(),groq:$('#pk_groq').value.trim()};cfg.panel.model=$('#p_model').value;cfg.panel.gap=$('#p_gap').value;cfg.panel.max=+$('#p_max').value;PX.read();
   if(unlocked)cfg.bots.forEach((b,i)=>{if(HIDE.includes(i))return;b.name=$('#n'+i).value||b.name;b.prompt=$('#p'+i).value});
   save();renderBots();reset();$('#sm').hidden=true;setOpen(false)}}
 let AUTH=false;
@@ -2967,6 +2966,7 @@ if(SR&&ib){
 
   const killRec=()=>{
     clearTimeout(sil);
+    if(typeof bargeStop==='function')bargeStop();
     const r=rec;rec=null;
     if(r){r.onresult=r.onerror=r.onend=null;try{r.abort()}catch(e){}}
   };
@@ -3049,7 +3049,12 @@ if(SR&&ib){
     if(cur.trim())out.push(cur.trim());
     return out;
   };
-  const getVoice=()=>{try{return speechSynthesis.getVoices().find(v=>/^id[-_]/i.test(v.lang))||null}catch(e){return null}};
+  /* ---- suara bawaan (dipakai saat Gemini tidak aktif): pilih suara Indonesia terbaik, bicara lebih santai ---- */
+  const getVoice=()=>{try{
+    const vs=(speechSynthesis.getVoices()||[]).filter(v=>/^id[-_]/i.test(v.lang));
+    if(!vs.length)return null;
+    return vs.find(v=>/google|damayanti|gadis|ardi|microsoft/i.test(v.name))||vs[0];
+  }catch(e){return null}};
   const speak=(text,my)=>new Promise(res=>{
     const ss=window.speechSynthesis;
     if(!ss||!text||!SPK){res();return}
@@ -3060,12 +3065,12 @@ if(SR&&ib){
       if(i>=q.length){fin();return}
       const part=q[i++];
       const u=new SpeechSynthesisUtterance(part);
-      u.lang='id-ID';u.rate=1.05;
+      u.lang='id-ID';u.rate=0.93;u.pitch=1.03;u.volume=1;
       const v=getVoice();if(v)u.voice=v;
       let fired=false,wd=0;
       const go=()=>{if(fired)return;fired=true;clearTimeout(wd);next()};
       u.onend=go;u.onerror=go;
-      wd=setTimeout(go,Math.max(15000,part.length*120+15000)); /* jaga-jaga kalau onend tidak terpanggil */
+      wd=setTimeout(go,Math.max(15000,part.length*120+15000));
       try{ss.speak(u)}catch(e){go()}
     };
     try{ss.cancel()}catch(e){}
@@ -3107,10 +3112,42 @@ if(SR&&ib){
     if(!live||my!==sess)return;
     showTx(reply,false);
     setState('speak','');
+    bargeStart(reply,my);
     await speak(reply,my);
+    bargeStop();
     if(!live||my!==sess)return;
     await wait(350);
     if(live&&my===sess)listen();
+  };
+
+  /* ---- potong pembicaraan otomatis: dengar sambil bot bicara (tanpa earphone tetap diberi pengaman gema) ---- */
+  let bi=null;
+  const bNorm=x=>String(x||'').toLowerCase().replace(/[^\p{L}\p{N}\s]/gu,' ').split(/\s+/).filter(Boolean);
+  const bargeStop=()=>{const r=bi;bi=null;if(r){r.onresult=r.onerror=r.onend=null;try{r.abort()}catch(e){}}};
+  const bargeStart=(replyText,my)=>{
+    bargeStop();
+    if(!SR||!SPK)return;
+    const botW=new Set(bNorm(replyText));
+    const t0=Date.now();
+    let r;try{r=new SR()}catch(e){return}
+    r.lang='id-ID';r.interimResults=true;r.continuous=true;r.maxAlternatives=1;
+    r.onresult=e=>{
+      if(bi!==r||my!==sess||state!=='speak'||Date.now()-t0<900)return; /* abaikan gema di awal bicara bot */
+      let said='';
+      for(let i=0;i<e.results.length;i++)said+=' '+e.results[i][0].transcript;
+      const w=bNorm(said);
+      const novel=w.filter(x=>!botW.has(x)); /* kata yang bukan dari kalimat bot = suara pengguna */
+      if(w.length>=3&&novel.length>=2){
+        bargeStop();
+        sess++;
+        try{speechSynthesis.cancel()}catch(er){}
+        listen();
+      }
+    };
+    r.onerror=()=>{};
+    r.onend=()=>{if(bi===r&&live&&state==='speak'){try{r.start()}catch(er){bi=null}}};
+    bi=r;
+    try{r.start()}catch(e){bi=null}
   };
 
   /* ---- Buka / tutup panggilan ---- */
@@ -4279,8 +4316,6 @@ XT.code=async a=>{
  const off=()=>{try{return localStorage.getItem('gtts_off')==='1'}catch(e){return false}};
  const keys=()=>{try{
   const sp=s=>String(s||'').split(/[,\s]+/).filter(Boolean);
-  const m=(cfg&&cfg.media&&cfg.media.gttsMode)||'auto';
-  if(m==='manual')return sp(cfg&&cfg.media&&cfg.media.gtts);
   const a=sp(cfg&&cfg.keys&&cfg.keys.gemini);
   return a.length?a:sp(cfg&&cfg.panel&&cfg.panel.keys&&cfg.panel.keys.gemini);
  }catch(e){return[]}};
@@ -4353,8 +4388,6 @@ XT.code=async a=>{
 
  /* ---- antrean ucapan ---- */
  let Q=[],running=false,down=0,fails=0;
- const setSt=(ok,msg)=>{try{const o={ok:!!ok,msg:String(msg||'').slice(0,120),t:Date.now()};window.GTTS.st=o;localStorage.setItem('xbot_gtts_st',JSON.stringify(o))}catch(e){}};
- window.gttsDotHTML=()=>{const st=window.GTTS&&GTTS.st;const c=!st?'#8e8e93':st.ok?'#30d158':'#ff453a';const t=!st?'belum pernah dicoba':st.ok?'masih ada kuota (terakhir berhasil)':'kuota habis / gagal: '+(st.msg||'');return '<span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:'+c+';vertical-align:middle;margin-right:6px"></span>'+esc(t)};
  const fire=(u,t)=>setTimeout(()=>{try{u.dispatchEvent(new Event(t))}catch(e){}},0);
  const viaNative=j=>new Promise(res=>{
   j.native=1;let d=0;const f=()=>{if(!d){d=1;res()}};
@@ -4374,7 +4407,6 @@ XT.code=async a=>{
     if(err||!url){
      fails++;down=Date.now()+Math.min(600000,60000*Math.pow(2,fails-1));
      window.GTTS.lastError=String(err&&err.message||err||'gagal');
-     setSt(false,window.GTTS.lastError);
      try{console.warn('[Gemini TTS]',window.GTTS.lastError)}catch(e){}
      toast('Suara Gemini gagal ('+window.GTTS.lastError.slice(0,90)+'). Sementara pakai suara browser.');
      await viaNative(j);if(Q[0]===j)Q.shift();continue;
@@ -4383,7 +4415,7 @@ XT.code=async a=>{
     const r=await playUrl(url);
     if(Q[0]!==j)continue;                       /* dibatalkan saat diputar */
     Q.shift();
-    if(r==='ok'){fails=0;setSt(true,'');fire(j.u,'end')}
+    if(r==='ok'){fails=0;fire(j.u,'end')}
     else{fails++;down=Date.now()+60000;window.GTTS.lastError='audio tidak bisa diputar';fire(j.u,'error')}
    }
   }finally{running=false}
@@ -4410,7 +4442,7 @@ XT.code=async a=>{
  };
  try{Object.defineProperty(ss,'speaking',{configurable:true,get:()=>Q.length>0||natSpeaking()})}catch(e){}
 
- window.GTTS={model:MODEL,voice:VOICE,lastError:'',st:(()=>{try{return JSON.parse(localStorage.getItem('xbot_gtts_st')||'null')}catch(e){return null}})(),
+ window.GTTS={model:MODEL,voice:VOICE,lastError:'',
   test:t=>{const u=new SpeechSynthesisUtterance(t||'Halo, ini tes suara Aoede.');ss.speak(u)}};
 })();
 </script>
