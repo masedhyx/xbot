@@ -290,7 +290,7 @@ const sysx=()=>CRT+`\n\n[Info perangkat pengguna] Waktu sekarang di perangkat pe
 /* ===== NOTIFIKASI: suara + badge ikon + notif sistem ===== */
 let _ac=null,UNM=0;const T00=document.title;
 const audioUnlock=()=>{try{const A=window.AudioContext||window.webkitAudioContext;if(!A)return;_ac=_ac||new A();if(_ac.state==='suspended')_ac.resume()}catch(e){}};
-const ding=()=>{try{audioUnlock();if(!_ac)return;const t=_ac.currentTime;[[880,0],[1318.5,.13]].forEach(([f,d])=>{const o=_ac.createOscillator(),g=_ac.createGain();o.type='sine';o.frequency.value=f;g.gain.setValueAtTime(0,t+d);g.gain.linearRampToValueAtTime(.35,t+d+.015);g.gain.exponentialRampToValueAtTime(.001,t+d+.45);o.connect(g);g.connect(_ac.destination);o.start(t+d);o.stop(t+d+.5)});if(navigator.vibrate)navigator.vibrate(60)}catch(e){}};
+const ding=()=>{if(window.XCALL)return;try{audioUnlock();if(!_ac)return;const t=_ac.currentTime;[[880,0],[1318.5,.13]].forEach(([f,d])=>{const o=_ac.createOscillator(),g=_ac.createGain();o.type='sine';o.frequency.value=f;g.gain.setValueAtTime(0,t+d);g.gain.linearRampToValueAtTime(.35,t+d+.015);g.gain.exponentialRampToValueAtTime(.001,t+d+.45);o.connect(g);g.connect(_ac.destination);o.start(t+d);o.stop(t+d+.5)});if(navigator.vibrate)navigator.vibrate(60)}catch(e){}};
 const sysNotif=async(title,body)=>{try{if(!window.Notification||Notification.permission!=='granted')return;const o={body,icon:'icon-192.png',badge:'icon-192.png',tag:'xbot',renotify:true};
   const r=navigator.serviceWorker&&await navigator.serviceWorker.getRegistration();if(r)await r.showNotification(title,o);else new Notification(title,o)}catch(e){}};
 const askPerm=()=>{try{if(window.Notification&&Notification.permission==='default')Notification.requestPermission()}catch(e){}};
@@ -393,6 +393,7 @@ async function settings(){
  const K=['groq','gemini','tavily','exa','firecrawl'];
  $('#sm').hidden=false;$('#sm').innerHTML=`<button id="x" style="font-size:17px;color:#6ab0ff">← Kembali</button>
   <h3>API key (disimpan di browser ini saja; kosong = pakai key bawaan server)</h3>${K.map(k=>`<input type="password" id="k_${k}" placeholder="${k}" value="${esc(cfg.keys[k]||'')}">`).join('')}
+ <h3>Gemini key khusus suara (TTS)</h3><p style="${hint}">Khusus suara Aoede. Kosong = pakai key Gemini chat.</p><input type="password" id="k_gtts" placeholder="Gemini key TTS" value="${esc((cfg.media||{}).gtts||'')}">
  <h3>Foto gratis</h3><p style="${hint}">Key gratis dari pixabay.com/api/docs dan pexels.com/api. Urutan: Pixabay, Pexels, lalu Wikimedia. Video tetap lewat YouTube seperti biasa. Kosong = langsung pakai cadangan.</p><input type="password" id="k_pixabay" placeholder="Pixabay key" value="${esc((cfg.media||{}).pixabay||'')}"><input type="password" id="k_pexels" placeholder="Pexels key" value="${esc((cfg.media||{}).pexels||'')}"><input type="password" id="k_unsplash" placeholder="Unsplash Access Key (cadangan foto)" value="${esc((cfg.media||{}).unsplash||'')}"><p style="${hint}">Cadangan tambahan: Unsplash (pakai key di atas) dan Openverse (otomatis, tanpa key). Parallel dipakai sebagai cadangan pencarian web kalau pencarian utama gagal.</p><input type="password" id="k_parallel" placeholder="Parallel key (cadangan pencarian web)" value="${esc((cfg.media||{}).parallel||'')}"><p style="${hint}">Serper (google.serper.dev) dipakai sebagai cadangan pencarian web setelah pencarian utama dan Parallel. Key hanya disimpan di browser kamu.</p><input type="password" id="k_serper" placeholder="Serper key (cadangan pencarian web)" value="${esc((cfg.media||{}).serper||'')}">
  <h3>Model AI</h3><p style="${hint}">Teks dan foto. Kalau foto dikirim, otomatis diproses Gemini.</p><select id="s_model">${grp('Gemini','gemini')}${grp('Groq','groq')}</select>
  <h3>Model gambar</h3><p style="${hint}">Dipakai di "/gambar". Model gambar sering butuh akun berbayar.</p><select id="s_img">${IMGS.map(m=>opt(m,cfg.img||DEF_IMG)).join('')}</select>
@@ -405,7 +406,7 @@ async function settings(){
   $('#bp').innerHTML=cfg.bots.map((b,i)=>HIDE.includes(i)?'':`<div class="bo"><div style="display:flex;gap:10px;align-items:center"><div style="width:18px;flex:none">${bot(COL[i])}</div><input id="n${i}" value="${esc(b.name)}"></div><textarea id="p${i}">${esc(b.prompt)}</textarea></div>`).join('')};
  if(AUTH)$('#ub').click();
  $('#x').onclick=()=>$('#sm').hidden=true;
- $('#sv').onclick=()=>{K.forEach(k=>cfg.keys[k]=$('#k_'+k).value.trim());cfg.media={pixabay:$('#k_pixabay').value.trim(),pexels:$('#k_pexels').value.trim(),unsplash:$('#k_unsplash').value.trim(),parallel:$('#k_parallel').value.trim(),serper:(($('#k_serper')||{}).value||'').trim()};cfg.model=$('#s_model').value;cfg.img=$('#s_img').value.trim()||DEF_IMG;cfg.mode=$('#s_mode').value;cfg.panel.on=$('#p_on').value=='1';cfg.panel.keys={gemini:$('#pk_gemini').value.trim(),groq:$('#pk_groq').value.trim()};cfg.panel.model=$('#p_model').value;cfg.panel.gap=$('#p_gap').value;cfg.panel.max=+$('#p_max').value;PX.read();
+ $('#sv').onclick=()=>{K.forEach(k=>cfg.keys[k]=$('#k_'+k).value.trim());cfg.media={gtts:($('#k_gtts')?$('#k_gtts').value.trim():((cfg.media||{}).gtts||'')),pixabay:$('#k_pixabay').value.trim(),pexels:$('#k_pexels').value.trim(),unsplash:$('#k_unsplash').value.trim(),parallel:$('#k_parallel').value.trim(),serper:(($('#k_serper')||{}).value||'').trim()};cfg.model=$('#s_model').value;cfg.img=$('#s_img').value.trim()||DEF_IMG;cfg.mode=$('#s_mode').value;cfg.panel.on=$('#p_on').value=='1';cfg.panel.keys={gemini:$('#pk_gemini').value.trim(),groq:$('#pk_groq').value.trim()};cfg.panel.model=$('#p_model').value;cfg.panel.gap=$('#p_gap').value;cfg.panel.max=+$('#p_max').value;PX.read();
   if(unlocked)cfg.bots.forEach((b,i)=>{if(HIDE.includes(i))return;b.name=$('#n'+i).value||b.name;b.prompt=$('#p'+i).value});
   save();renderBots();reset();$('#sm').hidden=true;setOpen(false)}}
 let AUTH=false;
@@ -2929,6 +2930,7 @@ if(SR&&ib){
   let SPK=true,state='idle',rec=null,live=false,sess=0,sil=0,empties=0,svcRetry=0,micOk=false,wl=null;
   const ICON={idle:'🎙️',listen:'🎙️',think:'💭',speak:'🔊'};
   const wait=ms=>new Promise(r=>setTimeout(r,ms));
+  let greetT=0;
   const setState=(s,msg)=>{
     state=s;
     vbox.classList.remove('s-idle','s-listen','s-think','s-speak');
@@ -2966,6 +2968,7 @@ if(SR&&ib){
 
   const killRec=()=>{
     clearTimeout(sil);
+    if(typeof bargeStop==='function')bargeStop();
     const r=rec;rec=null;
     if(r){r.onresult=r.onerror=r.onend=null;try{r.abort()}catch(e){}}
   };
@@ -2983,6 +2986,7 @@ if(SR&&ib){
 
     r.onresult=e=>{
       if(my!==sess)return;
+      clearTimeout(greetT);greetT=0; /* pengguna sudah bicara: tidak perlu menyapa */
       let t='';
       for(let i=0;i<e.results.length;i++)t+=e.results[i][0].transcript;
       t=t.trim();if(!t)return;
@@ -3106,10 +3110,59 @@ if(SR&&ib){
     if(!live||my!==sess)return;
     showTx(reply,false);
     setState('speak','');
+    bargeStart(reply,my);
     await speak(reply,my);
+    bargeStop();
     if(!live||my!==sess)return;
     await wait(350);
     if(live&&my===sess)listen();
+  };
+
+  /* ---- Potong pembicaraan otomatis: dengar sambil bot bicara (aman tanpa earphone) ---- */
+  let bi=null;
+  const bNorm=s=>String(s||'').toLowerCase().replace(/[^\p{L}\p{N}\s]/gu,' ').split(/\s+/).filter(Boolean);
+  const bargeStop=()=>{const r=bi;bi=null;if(r){r.onresult=r.onerror=r.onend=null;try{r.abort()}catch(e){}}};
+  const bargeStart=(replyText,my)=>{
+    bargeStop();
+    if(!SR||!SPK)return;
+    const botW=new Set(bNorm(replyText));
+    const t0=Date.now();
+    let r;try{r=new SR()}catch(e){return}
+    r.lang='id-ID';r.interimResults=true;r.continuous=true;r.maxAlternatives=1;
+    r.onresult=e=>{
+      if(bi!==r||my!==sess||state!=='speak'||Date.now()-t0<900)return; /* abaikan gema di awal bicara bot */
+      let said='';
+      for(let i=0;i<e.results.length;i++)said+=' '+e.results[i][0].transcript;
+      const w=bNorm(said);
+      const novel=w.filter(x=>!botW.has(x)); /* kata yang bukan dari kalimat bot = suara pengguna */
+      if(w.length>=3&&novel.length>=2){
+        bargeStop();
+        sess++;
+        try{speechSynthesis.cancel()}catch(er){}
+        listen();
+      }
+    };
+    r.onerror=()=>{};
+    r.onend=()=>{if(bi===r&&live&&state==='speak'){try{r.start()}catch(er){bi=null}}};
+    bi=r;
+    try{r.start()}catch(e){bi=null}
+  };
+
+  /* sapaan manusiawi: hanya kalau 10 detik tidak ada suara dari pengguna */
+  const greet=async()=>{
+    greetT=0;
+    if(!live||state!=='listen')return;
+    const hr=new Date().getHours(),waktu=hr>=4&&hr<11?'pagi':hr>=11&&hr<15?'siang':hr>=15&&hr<18?'sore':'malam';
+    const namaBot=(cfg.bots[cur]&&cfg.bots[cur].name)||'aku';
+    const sapa=[`Halo! Selamat ${waktu}. Ada yang bisa saya bantu?`,`Halo, selamat ${waktu}! Ini ${namaBot}. Ada yang bisa saya bantu?`,`Selamat ${waktu}! Akhirnya telponnya diangkat juga. Ada yang bisa saya bantu?`][Math.floor(Math.random()*3)];
+    killRec();
+    const mySess=++sess;
+    showTx(sapa,false);
+    setState('speak','');
+    await speak(sapa,mySess);
+    if(!live||mySess!==sess)return;
+    await wait(350);
+    if(live&&mySess===sess)listen();
   };
 
   /* ---- Buka / tutup panggilan ---- */
@@ -3127,21 +3180,14 @@ if(SR&&ib){
     if(!live)return;
     if(!ok){elTime.textContent='Gagal terhubung';return}
     startTimer();
-    await wait(250);
     if(!live)return;
-    const hr=new Date().getHours(),waktu=hr>=4&&hr<11?'pagi':hr>=11&&hr<15?'siang':hr>=15&&hr<18?'sore':'malam';
-    const namaBot=(cfg.bots[cur]&&cfg.bots[cur].name)||'aku';
-    const sapa=[`Halo! Selamat ${waktu}. Ada yang bisa saya bantu?`,`Halo, selamat ${waktu}! Ini ${namaBot}. Ada yang bisa saya bantu?`,`Selamat ${waktu}! Akhirnya telponnya diangkat juga. Ada yang bisa saya bantu?`][Math.floor(Math.random()*3)];
-    const mySess=sess;
-    showTx(sapa,false);
-    setState('speak','');
-    await speak(sapa,mySess);
-    if(!live||mySess!==sess)return;
-    await wait(350);
-    if(live)listen();
+    /* langsung dengarkan; sapaan hanya jika 10 detik tidak ada suara */
+    clearTimeout(greetT);
+    greetT=setTimeout(greet,10000);
+    listen();
   };
   const end=()=>{
-    live=false;window.XCALL=false;sess++;stopTimer();
+    live=false;window.XCALL=false;sess++;stopTimer();clearTimeout(greetT);greetT=0;
     killRec();
     try{speechSynthesis.cancel()}catch(e){}
     vbox.classList.remove('on');
@@ -4278,6 +4324,8 @@ XT.code=async a=>{
  const off=()=>{try{return localStorage.getItem('gtts_off')==='1'}catch(e){return false}};
  const keys=()=>{try{
   const sp=s=>String(s||'').split(/[,\s]+/).filter(Boolean);
+  const t=sp(cfg&&cfg.media&&cfg.media.gtts);
+  if(t.length)return t;
   const a=sp(cfg&&cfg.keys&&cfg.keys.gemini);
   return a.length?a:sp(cfg&&cfg.panel&&cfg.panel.keys&&cfg.panel.keys.gemini);
  }catch(e){return[]}};
