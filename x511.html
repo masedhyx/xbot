@@ -394,6 +394,7 @@ async function settings(){
  $('#sm').hidden=false;$('#sm').innerHTML=`<button id="x" style="font-size:17px;color:#6ab0ff">← Kembali</button>
   <h3>API key (disimpan di browser ini saja; kosong = pakai key bawaan server)</h3>${K.map(k=>`<input type="password" id="k_${k}" placeholder="${k}" value="${esc(cfg.keys[k]||'')}">`).join('')}
  <h3>Foto gratis</h3><p style="${hint}">Key gratis dari pixabay.com/api/docs dan pexels.com/api. Urutan: Pixabay, Pexels, lalu Wikimedia. Video tetap lewat YouTube seperti biasa. Kosong = langsung pakai cadangan.</p><input type="password" id="k_pixabay" placeholder="Pixabay key" value="${esc((cfg.media||{}).pixabay||'')}"><input type="password" id="k_pexels" placeholder="Pexels key" value="${esc((cfg.media||{}).pexels||'')}"><input type="password" id="k_unsplash" placeholder="Unsplash Access Key (cadangan foto)" value="${esc((cfg.media||{}).unsplash||'')}"><p style="${hint}">Cadangan tambahan: Unsplash (pakai key di atas) dan Openverse (otomatis, tanpa key). Parallel dipakai sebagai cadangan pencarian web kalau pencarian utama gagal.</p><input type="password" id="k_parallel" placeholder="Parallel key (cadangan pencarian web)" value="${esc((cfg.media||{}).parallel||'')}"><p style="${hint}">Serper (google.serper.dev) dipakai sebagai cadangan pencarian web setelah pencarian utama dan Parallel. Key hanya disimpan di browser kamu.</p><input type="password" id="k_serper" placeholder="Serper key (cadangan pencarian web)" value="${esc((cfg.media||{}).serper||'')}">
+ <h3>Suara telepon (Gemini)</h3><p style="${hint}">Key khusus untuk suara bot saat mode telepon, terpisah dari key chat supaya kuotanya tidak bentrok. Kosong = pakai key Gemini utama.</p><input type="password" id="tk_gemini" placeholder="key Gemini khusus suara telepon" value="${esc((cfg.tts||{}).gemini||'')}">
  <h3>Model AI</h3><p style="${hint}">Teks dan foto. Kalau foto dikirim, otomatis diproses Gemini.</p><select id="s_model">${grp('Gemini','gemini')}${grp('Groq','groq')}</select>
  <h3>Model gambar</h3><p style="${hint}">Dipakai di "/gambar". Model gambar sering butuh akun berbayar.</p><select id="s_img">${IMGS.map(m=>opt(m,cfg.img||DEF_IMG)).join('')}</select>
  <h3>Mode pencarian web</h3><select id="s_mode">${[['auto','Otomatis'],['on','Selalu'],['off','Mati']].map(m=>`<option value="${m[0]}"${m[0]==cfg.mode?' selected':''}>${m[1]}</option>`).join('')}</select>
@@ -405,7 +406,7 @@ async function settings(){
   $('#bp').innerHTML=cfg.bots.map((b,i)=>HIDE.includes(i)?'':`<div class="bo"><div style="display:flex;gap:10px;align-items:center"><div style="width:18px;flex:none">${bot(COL[i])}</div><input id="n${i}" value="${esc(b.name)}"></div><textarea id="p${i}">${esc(b.prompt)}</textarea></div>`).join('')};
  if(AUTH)$('#ub').click();
  $('#x').onclick=()=>$('#sm').hidden=true;
- $('#sv').onclick=()=>{K.forEach(k=>cfg.keys[k]=$('#k_'+k).value.trim());cfg.media={pixabay:$('#k_pixabay').value.trim(),pexels:$('#k_pexels').value.trim(),unsplash:$('#k_unsplash').value.trim(),parallel:$('#k_parallel').value.trim(),serper:(($('#k_serper')||{}).value||'').trim()};cfg.model=$('#s_model').value;cfg.img=$('#s_img').value.trim()||DEF_IMG;cfg.mode=$('#s_mode').value;cfg.panel.on=$('#p_on').value=='1';cfg.panel.keys={gemini:$('#pk_gemini').value.trim(),groq:$('#pk_groq').value.trim()};cfg.panel.model=$('#p_model').value;cfg.panel.gap=$('#p_gap').value;cfg.panel.max=+$('#p_max').value;PX.read();
+ $('#sv').onclick=()=>{K.forEach(k=>cfg.keys[k]=$('#k_'+k).value.trim());cfg.media={pixabay:$('#k_pixabay').value.trim(),pexels:$('#k_pexels').value.trim(),unsplash:$('#k_unsplash').value.trim(),parallel:$('#k_parallel').value.trim(),serper:(($('#k_serper')||{}).value||'').trim()};cfg.tts={gemini:(($('#tk_gemini')||{}).value||'').trim()};cfg.model=$('#s_model').value;cfg.img=$('#s_img').value.trim()||DEF_IMG;cfg.mode=$('#s_mode').value;cfg.panel.on=$('#p_on').value=='1';cfg.panel.keys={gemini:$('#pk_gemini').value.trim(),groq:$('#pk_groq').value.trim()};cfg.panel.model=$('#p_model').value;cfg.panel.gap=$('#p_gap').value;cfg.panel.max=+$('#p_max').value;PX.read();
   if(unlocked)cfg.bots.forEach((b,i)=>{if(HIDE.includes(i))return;b.name=$('#n'+i).value||b.name;b.prompt=$('#p'+i).value});
   save();renderBots();reset();$('#sm').hidden=true;setOpen(false)}}
 let AUTH=false;
@@ -2929,6 +2930,8 @@ if(SR&&ib){
   let SPK=true,state='idle',rec=null,live=false,sess=0,sil=0,empties=0,svcRetry=0,micOk=false,wl=null;
   const ICON={idle:'🎙️',listen:'🎙️',think:'💭',speak:'🔊'};
   const wait=ms=>new Promise(r=>setTimeout(r,ms));
+  /* nada 'ting' lembut: tanda giliranmu untuk bicara (tidak dimatikan saat mode telepon) */
+  const readyTone=()=>{try{audioUnlock();if(!_ac)return;const t=_ac.currentTime;[[1046.5,0,.2],[1568,.1,.14]].forEach(([f,d,v])=>{const o=_ac.createOscillator(),g=_ac.createGain();o.type='sine';o.frequency.value=f;g.gain.setValueAtTime(0,t+d);g.gain.linearRampToValueAtTime(v,t+d+.012);g.gain.exponentialRampToValueAtTime(.001,t+d+.35);o.connect(g);g.connect(_ac.destination);o.start(t+d);o.stop(t+d+.4)});if(navigator.vibrate)navigator.vibrate(30)}catch(e){}};
   const setState=(s,msg)=>{
     state=s;
     vbox.classList.remove('s-idle','s-listen','s-think','s-speak');
@@ -3054,7 +3057,7 @@ if(SR&&ib){
   const getVoice=()=>{try{
     const vs=(speechSynthesis.getVoices()||[]).filter(v=>/^id[-_]/i.test(v.lang));
     if(!vs.length)return null;
-    return vs.find(v=>/google|damayanti|gadis|ardi|microsoft/i.test(v.name))||vs[0];
+    return vs.find(v=>/natural|neural|online/i.test(v.name))||vs.find(v=>/google/i.test(v.name))||vs.find(v=>/gadis|damayanti|ardi|microsoft/i.test(v.name))||vs[0];
   }catch(e){return null}};
   const speak=(text,my)=>new Promise(res=>{
     const ss=window.speechSynthesis;
@@ -3068,7 +3071,7 @@ if(SR&&ib){
       const u=new SpeechSynthesisUtterance(part);
       /* variasi kecil tiap kalimat supaya tidak datar seperti robot: kecepatan, nada, dan naik-turun di akhir tanya */
       u.lang='id-ID';
-      u.rate=0.9+Math.random()*0.1;
+      u.rate=0.97+Math.random()*0.06;
       u.pitch=0.98+Math.random()*0.1+(/\?\s*$/.test(part)?0.08:0);
       u.volume=1;
       const v=getVoice();if(v)u.voice=v;
@@ -3122,7 +3125,7 @@ if(SR&&ib){
     bargeStop();
     if(!live||my!==sess)return;
     await wait(350);
-    if(live&&my===sess)listen();
+    if(live&&my===sess){readyTone();await wait(300);if(live&&my===sess)listen()}
   };
 
   /* ---- potong pembicaraan otomatis: dengar sambil bot bicara (tanpa earphone tetap diberi pengaman gema) ---- */
@@ -3181,7 +3184,7 @@ if(SR&&ib){
     await speak(sapa,mySess);
     if(!live||mySess!==sess)return;
     await wait(350);
-    if(live)listen();
+    if(live){readyTone();await wait(300);if(live)listen()}
   };
   const end=()=>{
     live=false;window.XCALL=false;sess++;stopTimer();
@@ -4125,7 +4128,7 @@ window.__BS={BS,TASKQ,WS,taskAdd,laporanKolektif};
 </style>
 <script>
 (()=>{
-const IDS=['k_groq','k_gemini','k_tavily','k_exa','k_firecrawl','k_pixabay','k_pexels','k_unsplash','k_parallel','k_serper','pk_gemini','pk_groq'];
+const IDS=['k_groq','k_gemini','k_tavily','k_exa','k_firecrawl','k_pixabay','k_pexels','k_unsplash','k_parallel','k_serper','pk_gemini','pk_groq','tk_gemini'];
 const TO=10000;
 const R=async(u,o)=>{const c=new AbortController(),t=setTimeout(()=>c.abort(),TO);try{const r=await fetch(u,{...(o||{}),signal:c.signal});let j=null;try{j=await r.clone().json()}catch(e){}return {st:r.status,j}}finally{clearTimeout(t)}};
 const ok=m=>({s:'ok',m:m||'Normal'});
@@ -4150,7 +4153,7 @@ const CHK={
  parallel:async k=>{const r=await R('https://api.parallel.ai/v1/search',{method:'POST',headers:{'Content-Type':'application/json','x-api-key':k},body:'{}'});if(r.st===400||r.st===422)return ok('Key diterima server (dicek tanpa memakai kuota)');return gen(r.st,'Parallel')},
  serper:async k=>{const r=await R('https://google.serper.dev/account',{headers:{'X-API-KEY':k}});if(r.st===200){const b=r.j&&r.j.balance;if(b!=null&&b<=0)return bad('Serper: kredit habis (saldo 0). Isi ulang atau ganti key.');return ok(b!=null?('Normal (sisa '+b+' kredit)'):'Normal')}if(r.st===404)return unk('Serper: pengecekan saldo tidak tersedia.');return gen(r.st,'Serper')}
 };
-const service=id=>id.replace(/^p?k_/,'');
+const service=id=>id.replace(/^[pt]?k_/,'');
 async function runCheck(inp,dot,msg){
   const v=(inp.value||'').trim();
   const set=(cls,txt,kind)=>{dot.className='kdot '+cls;dot.title=txt;msg.textContent=(cls==='ok'||!txt)?'':txt;msg.className='kmsg'+(kind==='unk'?' unk':'');msg.style.display=(cls==='ok'||!txt)?'none':'block'};
@@ -4316,11 +4319,13 @@ XT.code=async a=>{
  const ss=window.speechSynthesis;
  if(!ss||window.GTTS)return;
  const MODEL='gemini-3.8-flash-tts',VOICE='Aoede',MAXCH=3000;
+ const STYLE='Katakan dengan nada hangat, santai, dan alami seperti orang sungguhan yang sedang mengobrol di telepon, dengan intonasi dan jeda yang wajar: ';
  const nat={speak:ss.speak.bind(ss),cancel:ss.cancel.bind(ss)};
  const natSpeaking=()=>{try{return Object.getOwnPropertyDescriptor(Object.getPrototypeOf(ss),'speaking').get.call(ss)}catch(e){return false}};
  const off=()=>{try{return localStorage.getItem('gtts_off')==='1'}catch(e){return false}};
  const keys=()=>{try{
   const sp=s=>String(s||'').split(/[,\s]+/).filter(Boolean);
+  const t=sp(cfg&&cfg.tts&&cfg.tts.gemini);if(t.length)return t;
   const a=sp(cfg&&cfg.keys&&cfg.keys.gemini);
   return a.length?a:sp(cfg&&cfg.panel&&cfg.panel.keys&&cfg.panel.keys.gemini);
  }catch(e){return[]}};
@@ -4356,7 +4361,7 @@ XT.code=async a=>{
     const r=await fetch('https://generativelanguage.googleapis.com/v1beta/models/'+MODEL+':generateContent?key='+encodeURIComponent(L[idx]),{
      method:'POST',headers:{'Content-Type':'application/json'},
      body:JSON.stringify({
-      contents:[{role:'user',parts:[{text:text}]}],
+      contents:[{role:'user',parts:[{text:STYLE+text}]}],
       generationConfig:{responseModalities:['AUDIO'],temperature:1,
        speech_config:{voice_config:{prebuilt_voice_config:{voice_name:VOICE}}}}
      })});
@@ -4410,7 +4415,7 @@ XT.code=async a=>{
     try{url=await Promise.race([j.p,j.killed])}catch(e){err=e}
     if(Q[0]!==j)continue;                       /* dibatalkan */
     if(err||!url){
-     fails++;down=Date.now()+Math.min(600000,60000*Math.pow(2,fails-1));
+     fails++;down=Date.now()+Math.min(120000,15000*Math.pow(2,fails-1));
      window.GTTS.lastError=String(err&&err.message||err||'gagal');
      try{console.warn('[Gemini TTS]',window.GTTS.lastError)}catch(e){}
      toast('Suara Gemini gagal ('+window.GTTS.lastError.slice(0,90)+'). Sementara pakai suara browser.');
@@ -4421,7 +4426,7 @@ XT.code=async a=>{
     if(Q[0]!==j)continue;                       /* dibatalkan saat diputar */
     Q.shift();
     if(r==='ok'){fails=0;fire(j.u,'end')}
-    else{fails++;down=Date.now()+60000;window.GTTS.lastError='audio tidak bisa diputar';fire(j.u,'error')}
+    else{fails++;down=Date.now()+15000;window.GTTS.lastError='audio tidak bisa diputar';fire(j.u,'error')}
    }
   }finally{running=false}
  }
