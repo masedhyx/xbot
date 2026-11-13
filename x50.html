@@ -71,7 +71,10 @@ footer{padding:6px 18px calc(env(safe-area-inset-bottom) + 12px);position:relati
 window.RAWFETCH=window.RAWFETCH||window.fetch.bind(window);
 /* daftar model */
 const DEF_MODEL='gemini:gemini-3.1-flash-lite',DEF_IMG='gemini-3.1-flash-image';
-const FALLBACK_MODELS=[{id:'gemini:gemini-3.6-flash',label:'gemini-3.6-flash'},{id:'gemini:gemini-3.5-flash-lite',label:'gemini-3.5-flash-lite'},{id:'gemini:gemini-3.1-flash-lite',label:'gemini-3.1-flash-lite'},{id:'gemini:gemini-2.5-flash',label:'gemini-2.5-flash'},{id:'gemini:gemini-2.5-flash-lite',label:'gemini-2.5-flash-lite'},{id:'groq:openai/gpt-oss-120b',label:'GPT-OSS 120B — paling kuat'},{id:'groq:openai/gpt-oss-20b',label:'GPT-OSS 20B — lebih ringan & cepat'},{id:'groq:qwen/qwen3.8-27b',label:'Qwen 3.8 27B — penalaran & umum'}];
+const FALLBACK_MODELS=[{id:'gemini:gemini-3.5-flash-lite',label:'gemini-3.5-flash-lite'},{id:'gemini:gemini-3.1-flash-lite',label:'gemini-3.1-flash-lite'},{id:'groq:openai/gpt-oss-120b',label:'GPT-OSS 120B — paling kuat'},{id:'groq:openai/gpt-oss-20b',label:'GPT-OSS 20B — lebih ringan & cepat'},{id:'groq:qwen/qwen3.8-27b',label:'Qwen 3.8 27B — penalaran & umum'}];
+/* Gemini teks: hanya model yang lolos cek (hijau) di Status API */
+const GEM_OK=['gemini-3.5-flash-lite','gemini-3.1-flash-lite'];
+const modelOK=id=>{id=String(id||'');return !/^gemini:/.test(id)||GEM_OK.includes(id.slice(7))};
 const FALLBACK_IMG=[{id:'gemini-3.1-flash-image',label:'gemini-3.1-flash-image'}];
 const SERVER_URL='https://xbot.edhymaster70.workers.dev';
 const PW_HASH='42d5eaa7af283ddcd8f11ce357934a5ec7aa4e21f37c029a2ee047ab889d2ae9';
@@ -117,8 +120,8 @@ const md=(s,p)=>{const TB=[],T=h=>{TB.push(h);return '\u0001'+(TB.length-1)+'\u0
 let BID=0;
 const bot=c=>{const k="k"+(++BID);return `<svg${c==='#3a3a38'?' style="--ey:#fff"':''} viewBox="114.4 21.35 411.4 411.4"><clipPath id="${k}"><circle class="cc" cx="320.1" cy="227.05" r="205.7"/></clipPath><circle class="bd" cx="320.1" cy="227.05" r="205.7" fill="${c}"/><g clip-path="url(#${k})"><path class="e"/><path class="e"/></g></svg>`};
 let cfg;try{cfg=JSON.parse(localStorage.getItem('xbot'))}catch{}
-cfg=Object.assign({url:SERVER_URL,keys:{},model:DEF_MODEL,img:DEF_IMG,mode:'auto',bots:NM.map((n,i)=>({name:'Bot '+n,prompt:`Kamu asisten AI yang ${TRAIT[i]}. Jawab dalam bahasa Indonesia.`}))},cfg||{});cfg.url=SERVER_URL;if(/3\.8-flash/.test(String(cfg.model||'')))cfg.model=DEF_MODEL;
-cfg.panel=Object.assign({on:true,keys:{gemini:'',groq:''},model:'',gap:'4.5-8',max:0},cfg.panel||{});cfg.panel.keys=Object.assign({gemini:'',groq:''},cfg.panel.keys);
+cfg=Object.assign({url:SERVER_URL,keys:{},model:DEF_MODEL,img:DEF_IMG,mode:'auto',bots:NM.map((n,i)=>({name:'Bot '+n,prompt:`Kamu asisten AI yang ${TRAIT[i]}. Jawab dalam bahasa Indonesia.`}))},cfg||{});cfg.url=SERVER_URL;if(!modelOK(cfg.model))cfg.model=DEF_MODEL;
+cfg.panel=Object.assign({on:true,keys:{gemini:'',groq:''},model:'',gap:'4.5-8',max:0},cfg.panel||{});cfg.panel.keys=Object.assign({gemini:'',groq:''},cfg.panel.keys);if(cfg.panel.model&&!modelOK(cfg.panel.model))cfg.panel.model='';
 if(cfg.bots[5]&&/^bot orange$/i.test(cfg.bots[5].name))cfg.bots[5].name='Bot Hitam';
 if(!cfg.bots[10])cfg.bots[10]={name:'edhyx',prompt:'Kamu edhyx, asisten AI yang cerdas, ramah, dan santai. Jawab dalam bahasa Indonesia dengan jelas dan membantu.'};
 const save=()=>{try{localStorage.setItem('xbot',JSON.stringify(cfg))}catch{}};
@@ -389,6 +392,7 @@ $('#ms').onclick=async e=>{const a=e.target.closest('[data-a]');if(!a)return;con
 async function sha(s){return[...new Uint8Array(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(s)))].map(x=>x.toString(16).padStart(2,'0')).join('')}
 async function settings(){
  try{MODELS=await(await fetch(cfg.url.replace(/\/$/,'')+'/models')).json();if(!Array.isArray(MODELS)||!MODELS.length)MODELS=FALLBACK_MODELS}catch{MODELS=FALLBACK_MODELS}
+ MODELS=MODELS.filter(m=>m&&modelOK(m.id));GEM_OK.forEach(g=>{if(!MODELS.some(m=>m.id==='gemini:'+g))MODELS.unshift({id:'gemini:'+g,label:g})});
  try{IMGS=await(await fetch(cfg.url.replace(/\/$/,'')+'/image-models')).json();if(!Array.isArray(IMGS)||!IMGS.length)IMGS=FALLBACK_IMG}catch{IMGS=FALLBACK_IMG}
  const opt=(m,v)=>`<option value="${esc(m.id)}"${m.id==v?' selected':''}>${esc(m.label)}</option>`,grp=(n,p)=>{const l=MODELS.filter(m=>m.id.startsWith(p+':'));return l.length?`<optgroup label="${n}">${l.map(m=>opt(m,cfg.model)).join('')}</optgroup>`:''},hint='font-size:14px;color:#8a8a8a;margin:0 0 8px';
  const K=['groq','gemini','tavily','exa','firecrawl'];
@@ -1795,12 +1799,12 @@ const readFinal=async r=>{
 };
 /* ---------- Rantai cadangan model: Groq (semua) -> Gemini (semua). Error baru muncul kalau SEMUA gagal ---------- */
 const XGQ=['groq:openai/gpt-oss-120b','groq:openai/gpt-oss-20b','groq:qwen/qwen3.8-27b'];
-const XGM=['gemini:gemini-3.1-flash-lite','gemini:gemini-2.5-flash-lite','gemini:gemini-3.5-flash-lite','gemini:gemini-2.5-flash','gemini:gemini-3.6-flash'];
+const XGM=['gemini:gemini-3.1-flash-lite','gemini:gemini-3.5-flash-lite'];
 const XBAD=new Map();
 const xbad=k=>(XBAD.get(k)||0)>Date.now();
 const xquota=m=>/429|quota|rate.?limit|exhausted|RESOURCE_EXHAUSTED|too many/i.test(String(m||''));
 async function callChain(input,init,body,accept){
-  const first=String(body.model||'');
+  const first=(typeof modelOK==='function'&&!modelOK(body.model))?XGM[0]:String(body.model||'');
   const plan=[],add=(m,mode)=>{const k=m+'|'+mode;if(m&&!plan.some(x=>x.k===k))plan.push({k,model:m,mode})};
   const media=!!(body.image||body.image_gen);
   if(body.image&&!body.image_gen)XGM.forEach(m=>add(m,body.mode));
@@ -4558,6 +4562,7 @@ window.fetch = async function(input, init){
 
   let b;
   try{ b = JSON.parse(init.body) }catch{ return origFetch.apply(this, arguments) }
+  if(typeof b.model==='string' && /^gemini:/.test(b.model) && !/gemini-3\.(1|5)-flash-lite$/.test(b.model)) b.model = CFG.GEMINI_HEAVY;
 
   const wantsImage = b.image_gen === true;
   const lastUserImg = String((b.messages||[]).slice(-1)[0]?.content || '');
