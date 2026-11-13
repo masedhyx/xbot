@@ -2930,7 +2930,6 @@ if(SR&&ib){
   let SPK=true,state='idle',rec=null,live=false,sess=0,sil=0,empties=0,svcRetry=0,micOk=false,wl=null;
   const ICON={idle:'🎙️',listen:'🎙️',think:'💭',speak:'🔊'};
   const wait=ms=>new Promise(r=>setTimeout(r,ms));
-  let greetT=0;
   const setState=(s,msg)=>{
     state=s;
     vbox.classList.remove('s-idle','s-listen','s-think','s-speak');
@@ -2986,7 +2985,6 @@ if(SR&&ib){
 
     r.onresult=e=>{
       if(my!==sess)return;
-      clearTimeout(greetT);greetT=0; /* pengguna sudah bicara: tidak perlu menyapa */
       let t='';
       for(let i=0;i<e.results.length;i++)t+=e.results[i][0].transcript;
       t=t.trim();if(!t)return;
@@ -3148,23 +3146,6 @@ if(SR&&ib){
     try{r.start()}catch(e){bi=null}
   };
 
-  /* sapaan manusiawi: hanya kalau 10 detik tidak ada suara dari pengguna */
-  const greet=async()=>{
-    greetT=0;
-    if(!live||state!=='listen')return;
-    const hr=new Date().getHours(),waktu=hr>=4&&hr<11?'pagi':hr>=11&&hr<15?'siang':hr>=15&&hr<18?'sore':'malam';
-    const namaBot=(cfg.bots[cur]&&cfg.bots[cur].name)||'aku';
-    const sapa=[`Halo! Selamat ${waktu}. Ada yang bisa saya bantu?`,`Halo, selamat ${waktu}! Ini ${namaBot}. Ada yang bisa saya bantu?`,`Selamat ${waktu}! Akhirnya telponnya diangkat juga. Ada yang bisa saya bantu?`][Math.floor(Math.random()*3)];
-    killRec();
-    const mySess=++sess;
-    showTx(sapa,false);
-    setState('speak','');
-    await speak(sapa,mySess);
-    if(!live||mySess!==sess)return;
-    await wait(350);
-    if(live&&mySess===sess)listen();
-  };
-
   /* ---- Buka / tutup panggilan ---- */
   const begin=async()=>{
     live=true;window.XCALL=true;empties=0;svcRetry=0;
@@ -3180,14 +3161,21 @@ if(SR&&ib){
     if(!live)return;
     if(!ok){elTime.textContent='Gagal terhubung';return}
     startTimer();
+    await wait(0);
     if(!live)return;
-    /* langsung dengarkan; sapaan hanya jika 10 detik tidak ada suara */
-    clearTimeout(greetT);
-    greetT=setTimeout(greet,10000);
-    listen();
+    const hr=new Date().getHours(),waktu=hr>=4&&hr<11?'pagi':hr>=11&&hr<15?'siang':hr>=15&&hr<18?'sore':'malam';
+    const namaBot=(cfg.bots[cur]&&cfg.bots[cur].name)||'aku';
+    const sapa=[`Halo! Selamat ${waktu}. Ada yang bisa saya bantu?`,`Halo, selamat ${waktu}! Ini ${namaBot}. Ada yang bisa saya bantu?`,`Selamat ${waktu}! Akhirnya telponnya diangkat juga. Ada yang bisa saya bantu?`][Math.floor(Math.random()*3)];
+    const mySess=sess;
+    showTx(sapa,false);
+    setState('speak','');
+    await speak(sapa,mySess);
+    if(!live||mySess!==sess)return;
+    await wait(350);
+    if(live)listen();
   };
   const end=()=>{
-    live=false;window.XCALL=false;sess++;stopTimer();clearTimeout(greetT);greetT=0;
+    live=false;window.XCALL=false;sess++;stopTimer();
     killRec();
     try{speechSynthesis.cancel()}catch(e){}
     vbox.classList.remove('on');
