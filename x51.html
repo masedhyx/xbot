@@ -290,7 +290,7 @@ const sysx=()=>CRT+`\n\n[Info perangkat pengguna] Waktu sekarang di perangkat pe
 /* ===== NOTIFIKASI: suara + badge ikon + notif sistem ===== */
 let _ac=null,UNM=0;const T00=document.title;
 const audioUnlock=()=>{try{const A=window.AudioContext||window.webkitAudioContext;if(!A)return;_ac=_ac||new A();if(_ac.state==='suspended')_ac.resume()}catch(e){}};
-const ding=()=>{if(window.XCALL)return;try{audioUnlock();if(!_ac)return;const t=_ac.currentTime;[[880,0],[1318.5,.13]].forEach(([f,d])=>{const o=_ac.createOscillator(),g=_ac.createGain();o.type='sine';o.frequency.value=f;g.gain.setValueAtTime(0,t+d);g.gain.linearRampToValueAtTime(.35,t+d+.015);g.gain.exponentialRampToValueAtTime(.001,t+d+.45);o.connect(g);g.connect(_ac.destination);o.start(t+d);o.stop(t+d+.5)});if(navigator.vibrate)navigator.vibrate(60)}catch(e){}};
+const ding=()=>{try{audioUnlock();if(!_ac)return;const t=_ac.currentTime;[[880,0],[1318.5,.13]].forEach(([f,d])=>{const o=_ac.createOscillator(),g=_ac.createGain();o.type='sine';o.frequency.value=f;g.gain.setValueAtTime(0,t+d);g.gain.linearRampToValueAtTime(.35,t+d+.015);g.gain.exponentialRampToValueAtTime(.001,t+d+.45);o.connect(g);g.connect(_ac.destination);o.start(t+d);o.stop(t+d+.5)});if(navigator.vibrate)navigator.vibrate(60)}catch(e){}};
 const sysNotif=async(title,body)=>{try{if(!window.Notification||Notification.permission!=='granted')return;const o={body,icon:'icon-192.png',badge:'icon-192.png',tag:'xbot',renotify:true};
   const r=navigator.serviceWorker&&await navigator.serviceWorker.getRegistration();if(r)await r.showNotification(title,o);else new Notification(title,o)}catch(e){}};
 const askPerm=()=>{try{if(window.Notification&&Notification.permission==='default')Notification.requestPermission()}catch(e){}};
