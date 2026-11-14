@@ -5778,27 +5778,31 @@ window._xHiasanIcons=IC;
 <!-- ===== AKHIR TAMBAHAN IKON, EMOJI, FAVICON, WARNA ===== -->
 <!-- ===== EFEK STATUS CHAT & STATUS PROSES: kilau bergerak, font 15px tegak ===== -->
 <style id="xshim-css">
-.stt,.stt span,.agp,.agp *{font-size:15px!important;font-style:normal!important;font-weight:400!important;text-transform:none!important}
-.stt span::first-letter,.agp summary::first-letter,.agp li::first-letter{text-transform:uppercase}
+.stt,.stt span,.agp,.agp *{font-size:15px!important;font-style:normal!important;font-weight:400!important;text-transform:lowercase!important}
 .stt span,.agp:not(.xdone) summary,.agp:not(.xdone) li:last-child:not(.ok):not(.er){
  color:transparent!important;-webkit-text-fill-color:transparent;
  background-image:linear-gradient(100deg,#6d6d72 0%,#6d6d72 38%,#f4f4f6 50%,#6d6d72 62%,#6d6d72 100%);
- background-size:260% 100%;background-repeat:no-repeat;
+ background-size:250% 100%;background-repeat:no-repeat;background-position:100% 0;
  -webkit-background-clip:text;background-clip:text;
  animation:xshim 2.2s linear infinite}
 .agp.xdone summary{color:#d0d0d0}
+.agp:not(.xdone){display:none!important}
 .agp li:last-child:not(.ok):not(.er)::before{-webkit-text-fill-color:#8a8a8a}
-@keyframes xshim{from{background-position:130% 0}to{background-position:-30% 0}}
+@keyframes xshim{from{background-position:100% 0}to{background-position:0% 0}}
+.stt{position:relative}
+.xghost{position:absolute;pointer-events:none;white-space:nowrap;color:#6d6d72;font-size:15px;text-transform:lowercase;animation:xgo .38s ease-out forwards}
+@keyframes xgo{from{opacity:1}to{opacity:0}}
 @media (prefers-reduced-motion:reduce){.stt span,.agp:not(.xdone) summary,.agp:not(.xdone) li:last-child{animation:none}}
 </style>
 <script id="xshim-js">
 (()=>{try{
 const root=document.getElementById('ms')||document.body;
-const fade=el=>{try{el.animate([{opacity:0,filter:'blur(2px)'},{opacity:1,filter:'blur(0)'}],{duration:380,easing:'ease-out'})}catch(e){}};
+const fade=el=>{try{el.animate([{opacity:0},{opacity:1}],{duration:380,easing:'ease-out'})}catch(e){}};
+const ghost=(el,old)=>{try{if(!old||!el.matches('.stt span'))return;const p=el.parentNode,g=document.createElement('div');g.className='xghost';g.textContent=old;g.style.left=el.offsetLeft+'px';g.style.top=el.offsetTop+'px';p.appendChild(g);setTimeout(()=>g.remove(),420)}catch(e){}};
 new MutationObserver(ms=>{for(const m of ms){let n=m.target;if(n.nodeType===3)n=n.parentNode;if(!n||n.nodeType!==1)continue;
- if(n.matches('.stt span')||n.matches('.agp summary'))fade(n);
+ if(n.matches('.stt span')||n.matches('.agp summary')){let o='';m.removedNodes&&m.removedNodes.forEach(x=>{o+=x.textContent||''});ghost(n,o.trim());fade(n)}
  const a=n.closest&&n.closest('.agp');
- if(a){const sm=a.querySelector('summary');if(sm)a.classList.toggle('xdone',!/^agen bekerja/i.test(sm.textContent))}}
+ if(a){const sm=a.querySelector('summary');if(sm){const d=!/^agen bekerja/i.test(sm.textContent);if(d&&!a.classList.contains('xdone')){const dt=a.querySelector('details');if(dt)dt.open=false}a.classList.toggle('xdone',d)}}}
 }).observe(root,{childList:true,subtree:true,characterData:true});
 }catch(e){}})();
 </script>
