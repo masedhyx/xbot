@@ -4729,4 +4729,297 @@ window._x111Ext={vc,ics};
 })();
 </script>
 <!-- ===== AKHIR TAMBAHAN AKSES LUAR ===== -->
+<!-- ===== TAMBAHAN: ALAT GAMBAR (HTML -> JPG/PNG) - hapus blok ini sampai AKHIR untuk membatalkan ===== -->
+<script>
+(()=>{
+if(window._xGambar)return;
+window._xGambar=1;
+try{
+const XT=window.XT;
+if(!XT)return;
+
+const kb=n=>n<1024?n+' B':n<1048576?Math.round(n/1024)+' KB':(n/1048576).toFixed(1)+' MB';
+const loadH2C=()=>window.html2canvas?Promise.resolve():new Promise((ok,no)=>{
+  const s=document.createElement('script');
+  s.src='https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js';
+  s.onload=ok;
+  s.onerror=()=>no(new Error('Pustaka gambar gagal dimuat (cek koneksi internet)'));
+  document.head.appendChild(s);
+});
+
+/* gambar {"nama":"acara.jpg","html":"<!DOCTYPE html>...","lebar":640} : render HTML jadi JPG/PNG, tampil sebagai tombol Unduh/Bagikan */
+XT.gambar=async a=>{
+  a=a||{};
+  let nama=String(a.nama||a.name||'').trim();
+  let html=a.html!=null?a.html:a.isi!=null?a.isi:a.content;
+  if(html==null||String(html).trim()==='')throw new Error('HTML kosong');
+  html=String(html);
+  if(html.length>300000)throw new Error('HTML terlalu besar (maksimal 300 KB)');
+  nama=nama.replace(/[\\\/:*?"<>|\u0000-\u001f]+/g,'_').replace(/^\.+/,'').slice(0,80)||'gambar';
+  const m=nama.match(/\.(\w{1,5})$/);
+  let ext=m?m[1].toLowerCase():'';
+  if(!/^(jpe?g|png)$/.test(ext)){nama=nama.replace(/\.\w{1,5}$/,'')+'.jpg';ext='jpg'}
+  if(!window.XF||!Array.isArray(window.XF.q))throw new Error('Penampung berkas belum siap');
+  if(window.XF.q.length>=5)throw new Error('Maksimal 5 berkas per jawaban');
+  let w=parseInt(a.lebar||a.width,10);
+  if(!(w>=240&&w<=1400))w=640;
+  await loadH2C();
+  if(!window.html2canvas)throw new Error('Pustaka gambar tidak tersedia');
+
+  /* halaman dirender di iframe terpisah tanpa skrip, jadi tidak menyentuh tampilan aplikasi */
+  const fr=document.createElement('iframe');
+  fr.setAttribute('sandbox','allow-same-origin');
+  fr.setAttribute('aria-hidden','true');
+  fr.style.cssText='position:fixed;left:-99999px;top:0;width:'+w+'px;height:1px;border:0;opacity:0;pointer-events:none';
+  document.body.appendChild(fr);
+  try{
+    await new Promise((ok,no)=>{
+      const t=setTimeout(()=>no(new Error('Waktu habis saat menyiapkan halaman')),10000);
+      fr.onload=()=>{clearTimeout(t);ok()};
+      fr.srcdoc=html;
+    });
+    const d=fr.contentDocument;
+    if(!d||!d.documentElement)throw new Error('Halaman tidak bisa dibaca');
+    try{if(d.fonts&&d.fonts.ready)await Promise.race([d.fonts.ready,new Promise(r=>setTimeout(r,2000))])}catch(e){}
+    await new Promise(r=>setTimeout(r,150));
+    const root=d.documentElement;
+    const h=Math.max(Math.ceil(root.scrollHeight),50);
+    if(h>6000)throw new Error('Halaman terlalu panjang (maksimal 6000 px)');
+    fr.style.height=h+'px';
+    await new Promise(r=>setTimeout(r,60));
+    const sc=(w*h>2.2e6)?1:2;
+    const cv=await window.html2canvas(root,{backgroundColor:'#ffffff',scale:sc,useCORS:true,logging:false,width:w,height:h,windowWidth:w,windowHeight:h,imageTimeout:4000});
+    const mime=ext==='png'?'image/png':'image/jpeg';
+    const blob=await new Promise((ok,no)=>{
+      try{cv.toBlob(b=>b?ok(b):no(new Error('Gagal membuat gambar')),mime,0.92)}catch(e){no(e)}
+    });
+    if(window.XF.q.length>=5)throw new Error('Maksimal 5 berkas per jawaban');
+    window.XF.q.push({name:nama,blob,t:Date.now()});
+    (window._xGQ=window._xGQ||[]).push({name:nama,blob,w:cv.width,h:cv.height,t:Date.now()});
+    if(window._xGQ.length>5)window._xGQ.shift();
+    return{ok:true,nama,ukuran:kb(blob.size),resolusi:cv.width+'x'+cv.height,catatan:'Tombol Unduh/Bagikan sudah tampil di chat. Jangan menempelkan ulang kode HTML; cukup jelaskan singkat.'};
+  }finally{
+    try{fr.remove()}catch(e){}
+  }
+};
+
+/* pratinjau: gambar tampil langsung di chat, tepat di atas kartu Unduh/Bagikan miliknya.
+   Hanya aktif bila kartu berkas dengan nama yang sama sudah dipasang aplikasi pada balasan itu. */
+const msEl=document.getElementById('ms');
+if(msEl&&window.MutationObserver)new MutationObserver(ml=>{
+  try{
+    for(const m of ml)for(const n of m.addedNodes){
+      if(n.nodeType!==1||!n.classList.contains('bm')||n.classList.contains('xr'))continue;
+      const Q=window._xGQ;
+      if(!Q||!Q.length)continue;
+      const now=Date.now(),cards=[...n.querySelectorAll('.xfc b')];
+      window._xGQ=Q.filter(g=>{
+        if(now-g.t>=600000)return false;
+        const b=cards.find(x=>x.textContent==='\u{1F4C4} '+g.name);
+        if(!b||!b.parentNode||!b.parentNode.parentNode)return true;
+        const box=document.createElement('div');
+        box.style.cssText='margin:10px 0 2px';
+        const im=document.createElement('img');
+        im.alt=g.name;
+        im.width=g.w;im.height=g.h;
+        im.style.cssText='display:block;max-width:100%;height:auto;border-radius:14px;background:#fff';
+        im.src=URL.createObjectURL(g.blob);
+        box.appendChild(im);
+        b.parentNode.parentNode.insertBefore(box,b.parentNode);
+        return false;
+      });
+    }
+  }catch(e){}
+}).observe(msEl,{childList:true});
+
+/* pengetahuan alat untuk bot: hanya dikirim bila pesan pengguna menyebut format gambar */
+const KWG=/\b(jpe?g|png)\b|poster|undangan|flyer|banner|infografis|sertifikat|kartu ucapan|(jadi|jadikan|ke|dalam|bentuk|format|simpan sebagai|ekspor|export|ubah)\s+(sebuah\s+)?gambar/i;
+const GSYS='\n\n[Alat gambar] Kalau pengguna minta hasil dalam format gambar (JPG/JPEG/PNG), misalnya poster, undangan, kartu, atau "jadikan gambar": JANGAN pakai alat file dan JANGAN hanya menulis kode HTML. Panggil alat gambar dengan satu baris: <tool>{"name":"gambar","args":{"nama":"acara.jpg","html":"<!DOCTYPE html>..."}}</tool> tanpa teks lain. Wajib: "nama" dan "html" berada di dalam "args"; penutup harus </tool>; JSON valid satu baris (baris baru di dalam teks ditulis \\n, tanda kutip ganda di dalam html ditulis \\"); html berupa halaman lengkap dengan CSS di <style> (tanpa JavaScript dan tanpa gambar dari internet); lebar halaman 640 px (bisa diatur dengan "lebar"). Setelah hasil alat muncul, jelaskan singkat bahwa gambarnya siap diunduh atau dibagikan.';
+const pg=window.galeriSysFor;
+window.galeriSysFor=function(b){
+  let s='';
+  try{s=pg?pg.apply(this,arguments)||'':''}catch(e){}
+  try{
+    if(b&&!b.image_gen&&String(b.system||'').includes('[Info perangkat pengguna]')){
+      const ms=Array.isArray(b.messages)?b.messages:[];
+      let u='';
+      for(let i=ms.length-1;i>=0;i--)if(ms[i]&&ms[i].role==='user'){
+        const c=ms[i].content;
+        u=typeof c==='string'?c:Array.isArray(c)?c.map(x=>(x&&x.text)||'').join(' '):'';
+        break;
+      }
+      if(KWG.test(u))s+=GSYS;
+    }
+  }catch(e){}
+  return s;
+};
+}catch(e){try{console.warn('Alat gambar tidak aktif:',e)}catch(_){}}
+})();
+</script>
+<!-- ===== AKHIR TAMBAHAN ALAT GAMBAR ===== -->
+<!-- ===== TAMBAHAN: ALAT ARTEFAK (halaman HTML + JavaScript tampil di chat, terisolasi) - hapus blok ini sampai AKHIR untuk membatalkan ===== -->
+<script>
+(()=>{
+if(window._xArtefak)return;
+window._xArtefak=1;
+try{
+const XT=window.XT;
+if(!XT)return;
+
+const kb=n=>n<1024?n+' B':n<1048576?Math.round(n/1024)+' KB':(n/1048576).toFixed(1)+' MB';
+
+/* Isolasi: iframe sandbox "allow-scripts" TANPA "allow-same-origin" = asal "null".
+   Kode di dalamnya tidak bisa membaca DOM, penyimpanan, cookie, atau API key aplikasi.
+   CSP di bawah memblokir permintaan jaringan (fetch/XHR/WebSocket); skrip hanya dari 2 CDN. */
+const CSP_OFF="default-src 'none'; script-src 'unsafe-inline' 'unsafe-eval' https://cdnjs.cloudflare.com https://cdn.jsdelivr.net; style-src 'unsafe-inline' https://fonts.googleapis.com; font-src data: https://fonts.gstatic.com; img-src data: blob:; media-src data: blob:; connect-src 'none'; frame-src 'none'; object-src 'none'; form-action 'none'; base-uri 'none'";
+/* terbuka hanya setelah pengguna menekan "Izinkan internet" pada artefak itu; tetap terisolasi dari data aplikasi */
+const CSP_ON="default-src 'none'; script-src 'unsafe-inline' 'unsafe-eval' https:; style-src 'unsafe-inline' https:; font-src data: https:; img-src data: blob: https:; media-src data: blob: https:; connect-src https: wss:; frame-src 'none'; object-src 'none'; form-action 'none'; base-uri 'none'";
+const inj=(h,csp)=>{
+  const M='<meta http-equiv="Content-Security-Policy" content="'+csp+'">';
+  if(/<head[^>]*>/i.test(h))return h.replace(/<head[^>]*>/i,m=>m+M);
+  if(/<html[^>]*>/i.test(h))return h.replace(/<html[^>]*>/i,m=>m+'<head>'+M+'</head>');
+  return '<!DOCTYPE html><html><head><meta charset="utf-8">'+M+'</head><body>'+h+'</body></html>';
+};
+const resizer=id=>'<script>(function(){var d=document.documentElement;function s(){try{var h=Math.ceil(Math.max(d.offsetHeight,document.body?document.body.offsetHeight:0));parent.postMessage({xa:"'+id+'",h:h},"*")}catch(e){}}addEventListener("load",s);try{new ResizeObserver(s).observe(d)}catch(e){}setTimeout(s,300)})()<\/script>';
+
+/* artefak {"judul":"Kalkulator","html":"<!DOCTYPE html>..."} : halaman HTML + JavaScript tampil di chat */
+XT.artefak=async a=>{
+  a=a||{};
+  const judul=String(a.judul||a.title||a.nama||'').trim().replace(/[\\\/:*?"<>|\u0000-\u001f]+/g,'_').replace(/\.html?$/i,'').slice(0,60)||'artefak';
+  let html=a.html!=null?a.html:a.isi!=null?a.isi:a.content;
+  if(html==null||String(html).trim()==='')throw new Error('HTML kosong');
+  html=String(html);
+  if(html.length>300000)throw new Error('HTML terlalu besar (maksimal 300 KB)');
+  if(!window.XF||!Array.isArray(window.XF.q))throw new Error('Penampung berkas belum siap');
+  if(window.XF.q.length>=5)throw new Error('Maksimal 5 berkas per jawaban');
+  let nama=judul+'.html',k=2;
+  while(window.XF.q.some(f=>f.name===nama))nama=judul+'-'+(k++)+'.html';
+  const blob=new Blob([html],{type:'text/html;charset=utf-8'});
+  window.XF.q.push({name:nama,blob,t:Date.now()});
+  (window._xAQ=window._xAQ||[]).push({name:nama,judul,html,t:Date.now()});
+  if(window._xAQ.length>5)window._xAQ.shift();
+  return{ok:true,nama,ukuran:kb(blob.size),catatan:'Artefak tampil di chat dengan tombol Unduh/Bagikan. Jangan menempelkan ulang kode; cukup jelaskan singkat.'};
+};
+
+const frames=new Map();let seq=0;
+const apply=f=>{
+  const px=f.big?Math.round(window.innerHeight*0.85):Math.min(Math.max(Math.round(f.h),120),640);
+  if(Math.abs(px-(f.cur||0))>2){f.cur=px;f.fr.style.height=px+'px'}
+};
+window.addEventListener('message',e=>{
+  try{
+    const d=e.data;
+    if(!d||typeof d.xa!=='string'||typeof d.h!=='number'||!isFinite(d.h))return;
+    const f=frames.get(d.xa);
+    if(!f||e.source!==f.fr.contentWindow)return;
+    f.h=d.h;
+    apply(f);
+  }catch(x){}
+});
+
+const copyTxt=async t=>{
+  try{await navigator.clipboard.writeText(t);return true}
+  catch(e){
+    try{
+      const ta=document.createElement('textarea');
+      ta.value=t;ta.style.cssText='position:fixed;left:-9999px;top:0;opacity:0';
+      document.body.appendChild(ta);ta.focus();ta.select();
+      const ok=document.execCommand('copy');ta.remove();return ok;
+    }catch(e2){return false}
+  }
+};
+const mkBtn=(t,fn)=>{
+  const b=document.createElement('button');
+  b.type='button';b.textContent=t;
+  b.style.cssText='padding:5px 10px;border:0;border-radius:10px;background:#2c2c2e;color:#fff;font-size:12px;font-weight:600;cursor:pointer';
+  b.onclick=fn;
+  return b;
+};
+
+const buildCard=g=>{
+  const id='xa'+(++seq)+Math.random().toString(36).slice(2,8);
+  const mkDoc=net=>inj(g.html,net?CSP_ON:CSP_OFF)+resizer(id);
+  let doc=mkDoc(false);
+  const box=document.createElement('div');
+  box.style.cssText='margin:10px 0 2px;border:1px solid #3a3a3c;border-radius:14px;overflow:hidden;background:#fff';
+  const hd=document.createElement('div');
+  hd.style.cssText='display:flex;flex-wrap:wrap;align-items:center;gap:6px;padding:8px 10px;background:#1c1c1e;color:#fff;font-size:13px';
+  const tt=document.createElement('b');
+  tt.textContent='Artefak: '+g.judul;
+  tt.style.cssText='flex:1 1 100%;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:600';
+  const fr=document.createElement('iframe');
+  fr.setAttribute('sandbox','allow-scripts');
+  fr.setAttribute('title',g.judul);
+  fr.style.cssText='display:block;width:100%;height:220px;border:0;background:#fff';
+  const f={fr,h:220,big:false,cur:220,net:false};
+  frames.set(id,f);
+  const bBig=mkBtn('Perbesar',()=>{f.big=!f.big;bBig.textContent=f.big?'Kecilkan':'Perbesar';apply(f)});
+  const bCopy=mkBtn('Salin',()=>{copyTxt(g.html).then(ok=>{bCopy.textContent=ok?'Tersalin':'Gagal';setTimeout(()=>{bCopy.textContent='Salin'},1500)})});
+  const reload=()=>{fr.srcdoc='';setTimeout(()=>{fr.srcdoc=doc},30)};
+  const bNet=mkBtn('Izinkan internet',()=>{
+    if(!f.net){
+      let ok=false;
+      try{ok=window.confirm('Izinkan artefak ini mengakses internet?\n\nKode di dalamnya bisa mengirim apa yang Anda ketik di artefak ini ke situs luar. Izinkan hanya jika Anda percaya. Data dan API key bot tetap aman.')}catch(e){}
+      if(!ok)return;
+      f.net=true;
+    }else f.net=false;
+    doc=mkDoc(f.net);
+    bNet.textContent=f.net?'Matikan internet':'Izinkan internet';
+    bNet.style.background=f.net?'#7a2e2e':'#2c2c2e';
+    tt.textContent='Artefak: '+g.judul+(f.net?' (internet aktif)':'');
+    reload();
+  });
+  const bReload=mkBtn('Ulang',reload);
+  const bClose=mkBtn('Tutup',()=>{frames.delete(id);box.remove()});
+  hd.append(tt,bBig,bNet,bCopy,bReload,bClose);
+  box.append(hd,fr);
+  fr.srcdoc=doc;
+  return box;
+};
+
+/* tampil di atas kartu Unduh/Bagikan miliknya; hanya bila aplikasi sudah memasang kartu dengan nama yang sama */
+const msEl=document.getElementById('ms');
+if(msEl&&window.MutationObserver)new MutationObserver(ml=>{
+  try{
+    for(const m of ml)for(const n of m.addedNodes){
+      if(n.nodeType!==1||!n.classList.contains('bm')||n.classList.contains('xr'))continue;
+      const Q=window._xAQ;
+      if(!Q||!Q.length)continue;
+      const now=Date.now(),cards=[...n.querySelectorAll('.xfc b')];
+      window._xAQ=Q.filter(g=>{
+        if(now-g.t>=600000)return false;
+        const b=cards.find(x=>x.textContent==='\u{1F4C4} '+g.name);
+        if(!b||!b.parentNode||!b.parentNode.parentNode)return true;
+        b.parentNode.parentNode.insertBefore(buildCard(g),b.parentNode);
+        return false;
+      });
+    }
+  }catch(e){}
+}).observe(msEl,{childList:true});
+
+/* pengetahuan alat untuk bot: hanya dikirim bila pesan pengguna jelas meminta artefak / tampil langsung di chat */
+const KWA=/\bartefak\b|\bartifacts?\b|(pratinjau|preview|tampilkan|munculkan|jalankan)[^.\n]{0,25}(langsung|di chat|dalam chat)/i;
+const ASYS='\n\n[Alat artefak] Kalau pengguna minta hasil tampil langsung di chat seperti artefak (halaman HTML yang bisa dijalankan: kalkulator, game kecil, kuis, simulasi, dasbor, halaman interaktif): JANGAN hanya menempelkan kode. Panggil alat artefak dengan satu baris: <tool>{"name":"artefak","args":{"judul":"Kalkulator","html":"<!DOCTYPE html>..."}}</tool> tanpa teks lain. Wajib: "judul" dan "html" berada di dalam "args"; penutup harus </tool>; JSON valid satu baris (baris baru di dalam teks ditulis \\n, tanda kutip ganda di dalam html ditulis \\"); html = satu halaman lengkap dengan CSS dan JavaScript langsung di dalamnya; tanpa localStorage/cookie dan tanpa alert/confirm/prompt; internet MATI secara default dan baru aktif bila pengguna menekan tombol Izinkan internet di kartu artefak, jadi bila halaman butuh data dari internet (fetch ke API https yang mengizinkan CORS, gambar https, pustaka dari CDN) wajib tampilkan pesan ramah "Tekan Izinkan internet di atas untuk memuat data" saat gagal, dan jangan menaruh kunci rahasia di kode; tanpa itu pakai data: URI atau SVG dan pustaka dari cdnjs.cloudflare.com atau cdn.jsdelivr.net; jangan ada loop tak berujung; tampilan harus muat di lebar HP (sekitar 360 px). Setelah hasil alat muncul, jelaskan singkat apa yang dibuat.';
+const pg=window.galeriSysFor;
+window.galeriSysFor=function(b){
+  let s='';
+  try{s=pg?pg.apply(this,arguments)||'':''}catch(e){}
+  try{
+    if(b&&!b.image_gen&&String(b.system||'').includes('[Info perangkat pengguna]')){
+      const ms=Array.isArray(b.messages)?b.messages:[];
+      let u='';
+      for(let i=ms.length-1;i>=0;i--)if(ms[i]&&ms[i].role==='user'){
+        const c=ms[i].content;
+        u=typeof c==='string'?c:Array.isArray(c)?c.map(x=>(x&&x.text)||'').join(' '):'';
+        break;
+      }
+      if(KWA.test(u)&&!(/\b(jpe?g|png)\b/i.test(u)&&!/artefak|artifact/i.test(u)))s+=ASYS;
+    }
+  }catch(e){}
+  return s;
+};
+}catch(e){try{console.warn('Alat artefak tidak aktif:',e)}catch(_){}}
+})();
+</script>
+<!-- ===== AKHIR TAMBAHAN ALAT ARTEFAK ===== -->
 </body></html>
