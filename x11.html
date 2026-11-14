@@ -3451,7 +3451,7 @@ const agRun=(input,init,b0)=>{
       }catch(e){}
     }
     sm.textContent=fin.error?'agen berhenti karena error':'proses agen · '+R.steps.length+' langkah · '+used+' putaran · '+R.seen.size+' sumber dicek';
-    dt.open=false;card.style.display='';if(stEl)stEl.style.display='none';emit(fin);try{ctl.close()}catch(e){}
+    dt.open=false;card.style.display=fin.error?'':'none';if(stEl)stEl.style.display='none';emit(fin);try{ctl.close()}catch(e){}
   })();
   return new Response(stream,{status:200,headers:{'Content-Type':'application/x-ndjson'}})};
 window.fetch=async function(input,init){
@@ -5165,4 +5165,230 @@ window.galeriSysFor=function(b){
 })();
 </script>
 <!-- ===== AKHIR TAMBAHAN ALAT ARTEFAK ===== -->
+<!-- ===== TAMBAHAN: SATELIT 3D (bumi -> Indonesia -> provinsi -> kabupaten -> titik GPS). Hapus blok ini sampai AKHIR untuk membatalkan ===== -->
+<style>
+.mp.mpsat{width:100%!important;max-width:520px}
+.xs3{position:relative;border-radius:16px;overflow:hidden;background:#000;height:min(72vh,440px);border:1px solid #2a2a2a}
+.xs3m{position:absolute;inset:0}
+.xs3l{position:absolute;left:10px;top:10px;z-index:3;max-width:calc(100% - 140px);background:rgba(0,0,0,.55);-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);color:#fff;padding:8px 12px;border-radius:12px;font-size:14px;line-height:1.25;pointer-events:none;transition:opacity .3s}
+.xs3l small{display:block;opacity:.7;font-size:10px;letter-spacing:.09em;text-transform:uppercase;margin-bottom:2px}
+.xs3d{position:absolute;left:12px;bottom:12px;z-index:3;display:flex;gap:6px;pointer-events:none}
+.xs3d i{width:7px;height:7px;border-radius:50%;background:rgba(255,255,255,.3);transition:background .3s,transform .3s}
+.xs3d i.on{background:#fff;transform:scale(1.3)}
+.xs3r{position:absolute;right:10px;top:10px;z-index:4;border:0;border-radius:12px;padding:8px 11px;font-size:13px;color:#fff;background:rgba(0,0,0,.55);-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px)}
+.xs3x{position:absolute;inset:0;display:flex;flex-direction:column;gap:10px;align-items:center;justify-content:center;text-align:center;padding:20px;color:#ddd;font-size:14px}
+.xs3x a,.xs3x button{color:#9ecbff;background:none;border:0;font-size:14px;text-decoration:none}
+.xs3p{width:18px;height:18px;border-radius:50%;background:#2f8cff;border:3px solid #fff;box-shadow:0 0 0 0 rgba(47,140,255,.7);animation:xs3pl 1.6s infinite}
+@keyframes xs3pl{70%{box-shadow:0 0 0 18px rgba(47,140,255,0)}100%{box-shadow:0 0 0 0 rgba(47,140,255,0)}}
+.xs3.pv{height:230px}.xs3.pv .xs3d,.xs3.pv .xs3r{display:none}.xs3g{display:none;position:absolute;left:10px;bottom:10px;z-index:4;border:0;border-radius:12px;padding:9px 13px;font-size:13px;color:#fff;background:rgba(0,0,0,.6);-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px)}.xs3.pv .xs3g{display:block}
+.xs3t{position:absolute;inset:0;z-index:2;pointer-events:none;transition:background 1s}
+.xs3f{position:absolute;right:56px;top:10px;z-index:4;border:0;border-radius:12px;padding:8px 11px;font-size:13px;color:#fff;background:rgba(0,0,0,.55);-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px)}
+.xs3.pv .xs3f{right:10px}.xs3.pv .xs3l{max-width:calc(100% - 130px)}
+</style>
+<script>
+(()=>{
+if(window._xSat)return;
+window._xSat=1;
+try{
+const LIB='https://cdn.jsdelivr.net/npm/maplibre-gl@5.6.0/dist/maplibre-gl';
+const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+
+/* ---------- pemuat pustaka peta (hanya saat dibutuhkan) ---------- */
+let libP=null;
+const loadLib=()=>libP||(libP=new Promise((ok,no)=>{
+  if(window.maplibregl)return ok();
+  const l=document.createElement('link');l.rel='stylesheet';l.href=LIB+'.css';document.head.appendChild(l);
+  const s=document.createElement('script');s.src=LIB+'.js';s.onload=()=>ok();s.onerror=()=>{libP=null;no(new Error('Pustaka peta gagal dimuat (cek koneksi internet)'))};
+  document.head.appendChild(s)}));
+
+/* ---------- data wilayah dari OpenStreetMap (Nominatim), pelan-pelan agar tidak kena batas ---------- */
+const nom=async(lat,lon,zoom)=>{
+  const c=new AbortController(),t=setTimeout(()=>c.abort(),9000);
+  try{const r=await fetch('https://nominatim.openstreetmap.org/reverse?format=jsonv2&accept-language=id&polygon_geojson=1&polygon_threshold=0.01&zoom='+zoom+'&lat='+lat+'&lon='+lon,{signal:c.signal});
+    if(!r.ok)return null;const j=await r.json();if(!j||j.error)return null;
+    const b=(j.boundingbox||[]).map(Number);
+    return{nama:j.name||String(j.display_name||'').split(',')[0],bounds:b.length===4&&b.every(isFinite)?[[b[2],b[0]],[b[3],b[1]]]:null,geo:j.geojson&&/Polygon/.test(j.geojson.type)?{type:'Feature',geometry:j.geojson}:null}}
+  catch(e){return null}finally{clearTimeout(t)}};
+
+const circ=(lon,lat,r)=>{const p=[],k=111320;for(let i=0;i<=64;i++){const a=i/64*2*Math.PI;p.push([lon+(r*Math.cos(a))/(k*Math.cos(lat*Math.PI/180)),lat+(r*Math.sin(a))/k])}return{type:'Feature',geometry:{type:'Polygon',coordinates:[p]}}};
+const dayStr=()=>new Date(Date.now()-30*36e5).toISOString().slice(0,10);
+const IDN=[[94.8,-11.2],[141.2,6.2]];
+const inIdn=(la,lo)=>la>-11.5&&la<6.5&&lo>94&&lo<142;
+
+/* hanya satu peta hidup pada satu waktu (iPhone membatasi jumlah WebGL) */
+let LIVE=null;
+
+/* ---------- suasana mengikuti jam perangkat: pagi, siang, sore, malam ---------- */
+const FASE={
+ pagi:{em:'🌅',nm:'pagi',tint:'linear-gradient(180deg,rgba(255,206,140,.22),rgba(255,255,255,0) 60%)',esri:{'raster-brightness-max':.98,'raster-saturation':.05},
+  sky:{'sky-color':'#8ec5ff','horizon-color':'#ffe0b0','fog-color':'#bfdcff'},night:0,clouds:1},
+ siang:{em:'☀️',nm:'siang',tint:'none',esri:{},sky:{'sky-color':'#199EF3','horizon-color':'#ffffff','fog-color':'#5aa9ff'},night:0,clouds:1},
+ sore:{em:'🌇',nm:'sore',tint:'linear-gradient(0deg,rgba(255,105,40,.34),rgba(255,160,60,.10) 55%,rgba(110,60,150,.16))',esri:{'raster-brightness-max':.9,'raster-saturation':.12,'raster-hue-rotate':-8},
+  sky:{'sky-color':'#ff9a5c','horizon-color':'#ffd08a','fog-color':'#7a4a8a'},night:0,clouds:1},
+ malam:{em:'🌙',nm:'malam',tint:'linear-gradient(180deg,rgba(6,12,50,.34),rgba(6,12,50,.20))',esri:{'raster-brightness-max':.42,'raster-saturation':-.35,'raster-contrast':.1},
+  sky:{'sky-color':'#01030c','horizon-color':'#26357a','fog-color':'#040a24'},night:1,clouds:0}};
+const FK=['pagi','siang','sore','malam'];
+const faseNow=()=>{const h=new Date().getHours();return h>=4&&h<10?'pagi':h>=10&&h<15?'siang':h>=15&&h<18?'sore':'malam'};
+
+function build(w,q){
+  const P=q.split(','),lat=+P[0],lon=+P[1],acc=+P[2]>0?+P[2]:30;let pv=P[3]==='pv';
+  let fk=faseNow();
+  const addr=(()=>{try{return typeof gpsAddr!=='undefined'&&gpsAddr?String(gpsAddr):''}catch(e){return''}})();
+  const place=addr?addr.split(',').slice(0,2).map(s=>s.trim()).join(', '):lat.toFixed(5)+', '+lon.toFixed(5);
+  const root=document.createElement('div');root.className='xs3'+(pv?' pv':'');
+  root.innerHTML='<div class="xs3m"></div><div class="xs3t"></div><div class="xs3l"><small>satelit</small><span>menyiapkan bumi…</span></div><div class="xs3d"><i></i><i></i><i></i><i></i><i></i></div><button class="xs3f" aria-label="Ganti suasana waktu"></button><button class="xs3r" aria-label="Putar ulang">↻</button><button class="xs3g">▶ Lihat dari satelit</button>';
+  w.appendChild(root);
+  const $=s=>root.querySelector(s),lab=(k,t)=>{const l=$('.xs3l');l.innerHTML='<small>'+esc(k)+'</small><span>'+esc(t)+'</span>'},
+        dots=n=>root.querySelectorAll('.xs3d i').forEach((d,i)=>d.classList.toggle('on',i<=n));
+  let map=null,marker=null,token=0;
+  const paintFase=()=>{const F=FASE[fk];$('.xs3t').style.background=F.tint;$('.xs3f').textContent=F.em+' '+F.nm};
+  paintFase();
+
+  const fail=msg=>{const m=$('.xs3m');if(m)m.innerHTML='<div class="xs3x"><div>🛰️ '+esc(msg)+'</div><a target="_blank" rel="noopener" href="https://maps.apple.com/?ll='+lat+','+lon+'&t=k">Buka satelit di Peta ↗</a></div>'};
+  const stop=()=>{token++;try{marker&&marker.remove()}catch(e){}marker=null;try{map&&map.remove()}catch(e){}map=null};
+  const park=()=>{stop();$('.xs3m').innerHTML='<div class="xs3x"><button>▶ Putar tampilan satelit</button></div>';$('.xs3m button').onclick=()=>play()};
+
+  const clearGJ=()=>{if(!map)return;['prov','kab','acc'].forEach(id=>{[id+'-l',id+'-f'].forEach(l=>{if(map.getLayer(l))map.removeLayer(l)});if(map.getSource(id))map.removeSource(id)})};
+  const drawGJ=(id,f,color,fillOp,width)=>{if(!map||!f)return;try{
+    map.addSource(id,{type:'geojson',data:f});
+    map.addLayer({id:id+'-f',type:'fill',source:id,paint:{'fill-color':color,'fill-opacity':fillOp}});
+    map.addLayer({id:id+'-l',type:'line',source:id,paint:{'line-color':color,'line-width':width}})}catch(e){}};
+  const fly=(o,ms)=>new Promise(res=>{if(!map)return res();let d=false;const f=()=>{if(!d){d=true;res()}};map.once('moveend',f);setTimeout(f,ms+2500);map.flyTo({...o,duration:ms,essential:true})});
+  const pin=()=>{try{const el=document.createElement('div');el.className='xs3p';marker=new maplibregl.Marker({element:el}).setLngLat([lon,lat]).addTo(map)}catch(e){}};
+
+  async function play(){
+    stop();const my=token;const live=()=>my===token&&map;
+    if(LIVE&&LIVE!==park2){try{LIVE()}catch(e){}}LIVE=park2;
+    const F=FASE[fk];paintFase();
+    $('.xs3m').innerHTML='';dots(-1);lab('satelit','memuat peta…');
+    try{await loadLib()}catch(e){return fail(e.message)}
+    if(my!==token)return;
+    const D=dayStr(),zUp=pv?(acc>200?14.5:16):1.15;
+    try{
+      map=new maplibregl.Map({container:$('.xs3m'),cooperativeGestures:true,attributionControl:{compact:true},
+        center:pv?[lon,lat]:[lon-75,8],zoom:zUp,pitch:pv?30:0,maxPitch:70,
+        style:{version:8,projection:{type:'globe'},
+          sources:{
+            esri:{type:'raster',tileSize:256,maxzoom:19,tiles:['https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'],attribution:'Esri, Maxar, Earthstar Geographics'},
+            gibs:{type:'raster',tileSize:256,maxzoom:9,tiles:['https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/MODIS_Terra_CorrectedReflectance_TrueColor/default/'+D+'/GoogleMapsCompatible_Level9/{z}/{y}/{x}.jpg'],attribution:'NASA GIBS'},
+            lights:{type:'raster',tileSize:256,maxzoom:8,tiles:['https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/VIIRS_Black_Marble/default/2016-01-01/GoogleMapsCompatible_Level8/{z}/{y}/{x}.png'],attribution:'NASA Black Marble'}},
+          layers:[
+            {id:'bg',type:'background',paint:{'background-color':'#000'}},
+            {id:'esri',type:'raster',source:'esri',paint:F.esri},
+            /* siang/pagi/sore: awan nyata (citra NASA); malam: lampu kota. Keduanya memudar saat mendekat */
+            {id:'gibs',type:'raster',source:'gibs',paint:{'raster-opacity':F.clouds?['interpolate',['linear'],['zoom'],4.5,1,6.8,0]:0}},
+            {id:'lights',type:'raster',source:'lights',paint:{'raster-opacity':F.night?['interpolate',['linear'],['zoom'],5,1,7.5,0]:0}}]}});
+    }catch(e){return fail('Peta 3D tidak didukung di perangkat ini')}
+    map.on('error',()=>{});
+    await new Promise(r=>{let d=0;const f=()=>{if(!d){d=1;r()}};map.once('load',f);setTimeout(f,12000)});
+    if(!live())return;
+    try{map.setSky({...F.sky,'sky-horizon-blend':.5,'horizon-fog-blend':.5,'fog-ground-blend':.5,'atmosphere-blend':['interpolate',['linear'],['zoom'],0,1,5,1,7,0]})}catch(e){}
+
+    /* mode pratinjau (kartu kecil saat cek lokasi): langsung ke titik, tanpa animasi */
+    if(pv){lab('lokasi Anda',place+' · ±'+Math.round(acc)+' m');drawGJ('acc',circ(lon,lat,Math.max(acc,8)),'#2f8cff',.18,2);pin();return}
+
+    /* data wilayah diambil di latar belakang selama bumi berputar */
+    const info={};
+    (async()=>{
+      if(!inIdn(lat,lon)){info.neg=await nom(lat,lon,3);await sleep(1100)}
+      info.prov=await nom(lat,lon,4);await sleep(1100);
+      info.kab=await nom(lat,lon,8)})();
+
+    /* 1. bumi 3D, berputar pelan (berawan di siang hari, lampu kota di malam hari) */
+    dots(0);lab('bumi',F.em+' '+F.nm+' hari · dilihat dari luar angkasa');
+    const t0=performance.now(),R=3200,lng0=map.getCenter().lng,tgt=inIdn(lat,lon)?118:lon;
+    await new Promise(res=>{const tick=now=>{if(!live())return res();const p=Math.min(1,(now-t0)/R);
+      try{map.jumpTo({center:[lng0+(tgt-lng0)*p,8-p*10]})}catch(e){}
+      p<1?requestAnimationFrame(tick):res()};requestAnimationFrame(tick)});
+    if(!live())return;
+
+    /* 2. negara (Indonesia) */
+    dots(1);
+    if(inIdn(lat,lon)){lab('negara','Indonesia');await fly({center:[118,-2.5],zoom:3.2,pitch:0},2600)}
+    else{lab('negara',(info.neg&&info.neg.nama)||'negara Anda');await fly(info.neg&&info.neg.bounds?{...map.cameraForBounds(info.neg.bounds,{padding:30})}:{center:[lon,lat],zoom:4},2600)}
+    if(!live())return;await sleep(350);
+
+    /* 3. provinsi */
+    for(let i=0;i<24&&!('prov' in info)&&live();i++)await sleep(250);
+    dots(2);lab('provinsi',(info.prov&&info.prov.nama)||'provinsi Anda');
+    drawGJ('prov',info.prov&&info.prov.geo,'#ffd54a',.08,2);
+    await fly(info.prov&&info.prov.bounds?{...map.cameraForBounds(info.prov.bounds,{padding:30,maxZoom:9}),pitch:0}:{center:[lon,lat],zoom:7,pitch:0},2600);
+    if(!live())return;await sleep(350);
+
+    /* 4. kabupaten / kota */
+    for(let i=0;i<24&&!('kab' in info)&&live();i++)await sleep(250);
+    dots(3);lab('kabupaten / kota',(info.kab&&info.kab.nama)||'wilayah Anda');
+    drawGJ('kab',info.kab&&info.kab.geo,'#ff7043',.12,2.5);
+    await fly(info.kab&&info.kab.bounds?{...map.cameraForBounds(info.kab.bounds,{padding:30,maxZoom:12}),pitch:0}:{center:[lon,lat],zoom:10,pitch:0},2600);
+    if(!live())return;await sleep(350);
+
+    /* 5. lokasi akurat */
+    dots(4);lab('lokasi akurat',place+' · ±'+Math.round(acc)+' m');
+    drawGJ('acc',circ(lon,lat,Math.max(acc,8)),'#2f8cff',.18,2);
+    await fly({center:[lon,lat],zoom:acc>200?15.5:17,pitch:45,bearing:0},3400);
+    if(!live())return;pin();
+  }
+  const park2=()=>park();
+  $('.xs3r').onclick=()=>play();
+  /* ketuk chip waktu untuk mencoba suasana lain (pagi, siang, sore, malam) */
+  $('.xs3f').onclick=()=>{fk=FK[(FK.indexOf(fk)+1)%4];play()};
+  /* dari pratinjau ke animasi penuh */
+  $('.xs3g').onclick=()=>{pv=false;root.classList.remove('pv');play()};
+
+  /* mulai otomatis saat kartu terlihat (agar riwayat lama tidak memutar semuanya sekaligus) */
+  let started=false;
+  const go=()=>{if(started)return;started=true;play()};
+  if('IntersectionObserver' in window){const io=new IntersectionObserver(es=>{if(es.some(e=>e.isIntersecting)){io.disconnect();go()}},{threshold:.5});io.observe(root)}else go();
+}
+
+/* ---------- sambungan ke sistem media chat: tag [satelit: lat,lon,akurasi] ---------- */
+const TGS=/\[satelit:\s*(-?\d+(?:\.\d+)?)\s*,\s*(-?\d+(?:\.\d+)?)\s*(?:,\s*(\d+(?:\.\d+)?))?(?:,\s*(pv))?\s*\]/gi;
+if(window.MP&&MP.parse&&MP.mount){
+  const op=MP.parse.bind(MP),om=MP.mount.bind(MP);
+  MP.parse=function(raw){let sat=null;
+    const s=String(raw||'').split(/(```[\s\S]*?```)/).map((p,i)=>i%2?p:p.replace(TGS,(m,a,o,c,v)=>{if(!sat)sat={k:'satelit',q:a+','+o+','+(c||'')+(v?',pv':'')};return''})).join('');
+    const r=op(s);if(sat){r.items.push(sat);r.tags=(r.tags?r.tags+'\n':'')+'[satelit: '+sat.q+']'}return r};
+  MP.mount=function(box,items){const sat=items.filter(i=>i.k==='satelit'),rest=items.filter(i=>i.k!=='satelit');
+    if(rest.length)om(box,rest);
+    if(sat.length){const bt=box.querySelector('.bt');if(bt){const w=document.createElement('div');w.className='mp mpsat';bt.after(w);build(w,sat[0].q)}}}}
+
+/* ---------- pencegat perintah: "tampilkan dari satelit" tidak lagi dilempar ke pencarian foto ---------- */
+const INTENT=/satelit|google ?earth|bumi 3 ?d|citra udara/i;
+const lastUser=b=>{const m=Array.isArray(b&&b.messages)?b.messages:[];for(let i=m.length-1;i>=0;i--)if(m[i]&&m[i].role==='user'){const c=m[i].content;return typeof c==='string'?c:Array.isArray(c)?c.map(x=>(x&&x.text)||'').join(' '):''}return''};
+const fake=text=>{const enc=new TextEncoder();return new Response(new ReadableStream({start(c){c.enqueue(enc.encode(JSON.stringify({text})+'\n'));c.close()}}),{status:200,headers:{'Content-Type':'application/x-ndjson'}})};
+const LOCQ=/(posisi|lokasi|letak)\s.*(saya|ku|aku|kami)|(saya|aku)\s.*(di\s?mana)|cek lokasi|di\s?mana saya/i;
+const tagResp=(r,suf)=>{if(!r||!r.body)return r;const enc=new TextEncoder(),dec=new TextDecoder(),rd=r.body.getReader();let buf='';
+  const fix=l=>{try{const j=JSON.parse(l);if(!j.s&&typeof j.text==='string'&&!j.error&&!/\[satelit:/.test(j.text)){j.text+=suf;return JSON.stringify(j)}}catch(e){}return l};
+  return new Response(new ReadableStream({async pull(c){const{done,value}=await rd.read();
+    if(done){if(buf.trim())c.enqueue(enc.encode(fix(buf)+'\n'));c.close();return}
+    buf+=dec.decode(value,{stream:true});let i;while((i=buf.indexOf('\n'))>=0){const l=buf.slice(0,i);buf=buf.slice(i+1);if(l)c.enqueue(enc.encode(fix(l)+'\n'))}}}),{status:r.status,headers:r.headers})};
+const pf=window.fetch;
+window.fetch=function(input,init){
+  try{
+    const url=typeof input==='string'?input:(input&&input.url)||'';
+    if(url.includes('/chat')&&init&&typeof init.body==='string'){
+      const b=JSON.parse(init.body);
+      if(!b.image_gen&&typeof b.system==='string'&&b.system.includes('[Info perangkat pengguna]')){
+        const u=lastUser(b);
+        if(u.length<120&&INTENT.test(u)){
+          let g=null,on=false;try{on=typeof gpsOn!=='undefined'&&gpsOn;g=typeof gps!=='undefined'?gps:null}catch(e){}
+          if(!on||!g||!g.coords)return Promise.resolve(fake('GPS belum aktif. Buka menu (+) lalu pilih **Bagikan GPS**, setelah itu minta lagi ya.'));
+          const c=g.coords;
+          return Promise.resolve(fake('Ini posisi Anda dari satelit. Ketuk ↻ untuk memutar ulang, atau pakai dua jari untuk menggeser peta.\n\n[satelit: '+c.latitude.toFixed(6)+','+c.longitude.toFixed(6)+','+Math.round(c.accuracy)+']'));
+        }
+        if(u.length<100&&LOCQ.test(u)&&!INTENT.test(u)){
+          let on=false,g=null;try{on=typeof gpsOn!=='undefined'&&gpsOn;g=typeof gps!=='undefined'?gps:null}catch(e){}
+          if(on&&g&&g.coords){const c=g.coords,suf='\n\n[satelit: '+c.latitude.toFixed(6)+','+c.longitude.toFixed(6)+','+Math.round(c.accuracy)+',pv]';
+            return pf.apply(this,arguments).then(r=>tagResp(r,suf))}
+        }
+      }
+    }
+  }catch(e){}
+  return pf.apply(this,arguments);
+};
+}catch(e){try{console.warn('Satelit 3D tidak aktif:',e)}catch(_){}}
+})();
+</script>
+<!-- ===== AKHIR TAMBAHAN SATELIT 3D ===== -->
 </body></html>
