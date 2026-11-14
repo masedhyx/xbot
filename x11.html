@@ -60,7 +60,7 @@ footer{padding:6px 18px calc(env(safe-area-inset-bottom) + 12px);position:relati
  <div id="ms"><div id="wl"></div></div>
  <footer>
   <div id="pv"></div><div id="gp"></div>
-  <div id="pm" hidden><button id="m_f">Lampirkan file</button><button id="m_c">Ambil foto</button><button id="m_g"><span>Bagikan GPS</span><i class="dt" hidden></i></button><button id="m_w"><span>Cari di web</span><i class="dt" hidden></i></button><button id="m_i">Buat gambar</button><button id="m_a"><span>Agen</span><i class="dt" hidden></i></button><button id="m_v">Telephone</button></div>
+  <div id="pm" hidden><button id="m_f">Lampirkan file</button><button id="m_c">Ambil foto</button><button id="m_g"><span>Bagikan GPS</span><i class="dt" hidden></i></button><button id="m_w"><span>Cari di web</span><i class="dt" hidden></i></button><button id="m_i">Buat gambar</button><button id="m_a"><span>Agen</span><i class="dt" hidden></i></button><div id="agd" hidden><div class="agr"><button data-d="cepat">Cepat</button><button data-d="std">Seimbang</button><button data-d="dalam">Mendalam</button></div><button id="m_r">Laporan tersimpan</button></div><button id="m_v">Telephone</button></div>
   <div id="qc"><button data-t="m_w"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.6 2.4 4 5.5 4 9s-1.4 6.6-4 9c-2.6-2.4-4-5.5-4-9s1.4-6.6 4-9z"/></svg><span>Cari di web</span></button><button data-t="m_i"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="3.5" width="17" height="17" rx="4"/><circle cx="9" cy="9.2" r="1.5"/><path d="M20.5 15.5l-4.8-4.8L6 20.5"/></svg><span>Buat gambar</span></button><button data-t="m_f"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20.5 11.5l-8.2 8.2a5.2 5.2 0 0 1-7.4-7.4l8.5-8.5a3.5 3.5 0 0 1 5 5l-8.5 8.5a1.8 1.8 0 0 1-2.5-2.5l7.8-7.8"/></svg><span>Lampirkan file</span></button><button data-t="m_g"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s-6.8-5.9-6.8-11.2a6.8 6.8 0 0 1 13.6 0C18.8 15.1 12 21 12 21z"/><circle cx="12" cy="9.8" r="2.4"/></svg><span>Bagikan GPS</span></button></div>
   <div id="ib"><button id="pl">+</button><textarea id="tx" rows="1" placeholder="Ketik pesan..."></textarea><button id="sd">↑</button></div>
  </footer>
@@ -336,7 +336,7 @@ async function send(){
  anchor(add(`<div class="um">${window.MP?MP.att(at,im):(im?`<img src="${im}">`:'')}${dt?`<div style="opacity:.75">📄 ${esc(dt.name)}</div>`:''}${esc(t)}${window.MP?MP.urls(t):''}</div>`));
  busy=true;$('#sd').textContent='■';$('#sd').dataset.b=1;ctrl=new AbortController();
  const b=cfg.bots[cur],st=add(`<div class="stt">${bot(COL[cur])}<span></span></div>`),eb=mk(st.querySelector('svg'),true,0,undefined,true);
- const stage=s=>{eb.set(s);st.querySelector('span').textContent=b.name+' '+LBL[s]+'...'};stage(im?'look':'think');
+ const stage=s=>{eb.set(s);st.querySelector('span').textContent=LBL[s]+'...'};stage(im?'look':'think');
  let fin;
  if(gpsOn){const fresh=gps&&Date.now()-gps.timestamp<60000,u=gpsUpdate().catch(()=>{});if(!fresh)await Promise.race([u,sleep(3000)])}
  try{
@@ -1496,7 +1496,7 @@ window.__BS_API={
 @keyframes lmIn{from{opacity:0;transform:translateY(8px)}}
 @media (prefers-reduced-motion:reduce){.lm.in{animation:none}}
 </style>
-<style>/* bot status chat = 28,8px */.stt svg{width:28.8px!important;height:28.8px!important;flex:none}</style>
+<style>/* bot status chat = 20px */.stt svg{width:20px!important;height:20px!important;flex:none}</style>
 <style>@keyframes fwin{from{opacity:0}to{opacity:1}}.fw{animation:fwin .52s ease-out both}</style>
 <style>/* Ruang Bot: judul tengah, panah besar, sumber = ikon, status di baris nama */
 #rs .rh{position:relative}
@@ -1799,6 +1799,7 @@ const ANTI_HALU=`
 - Bedakan dengan jelas antara fakta yang terverifikasi dan dugaan pribadi.`;
   const MAINC=!body.image_gen&&String(body.system||'').includes('[Info perangkat pengguna]');
   body.system=(body.system||'')+TOOL_SYS+(MAINC?TOOL_SYS2:'')+ANTI_HALU;
+  body.system+=(typeof window.galeriSysFor==='function'?window.galeriSysFor(body):'');
   let fin=null;
   try{
     for(let step=0;step<6;step++){
@@ -3351,23 +3352,136 @@ t.textContent=m;t.style.opacity='1';clearTimeout(t._t);t._t=setTimeout(()=>t.sty
 
 let AGENT_ON=false;
 try{AGENT_ON=localStorage.getItem('xbot_agent9')==='1'}catch(e){}
-const AGENT_SYS='\n\n[MODE AGEN AKTIF]\nKamu agen otonom. Cari info di web, baca halaman, verifikasi minimal 2 sumber, lalu susun laporan (Ringkasan, Poin, Sumber dengan judul & URL).';
+const AGENT_SYS='\n\n[MODE AGEN AKTIF]\nKamu bekerja sebagai agen riset otonom untuk permintaan ini. Cara kerja: (1) pahami tujuan pengguna; kalau benar-benar ambigu ajukan SATU pertanyaan singkat, kalau tidak langsung kerjakan; (2) rencanakan langkah, lalu cari di web dengan beberapa kata kunci berbeda dan baca halaman sumbernya, bukan hanya cuplikan; (3) cocokkan fakta penting dengan minimal 2 sumber independen, utamakan sumber resmi/primer dan yang terbaru (nilai kebaruan dengan tanggal di info perangkat); bila sumber berbeda pendapat, sebutkan perbedaannya; (4) jangan mengarang: tandai dengan jelas apa yang belum terverifikasi. Format hasil: **Ringkasan** (2-3 kalimat jawaban inti), **Temuan** (poin-poin, tiap klaim penting disertai sumbernya), **Yang belum pasti** (hanya jika ada), **Sumber** (judul + URL). Untuk pertanyaan sederhana atau obrolan ringan, jawab singkat tanpa format laporan.';
+/* ===== AGEN v2: putaran evaluasi, langkah terlihat, alat, memori tugas, laporan tersimpan, kedalaman, cek sumber ===== */
+const isMainChat=b=>!b.image_gen&&typeof b.system==='string'&&b.system.includes('[Info perangkat pengguna]');
 const origFetch9=window.fetch;
+const AGD={cepat:['Cepat',1],std:['Seimbang',2],dalam:['Mendalam',4]};
+let AG_D='std';try{const v=localStorage.getItem('xbot_agent_d');if(AGD[v])AG_D=v}catch(e){}
+const AGDP={cepat:'\n[KEDALAMAN: CEPAT] 1-2 pencarian saja, baca 1 sumber, jawaban ringkas.',std:'\n[KEDALAMAN: SEIMBANG] 3-4 pencarian dengan kata kunci berbeda, baca minimal 2 halaman sumber.',dalam:'\n[KEDALAMAN: MENDALAM] Minimal 5 pencarian dari sudut berbeda, baca minimal 4 halaman sumber, bandingkan klaim antarsumber, tulis laporan terstruktur dan lengkap.'};
+const AGTOOL='\n[ALAT UNTUK AGEN] Pakai alat yang tersedia: search dan read (baca halaman, bukan hanya cuplikan), code (hitungan atau olah data), dokumen (bila diminta Word/PDF), file (hanya untuk lampiran data seperti csv/xlsx; laporan utama disimpan otomatis oleh aplikasi, jangan buat berkas laporan sendiri), antrean_tambah (bila tugas terlalu besar untuk satu sesi: pecah 2-12 langkah untuk Ruang Bot). Tulis URL hanya yang benar-benar muncul di hasil alat; jangan mengarang tautan.';
+const MK='xbot_agent_mem',RK='xbot_agent_rpt';
+const ld=(k,d)=>{try{return JSON.parse(localStorage.getItem(k))||d}catch(e){return d}};
+const sv=(k,v)=>{try{localStorage.setItem(k,JSON.stringify(v))}catch(e){try{localStorage.setItem(k,JSON.stringify(v.slice(-Math.ceil(v.length/2))))}catch(e2){}}};
+/* memori tugas: ringkasan riset sebelumnya + obrolan lebih lama dari 12 pesan terakhir */
+const agMem=()=>{let s='';try{const M=ld(MK,[]).slice(-4),H=(typeof hist!=='undefined'&&Array.isArray(hist))?hist.slice(0,-12):[];
+  if(M.length)s+='\n[Memori tugas agen: riset sebelumnya]\n'+M.map(m=>'- '+m.t+' ('+m.d+'): '+m.r).join('\n');
+  if(H.length)s+='\n[Konteks obrolan lebih awal, diringkas]\n'+H.map(m=>(m.role==='user'?'P: ':'A: ')+String(m.content||'').replace(/\s+/g,' ').slice(0,m.role==='user'?240:200)).join('\n').slice(-3200);
+  if(s)s+='\nPakai hanya bila relevan dengan tugas sekarang.'}catch(e){}return s};
+const rdFin=async r=>{let f=null;const t=await r.text();for(const l of t.split('\n')){if(!l.trim())continue;try{const j=JSON.parse(l);if(!j.s)f=j}catch(e){}}return f};
+const urlsOf=t=>[...new Set((String(t||'').match(/https?:\/\/[^\s)\]>"'<]+/g)||[]).map(u=>u.replace(/[.,;:!?]+$/,'')))];
+const nu=u=>String(u).toLowerCase().replace(/^https?:\/\/(www\.)?/,'').replace(/[#?].*$/,'').replace(/\/$/,'');
+const hostOf=u=>{try{return new URL(u).hostname.replace(/^www\./,'')}catch(e){return String(u).slice(0,40)}};
+const stx=(n,a)=>{a=a||{};return n==='search'?['search','Mencari: '+String(a.q||'').slice(0,60)]:n==='read'?['read','Membaca: '+hostOf(a.url)]:n==='code'?['analyze','Menghitung dengan kode']:n==='file'?['write','Menyimpan berkas: '+String(a.nama||a.name||'').slice(0,40)]:n==='dokumen'?['write','Membuat dokumen '+String(a.nama||'').slice(0,40)]:n==='antrean_tambah'?['think','Membuat tugas di Ruang Bot: '+String(a.judul||'').slice(0,40)]:['analyze','Memakai alat: '+n]};
+/* catat langkah alat yang dipanggil model selama agen berjalan (hanya aktif saat RUN ada) */
+let RUN=null,hooked=0;
+const hook=()=>{if(hooked||!window.XT||typeof window.XT.run!=='function')return;hooked=1;const p=window.XT.run;
+  window.XT.run=async function(n,a){const R=RUN;if(!R)return p.apply(this,arguments);const [st,tx]=stx(n,a),li=R.step(tx,st);
+    try{const res=await p.apply(this,arguments);R.done(li,1);
+      if(n==='search'&&res&&res.hasil)urlsOf(res.hasil).forEach(u=>R.seen.add(nu(u)));
+      if(n==='read'&&a&&a.url){R.seen.add(nu(a.url));R.readU.add(a.url)}
+      return res}catch(e){R.done(li,0);throw e}}};
+const agCss=document.createElement('style');
+agCss.textContent='.agp,.agp *{font-size:16px;font-style:italic;font-weight:400;text-transform:lowercase}.agp{margin:14px 0;padding:0;background:none;color:#d0d0d0}.agp summary{cursor:pointer}.agp ol{margin:8px 0 0;padding:0;list-style:none}.agp li{padding:3px 0;color:#8a8a8a}.agp li:before{content:"◌ "}.agp li.ok{color:#d0d0d0}.agp li.ok:before{content:"✓ ";color:#30d158}.agp li.er:before{content:"✕ ";color:#ff453a}#agd[hidden]{display:none}#agd .agr{display:flex;gap:6px;padding:2px 10px 6px}#pm #agd button{width:auto;flex:1;padding:8px 4px;font-size:14px;justify-content:center;border-radius:12px;background:#2c2c2e}#pm #agd button.on{background:#12282e;box-shadow:inset 0 0 0 1px rgba(23,195,230,.55)}#pm #agd #m_r{width:100%;flex:none;justify-content:flex-start;background:none;color:#17c3e6;padding:6px 16px;font-size:14px}.agm{position:fixed;inset:0;z-index:98;background:#000a;display:flex;align-items:flex-end;justify-content:center}.agb{width:100%;max-width:560px;max-height:75vh;overflow:auto;background:#1c1c1e;border-radius:20px 20px 0 0;padding:16px;color:#f2f2f2}.agt{display:flex;justify-content:space-between;margin-bottom:10px}.agi{display:flex;align-items:center;gap:8px;padding:8px 0;border-top:1px solid #2c2c2e}.agi div{flex:1;min-width:0}.agi b{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:14px}.agi span{font-size:12px;color:#8e8e93}.agb button{padding:6px 10px;border-radius:10px;background:#2c2c2e;font-size:13px;color:#f2f2f2}';
+document.head.appendChild(agCss);
+function agReports(){
+  let m=document.getElementById('agm');if(m)m.remove();
+  const L=ld(RK,[]);m=document.createElement('div');m.id='agm';m.className='agm';
+  m.innerHTML='<div class="agb"><div class="agt"><b>Laporan agen</b><button data-x="1">Tutup</button></div>'+(L.length?L.map((r,i)=>'<div class="agi"><div><b>'+esc(r.t)+'</b><span>'+esc(r.d)+'</span></div><button data-u="'+i+'">Unduh</button><button data-c="'+i+'">Salin</button><button data-r="'+i+'">Hapus</button></div>').reverse().join(''):'<p style="color:#8e8e93">Belum ada laporan tersimpan.</p>')+'</div>';
+  m.onclick=async e=>{const t=e.target;if(t===m||t.dataset.x){m.remove();return}
+    const k=t.dataset.u!=null?'u':t.dataset.c!=null?'c':t.dataset.r!=null?'r':'';if(!k)return;
+    const i=+t.dataset[k],A=ld(RK,[]),r=A[i];if(!r)return;
+    if(k==='u'){const a=document.createElement('a'),u=URL.createObjectURL(new Blob([r.md],{type:'text/markdown;charset=utf-8'}));a.href=u;a.download='laporan-agen-'+(r.id||i)+'.md';document.body.appendChild(a);a.click();setTimeout(()=>{a.remove();URL.revokeObjectURL(u)},5000)}
+    if(k==='c')toast(await cpy(r.md)?'Laporan disalin':'Gagal menyalin');
+    if(k==='r'){A.splice(i,1);sv(RK,A);agReports()}};
+  document.body.appendChild(m)}
+const agRun=(input,init,b0)=>{
+  const enc=new TextEncoder();let ctl;const stream=new ReadableStream({start(c){ctl=c}});
+  const emit=o=>{try{ctl.enqueue(enc.encode(JSON.stringify(o)+'\n'))}catch(e){}};
+  const sig=init.signal,stopped=()=>!!(sig&&sig.aborted),[dl,N]=AGD[AG_D];
+  const card=add('<div class="agp"><details open><summary>agen bekerja...</summary><ol></ol></details></div>'),ol=card.querySelector('ol'),sm=card.querySelector('summary'),dt=card.querySelector('details'),stEl=(a=>a[a.length-1])(document.querySelectorAll('#ms .stt')),sp=stEl&&stEl.querySelector('span');
+  card.style.display='none';
+  const R={seen:new Set(),readU:new Set(),steps:[],
+    step(t,st){const li=document.createElement('li');li.textContent=String(t).toLowerCase();ol.appendChild(li);R.steps.push(t);if(sp&&sp.isConnected)sp.textContent=String(t).toLowerCase()+'...';try{sb()}catch(e){}return li},
+    done(li,ok){if(li)li.className=ok?'ok':'er'}};
+  const goal=(()=>{const m=b0.messages||[];for(let i=m.length-1;i>=0;i--)if(m[i].role==='user')return typeof m[i].content==='string'?m[i].content:'';return''})();
+  const sys0=b0.system+AGENT_SYS+AGTOOL+AGDP[AG_D]+agMem();
+  const call=async(msgs,sys,mode)=>{const r=await origFetch9.call(window,input,{...init,body:JSON.stringify({...b0,messages:msgs,system:sys,mode})});return rdFin(r)};
+  (async()=>{
+    let fin=null,used=0;const srcs=[];RUN=R;hook();
+    try{
+      let msgs=b0.messages;
+      for(let round=1;round<=N&&!stopped();round++){
+        used=round;
+        const rl=R.step(round===1?'Meriset dan menyusun jawaban':'Menutup kekurangan jawaban','think');
+        const f=await call(msgs,sys0,'on');R.done(rl,!!(f&&f.text&&!f.error));
+        if(!f||f.error||!f.text){if(!fin)fin=f||{error:'Balasan kosong dari server'};break}
+        fin=f;(f.sources||[]).forEach(x=>{if(x&&x.url&&!srcs.some(y=>y.url===x.url)){R.seen.add(nu(x.url));srcs.push(x)}});
+        if(round>=N||stopped())break;
+        const el=R.step('Mengevaluasi kecukupan jawaban','analyze');
+        let ev=null;try{ev=await call([{role:'user',content:'Tujuan pengguna: '+goal.slice(0,800)+'\n\nDraf jawaban:\n'+fin.text.slice(0,6000)+'\n\nNilai draf: apakah menjawab tujuan dengan lengkap, akurat, dan ada sumber? Balas HANYA JSON satu baris: {"cukup":true,"kurang":["..."],"cari":["kata kunci"]} (maks 3 kata kunci pencarian). Jangan panggil alat.'}],'Kamu pemeriksa kualitas riset yang ketat dan jujur. Balas hanya JSON.','off')}catch(e){}
+        let j=null;try{const m=ev&&ev.text&&ev.text.match(/\{[\s\S]*\}/);j=m&&JSON.parse(m[0])}catch(e){}
+        R.done(el,1);
+        if(!j||j.cukup||!Array.isArray(j.cari)||!j.cari.length){R.done(R.step('Jawaban dinilai cukup'),1);break}
+        msgs=[...b0.messages,{role:'assistant',content:fin.text},{role:'user',content:'Pemeriksa menemukan kekurangan: '+(Array.isArray(j.kurang)?j.kurang.join('; '):'')+'. Lakukan pencarian tambahan untuk: '+j.cari.slice(0,3).join(' | ')+'. Baca halaman sumbernya, lalu tulis ulang jawaban final lengkap yang menggabungkan temuan lama dan baru.'}];
+      }
+    }catch(e){if(!fin)fin=(e&&e.name==='AbortError')||stopped()?{text:'(dihentikan)'}:{error:'Agen gagal: '+((e&&e.message)||e)}}
+    RUN=null;
+    if(!fin)fin={text:'(dihentikan)'};
+    if(fin.text&&!fin.error&&fin.text!=='(dihentikan)'){
+      try{
+        /* cek sumber: tautan di jawaban harus ada di hasil alat/pencarian */
+        const us=urlsOf(fin.text),bad=[],cl=R.step('Memeriksa sumber','analyze');let t=fin.text;
+        for(const u of us){const k=nu(u);let ok=R.seen.has(k);if(!ok)for(const s of R.seen)if(s.startsWith(k)||k.startsWith(s)){ok=true;break}if(!ok)bad.push(u)}
+        bad.forEach(u=>{t=t.split(u).join('[tautan tidak terverifikasi]')});
+        if(bad.length)t+='\n\n_Pemeriksaan sumber: '+bad.length+' tautan dihapus karena tidak ditemukan di hasil pencarian._';
+        else if(us.length)t+='\n\n_Pemeriksaan sumber: '+us.length+' tautan cocok dengan hasil pencarian._';
+        fin.text=t;R.done(cl,1);
+        const all=[...srcs];[...R.readU].slice(0,6).forEach(u=>{if(!all.some(y=>nu(y.url)===nu(u)))all.push({url:u,title:''})});
+        if(all.length)fin.sources=all;
+        /* simpan laporan: berkas unduh di chat + riwayat laporan + memori tugas */
+        if(t.length>700){
+          const d=new Date(),judul=(goal.replace(/\s+/g,' ').trim().slice(0,70))||'Laporan agen',id=d.toISOString().slice(0,16).replace(/[-:]/g,'').replace('T','-'),tg=d.toLocaleString('id-ID');
+          const md='# '+judul+'\n\n_'+tg+' · Mode Agen · '+dl+'_\n\n'+t+'\n\n## Proses\n'+R.steps.map(x=>'- '+x).join('\n')+(fin.sources&&fin.sources.length?'\n\n## Sumber\n'+fin.sources.map(x=>'- '+x.url).join('\n'):'');
+          const sl=R.step('Menyimpan laporan','write');
+          try{if(window.XF&&XF.q.length<5&&window.XT&&XT.run)await XT.run('file',{nama:'laporan-agen-'+id+'.md',isi:md})}catch(e){}
+          sv(RK,[...ld(RK,[]),{id,t:judul,d:tg,md:md.slice(0,60000)}].slice(-15));
+          sv(MK,[...ld(MK,[]),{t:judul,d:tg,r:t.replace(/\s+/g,' ').slice(0,280)}].slice(-6));
+          R.done(sl,1)}
+      }catch(e){}
+    }
+    sm.textContent=fin.error?'agen berhenti karena error':'proses agen · '+R.steps.length+' langkah · '+used+' putaran · '+R.seen.size+' sumber dicek';
+    dt.open=false;card.style.display='';if(stEl)stEl.style.display='none';emit(fin);try{ctl.close()}catch(e){}
+  })();
+  return new Response(stream,{status:200,headers:{'Content-Type':'application/x-ndjson'}})};
 window.fetch=async function(input,init){
   const url=typeof input==='string'?input:(input&&input.url)||'';
   if(AGENT_ON&&url.includes('/chat')&&init&&init.body){
-    try{const b=JSON.parse(init.body);b.system=(b.system||'')+AGENT_SYS;init.body=JSON.stringify(b)}catch(e){}
+    let b=null;try{b=JSON.parse(init.body)}catch(e){}
+    if(b&&isMainChat(b)){
+      try{return await agRun(input,init,b)}catch(e){try{b.system=(b.system||'')+AGENT_SYS;b.mode='on';init={...init,body:JSON.stringify(b)}}catch(x){}}
+    }
   }
-  return origFetch9.apply(this,arguments);
+  return origFetch9.call(this,input,init);
 };
 
 function initMenu(){
   const pm=$('#pm'),ma=$('#m_a'),mv=$('#m_v');
   if(!pm)return;
-  const dot=ma&&ma.querySelector('.dt');
-  const sync=()=>{if(dot)dot.hidden=!AGENT_ON};
+  const dot=ma&&ma.querySelector('.dt'),ag=$('#agd');
+  const tx=$('#tx'),ph0=tx?tx.placeholder:'';
+  let webPrev=null;
+  const webSet=on=>{try{webOn=on;const d=$('#m_w .dt');if(d)d.hidden=!on}catch(e){}};
+  const sync=()=>{if(dot)dot.hidden=!AGENT_ON;
+    try{if(AGENT_ON){if(webPrev===null)webPrev=!!webOn;webSet(true)}else if(webPrev!==null){webSet(webPrev);webPrev=null}}catch(e){}
+    if(ag){ag.hidden=!AGENT_ON;ag.querySelectorAll('[data-d]').forEach(x=>x.classList.toggle('on',x.dataset.d===AG_D));const r=$('#m_r');if(r)r.textContent='Laporan tersimpan ('+ld(RK,[]).length+')'}
+    try{if(tx)tx.placeholder=AGENT_ON?'Beri tugas ke agen ('+AGD[AG_D][0]+')...':ph0}catch(e){}};
   sync();
-  if(ma)ma.onclick=()=>{pm.hidden=true;AGENT_ON=!AGENT_ON;sync();try{localStorage.setItem('xbot_agent9',AGENT_ON?'1':'0')}catch(e){}toast(AGENT_ON?'Mode Agen AKTIF':'Mode Agen mati')};
+  if(ma)ma.onclick=()=>{AGENT_ON=!AGENT_ON;if(!AGENT_ON)pm.hidden=true;sync();try{localStorage.setItem('xbot_agent9',AGENT_ON?'1':'0')}catch(e){}toast(AGENT_ON?'Mode Agen AKTIF · '+AGD[AG_D][0]:'Mode Agen mati')};
+  if(ag)ag.onclick=e=>{const d=e.target.closest('[data-d]');
+    if(d){AG_D=d.dataset.d;try{localStorage.setItem('xbot_agent_d',AG_D)}catch(x){}sync();pm.hidden=true;toast('Kedalaman agen: '+AGD[AG_D][0])}
+    else if(e.target.closest('#m_r')){pm.hidden=true;agReports()}};
+  const mw=$('#m_w');if(mw)mw.addEventListener('click',()=>{if(AGENT_ON){webSet(true);toast('Web tetap aktif selama Mode Agen aktif')}});
   if(mv)mv.onclick=()=>{pm.hidden=true;const b=document.getElementById('xvb');if(b)b.click();else toast('Mikrofon tidak didukung di browser ini')};
 }
 
@@ -3688,6 +3802,10 @@ const alatTx=f=>{
    +'\n- ruang_daftar {} : daftar berkas di ruang kerja bersama semua bot, dengan siapa terakhir mengubah'
    +'\n- ruang_baca {"nama":"...","mulai":0,"ukuran":8000} : baca berkas ruang kerja per potongan (maks 12000 karakter); bila ada "lanjut", panggil lagi dengan mulai itu'
    +'\n- ruang_tulis {"nama":"...","isi":"...","tambah":false} : tulis atau tambah berkas di ruang kerja bersama; perubahanmu tercatat atas namamu'
+   +'\n- ruang_riwayat {"nama":"..."} : lihat riwayat perubahan berkas di ruang kerja bersama'
+   +'\n- galeri_pilih {"jenis":"foto|video"} : buka galeri HP pengguna untuk melampirkan foto atau video; wajib persetujuan pengguna'
+   +'\n- kamera_ambil {} : buka kamera untuk mengambil foto; wajib persetujuan pengguna'
+   +'\n- foto_edit {"aksi":"putar|hitam_putih|terang|kontras|lebar","nilai":90} : edit foto yang sedang dilampirkan (putar derajat, terang/kontras -100..100, lebar maks px); wajib persetujuan pengguna'
    +'\n- antrean_tambah {"judul":"...","langkah":["langkah 1","langkah 2"]} : buat tugas panjang (2-12 langkah). Langkah dikerjakan bergiliran di ruang bot saat pengguna tidak sedang meminta sesuatu'
    +'\n- antrean_daftar {} : lihat progres tugas panjang';
   x+='\n- dokumen {\"nama\":\"laporan.docx\","isi\":[{\"tipe\":\"judul\","teks\":\"Judul\","warna\":\"biru\"},{\"tipe\":\"foto\","foto\":\"nama gambar di chat\","lebar\":10}]} : buat Word (.docx, .doc) atau PDF dengan teks berwarna dan foto';
@@ -3930,6 +4048,114 @@ XTO.ruang_baca=async({nama,mulai=0,ukuran})=>{
 };
 XTO.ruang_tulis=async({nama,isi,tambah})=>{ const oleh=kerjaOleh(); const n=rkWrite(nama,isi,tambah,oleh); return {ok:true,nama:n,oleh} };
 XTO.ruang_riwayat=async({nama})=>{ const k=rkName(nama),e=RUANG[k]; if(!e) throw new Error('Berkas tidak ada'); return {nama:k,riwayat:e.riwayat} };
+
+/* ===== GALERI, KAMERA, EDIT FOTO: setiap aksi minta persetujuan pengguna ===== */
+(function(){
+const X=window.XT; if(!X) return;
+const askOK=(judul,isi)=>new Promise(res=>{
+  const d=document.createElement('div');
+  d.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:100000;display:flex;align-items:center;justify-content:center;padding:20px';
+  d.innerHTML='<div style="background:#fff;color:#111;border-radius:16px;padding:18px;max-width:340px;width:100%;font:15px/1.4 system-ui,sans-serif;box-shadow:0 8px 30px #0005"><div id="xa-j" style="font-weight:600;margin-bottom:6px"></div><div id="xa-i" style="opacity:.8;margin-bottom:14px"></div><div style="display:flex;gap:10px;justify-content:flex-end"><button data-a="0" style="padding:9px 16px;border:0;border-radius:10px;background:#e5e5ea;color:#111;font-size:15px">Batal</button><button data-a="1" style="padding:9px 16px;border:0;border-radius:10px;background:#0a84ff;color:#fff;font-size:15px">Lanjut</button></div></div>';
+  d.querySelector('#xa-j').textContent=judul;
+  d.querySelector('#xa-i').textContent=isi;
+  let done=false,tm=0;
+  const fin=v=>{if(done)return;done=true;clearTimeout(tm);d.remove();res(v)};
+  d.querySelectorAll('button').forEach(b=>b.onclick=()=>fin(b.dataset.a==='1'));
+  tm=setTimeout(()=>fin(false),120000);
+  document.body.appendChild(d);
+  if(document.hidden&&typeof sysNotif==='function')sysNotif('XBOT',judul);
+});
+
+X.galeri_pilih=async({jenis}={})=>{
+  const ok=await askOK('Buka galeri?','Pilih '+(jenis==='video'?'video':'foto')+' dari galerimu.');
+  if(!ok) return {dibatalkan:true};
+  const fi=document.getElementById('fi'); if(!fi) throw new Error('Pemilih berkas tidak tersedia');
+  fi.click();
+  return {ok:true,catatan:'Galeri dibuka. Pilihan akan dilampirkan ke pesan berikutnya.'};
+};
+
+X.kamera_ambil=async()=>{
+  const ok=await askOK('Buka kamera?','Ambil foto dengan kamera.');
+  if(!ok) return {dibatalkan:true};
+  const fc=document.getElementById('fc'); if(!fc) throw new Error('Kamera tidak tersedia');
+  fc.click();
+  return {ok:true,catatan:'Kamera dibuka. Foto akan dilampirkan ke pesan berikutnya.'};
+};
+
+X.foto_edit=async({aksi,nilai}={})=>{
+  aksi=String(aksi||'');
+  const n=parseFloat(nilai);
+  const ALLOW=['putar','hitam_putih','terang','kontras','lebar'];
+  if(!ALLOW.includes(aksi)) throw new Error('Aksi tidak dikenal. Pilihan: '+ALLOW.join(', '));
+  if(!img) throw new Error('Belum ada foto terlampir. Minta pengguna melampirkan foto dulu.');
+  const ok=await askOK('Edit foto?','Aksi: '+aksi+(isNaN(n)?'':' ('+n+')')+'. Hasilnya menggantikan foto yang dilampirkan.');
+  if(!ok) return {dibatalkan:true};
+  const src=new Image();
+  await new Promise((res,rej)=>{src.onload=res;src.onerror=()=>rej(new Error('Foto tidak bisa dibaca'));src.src=img});
+  const w=src.naturalWidth,h=src.naturalHeight; if(!w||!h) throw new Error('Foto kosong');
+  const c=document.createElement('canvas'),x=c.getContext('2d');
+  const q=v=>v<0?0:v>255?255:v;
+  if(aksi==='putar'){
+    const deg=((Math.round((isNaN(n)?90:n)/90)*90)%360+360)%360;
+    const swap=deg===90||deg===270;
+    c.width=swap?h:w; c.height=swap?w:h;
+    x.translate(c.width/2,c.height/2); x.rotate(deg*Math.PI/180); x.drawImage(src,-w/2,-h/2);
+  } else if(aksi==='lebar'){
+    const k=Math.min(1,(isNaN(n)?1280:n)/Math.max(w,h));
+    c.width=Math.max(1,Math.round(w*k)); c.height=Math.max(1,Math.round(h*k));
+    x.drawImage(src,0,0,c.width,c.height);
+  } else {
+    c.width=w; c.height=h; x.drawImage(src,0,0);
+    const d=x.getImageData(0,0,w,h),p=d.data;
+    let amt=isNaN(n)?(aksi==='terang'?30:20):n;
+    amt=Math.max(-100,Math.min(100,amt));
+    const f=aksi==='kontras'?(259*(amt+255))/(255*(259-amt)):1;
+    const b=aksi==='terang'?amt*2.55:0;
+    for(let i=0;i<p.length;i+=4){
+      let r=p[i],g=p[i+1],bl=p[i+2];
+      if(aksi==='hitam_putih'){const yy=.299*r+.587*g+.114*bl;r=yy;g=yy;bl=yy}
+      else if(aksi==='terang'){r+=b;g+=b;bl+=b}
+      else {r=f*(r-128)+128;g=f*(g-128)+128;bl=f*(bl-128)+128}
+      p[i]=q(r);p[i+1]=q(g);p[i+2]=q(bl);
+    }
+    x.putImageData(d,0,0);
+  }
+  img=c.toDataURL('image/jpeg',.9);
+  note('✏️ foto diedit: '+aksi);
+  return {ok:true,aksi,ukuran:c.width+'x'+c.height};
+};
+})();
+
+/* ===== GALERI DI CHAT UTAMA: beri tahu bot alat galeri, kamera, dan edit foto ===== */
+(function(){
+ if(typeof A==='undefined'||!A||!A.get||typeof A.get.sysA!=='function'||!A.set||typeof A.set.sysA!=='function') return;
+ const prevSys=A.get.sysA();
+ A.set.sysA(function(f,t,k){
+   const s=prevSys.apply(this,arguments);
+   try{
+     const u=typeof lastUserTxt==='function'?String(lastUserTxt()||''):'';
+     if(!/galeri|kamera|foto|video|gambar|edit|ambil/i.test(u)) return s;
+     return s+'\n\n[Galeri & kamera] Kalau pengguna minta membuka galeri, mengambil foto, mengedit foto, atau mengambil video: JANGAN jawab dengan teks saja dan JANGAN tulis [foto:] atau [video:]. Panggil alat dengan satu baris <tool>...</tool> tanpa teks lain:\n- galeri_pilih {"jenis":"foto"} atau {"jenis":"video"} : buka galeri HP pengguna\n- kamera_ambil {} : buka kamera untuk foto\n- foto_edit {"aksi":"putar|hitam_putih|terang|kontras|lebar","nilai":90} : edit foto yang sedang dilampirkan\nAplikasi akan meminta persetujuan pengguna (Lanjut/Batal) sebelum alat berjalan.';
+   }catch(e){return s}
+ });
+})();
+
+/* ===== ATURAN GALERI untuk setiap permintaan chat (dipanggil dari window.fetch) ===== */
+window.galeriSysFor=function(body){
+  try{
+    const ms=Array.isArray(body&&body.messages)?body.messages:[];
+    let u='';
+    for(let i=ms.length-1;i>=0;i--){
+      if(ms[i]&&ms[i].role==='user'){
+        const c=ms[i].content;
+        u=typeof c==='string'?c:(Array.isArray(c)?c.map(x=>(x&&x.text)||'').join(' '):'');
+        break;
+      }
+    }
+    if(!/galeri|kamera|foto|video|gambar|edit|ambil/i.test(u)) return '';
+    return '\n\n[Galeri & kamera] Kalau pengguna minta membuka galeri, mengambil foto, mengedit foto, atau mengambil video: JANGAN jawab dengan teks saja dan JANGAN tulis [foto:] atau [video:]. Panggil alat dengan satu baris <tool>...</tool> tanpa teks lain:\n- galeri_pilih {"jenis":"foto"} atau {"jenis":"video"} : buka galeri HP pengguna\n- kamera_ambil {} : buka kamera untuk foto\n- foto_edit {"aksi":"putar|hitam_putih|terang|kontras|lebar","nilai":90} : edit foto yang sedang dilampirkan\nAplikasi akan meminta persetujuan pengguna (Lanjut/Batal) sebelum alat berjalan.';
+  }catch(e){return ''}
+};
 
 /* pengolah data: membaca CSV/teks tabel dari komputer pribadi atau ruang kerja, tanpa menulis kode */
 function parseCsv(t){
@@ -4274,7 +4500,7 @@ const runLimited=(code,ms)=>new Promise(res=>{
 });
 /* Status "sedang menjalankan kode" di baris status chat (hanya untuk chat utama yang sedang sibuk) */
 const mainBusy=()=>{try{return typeof busy!=='undefined'&&busy===true}catch(e){return false}};
-const setStatus=txt=>{try{if(!mainBusy())return()=>{};const all=document.querySelectorAll('#ms .stt span'),sp=all[all.length-1];if(!sp)return()=>{};const old=sp.textContent,m=old.match(/^(.*?) sedang /);if(!m)return()=>{};sp.textContent=m[1]+' sedang '+txt+'...';return()=>{if(sp.textContent.indexOf(txt)>-1)sp.textContent=old}}catch(e){return()=>{}}};
+const setStatus=txt=>{try{if(!mainBusy())return()=>{};const all=document.querySelectorAll('#ms .stt span'),sp=all[all.length-1];if(!sp)return()=>{};const old=sp.textContent;if(!/^(.*? )?sedang /.test(old))return()=>{};sp.textContent='sedang '+txt+'...';return()=>{if(sp.textContent.indexOf(txt)>-1)sp.textContent=old}}catch(e){return()=>{}}};
 /* Kartu kode di bawah/atas jawaban */
 const XC={q:[]};
 const ICON='<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l8 3v6c0 4.5-3.2 7.8-8 9-4.8-1.2-8-4.5-8-9V6z"/><path d="M9 12l2 2 4-4"/></svg>';
@@ -4325,7 +4551,7 @@ XT.code=async a=>{
  const ss=window.speechSynthesis;
  if(!ss||window.GTTS)return;
  const MODEL='gemini-3.8-flash-tts',VOICE='Aoede',MAXCH=3000;
- const STYLE='Katakan dengan nada hangat, santai, dan alami seperti orang sungguhan yang sedang mengobrol di telepon, dengan intonasi dan jeda yang wajar: ';
+ const STYLE='hangat, santai, dan alami seperti orang sungguhan yang sedang mengobrol, dengan intonasi dan jeda yang wajar';
  const STYLE_CALL='';
  const nat={speak:ss.speak.bind(ss),cancel:ss.cancel.bind(ss)};
  const natSpeaking=()=>{try{return Object.getOwnPropertyDescriptor(Object.getPrototypeOf(ss),'speaking').get.call(ss)}catch(e){return false}};
@@ -4336,7 +4562,7 @@ XT.code=async a=>{
   const a=sp(cfg&&cfg.keys&&cfg.keys.gemini);
   return a.length?a:sp(cfg&&cfg.panel&&cfg.panel.keys&&cfg.panel.keys.gemini);
  }catch(e){return[]}};
- const clean=t=>String(t||'').replace(/https?:\/\/\S+/g,' ').replace(/[*`#_~>|]/g,'').replace(/\s+/g,' ').trim();
+ const clean=t=>String(t||'').replace(/\[(?:MODE SUARA AKTIF|PANGGILAN SUARA)\][^\n]*/g,' ').replace(/https?:\/\/\S+/g,' ').replace(/[*`#_~>|]/g,'').replace(/\s+/g,' ').trim();
 
  /* ---- toast kecil kalau Gemini gagal (di HP tidak ada konsol) ---- */
  let toastT=0;
@@ -4369,7 +4595,7 @@ XT.code=async a=>{
     const r=await fetch('https://generativelanguage.googleapis.com/v1beta/models/'+MODEL+':generateContent?key='+encodeURIComponent(L[idx]),{
      method:'POST',headers:{'Content-Type':'application/json'},
      body:JSON.stringify({
-      contents:[{role:'user',parts:[{text:sty+text}]}],
+      contents:[{role:'user',parts:[sty?{text:text,speechMetadata:{style:sty}}:{text:text}]}],
       generationConfig:{responseModalities:['AUDIO'],temperature:1,
        speech_config:{voice_config:{prebuilt_voice_config:{voice_name:VOICE}}}}
      })});
@@ -4426,7 +4652,6 @@ XT.code=async a=>{
      fails++;down=Date.now()+Math.min(120000,15000*Math.pow(2,fails-1));
      window.GTTS.lastError=String(err&&err.message||err||'gagal');
      try{console.warn('[Gemini TTS]',window.GTTS.lastError)}catch(e){}
-     toast('Suara Gemini gagal ('+window.GTTS.lastError.slice(0,90)+'). Sementara pakai suara browser.');
      await viaNative(j);if(Q[0]===j)Q.shift();continue;
     }
     fire(j.u,'start');
@@ -4494,4 +4719,450 @@ if(window.XT&&typeof window.XT.run==='function'){
 })();
 </script>
 <!-- ===== AKHIR PATCH ===== -->
+<!-- ===== TAMBAHAN: AKSES LUAR (aplikasi, kontak, kalender, papan klip, rekam, QR, peta, data luar, sensor, Pintasan) ===== -->
+<script>
+(()=>{
+if(window._x111Ext)return;const XT=window.XT;if(!XT)return;
+const $$=i=>document.getElementById(i),en=encodeURIComponent,C={dibatalkan:true},E=m=>({error:m});
+const ask=(j,t,go)=>new Promise(res=>{const d=document.createElement('div');d.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:100001;display:flex;align-items:center;justify-content:center;padding:20px';
+d.innerHTML='<div style="background:#fff;color:#111;border-radius:16px;padding:18px;max-width:340px;width:100%;font:15px/1.4 system-ui,sans-serif;box-shadow:0 8px 30px #0005"><b></b><div style="opacity:.8;margin:6px 0 14px;word-break:break-word"></div><div style="display:flex;gap:10px;justify-content:flex-end"><button data-a="0" style="padding:9px 16px;border:0;border-radius:10px;background:#e5e5ea;color:#111;font:inherit">Batal</button><button data-a="1" style="padding:9px 16px;border:0;border-radius:10px;background:#007aff;color:#fff;font:inherit">Lanjut</button></div></div>';
+const c=d.firstChild;c.children[0].textContent=j;c.children[1].textContent=t;let done=0,tm;
+const fin=ok=>{if(done)return;done=1;clearTimeout(tm);let v;try{if(ok&&go)v=go()}catch(e){v=Promise.reject(e)}d.remove();res({ok,v})};
+d.querySelectorAll('button').forEach(b=>b.onclick=()=>fin(b.dataset.a==='1'));tm=setTimeout(()=>fin(0),120000);document.body.appendChild(d);
+if(document.hidden&&typeof sysNotif==='function')try{sysNotif('XBOT',j)}catch(e){}});
+const BT='padding:12px 22px;border:0;border-radius:12px;font:inherit;color:#fff;background:#3a3a3c';
+const ov=h=>{const d=document.createElement('div');d.style.cssText='position:fixed;inset:0;background:#000;z-index:100002;display:flex;flex-direction:column;align-items:center;justify-content:center;color:#fff;font:16px system-ui;gap:14px;padding:20px';d.innerHTML=h;document.body.appendChild(d);return d};
+const VS='width:100%;max-height:65vh;object-fit:cover;border-radius:14px';
+const stop=s=>{try{s.getTracks().forEach(t=>t.stop())}catch(e){}};
+
+/* 1 + 13. buka aplikasi lain & Pintasan iOS (selalu minta Lanjut/Batal; pengguna sendiri menekan kirim/panggil) */
+const dg=s=>String(s||'').replace(/[^\d+]/g,''),wa=s=>{let n=dg(s).replace(/^\+/,'');if(n[0]==='0')n='62'+n.slice(1);return n};
+const KJ={telepon:'tel',telpon:'tel',call:'tel',tel:'tel',sms:'sms',pesan:'sms',email:'mail',mail:'mail',surel:'mail',wa:'wa',whatsapp:'wa',peta:'map',maps:'map',navigasi:'map',facetime:'ft'};
+XT.buka_aplikasi=async(a={})=>{const k=KJ[String(a.jenis||'').toLowerCase()],tx=String(a.teks||'');let u,lb,web=0;
+if(!k)throw new Error('jenis harus salah satu: telepon, sms, email, whatsapp, peta, facetime');
+if(k==='tel'||k==='ft'||k==='sms'||k==='wa'){const n=k==='wa'?wa(a.nomor):dg(a.nomor);if(n.length<3)throw new Error('Nomor tidak valid');
+ if(k==='tel'){u='tel:'+n;lb='menelepon '+n}else if(k==='ft'){u='facetime:'+n;lb='FaceTime ke '+n}else if(k==='sms'){u='sms:'+n+(tx?'&body='+en(tx):'');lb='SMS ke '+n}else{u='https://wa.me/'+n+(tx?'?text='+en(tx):'');lb='WhatsApp ke '+n;web=1}}
+else if(k==='mail'){const m=String(a.email||'').trim();if(!/^[^\s@]+@[^\s@]+$/.test(m))throw new Error('Alamat email tidak valid');u='mailto:'+m+'?subject='+en(a.subjek||'')+'&body='+en(tx);lb='email ke '+m}
+else{const q=String(a.tujuan||'').trim();if(!q)throw new Error('Isi "tujuan"');u='https://maps.apple.com/?daddr='+en(q)+'&dirflg=d';lb='Peta ke '+q;web=1}
+const r=await ask('Buka aplikasi?','Akan membuka: '+lb+'. Kamu sendiri yang menekan kirim/panggil.',()=>{if(web)window.open(u,'_blank');else location.href=u});
+return r.ok?{ok:true,catatan:'Aplikasi dibuka dengan isi terisi. Pengguna yang menekan kirim/panggil; bot tidak mengirim apa pun.'}:C};
+XT.pintasan=async(a={})=>{const n=String(a.nama||'').trim();if(!n)throw new Error('Isi "nama" Pintasan');const u='shortcuts://run-shortcut?name='+en(n)+(a.teks?'&input=text&text='+en(a.teks):'');
+const r=await ask('Jalankan Pintasan?','Pintasan iOS "'+n+'" akan dijalankan.',()=>{location.href=u});return r.ok?{ok:true,catatan:'Pintasan dijalankan; hasilnya tidak kembali ke chat.'}:C};
+
+/* 2. kontak lewat file .vcf */
+const fi=$$('fi');if(fi&&!/vcf/.test(fi.accept))fi.accept+=',.vcf,text/vcard,text/x-vcard';
+const vc=t=>{const out=[];let c=null;for(const l of t.replace(/\r?\n[ \t]/g,'').split(/\r?\n/)){if(/^BEGIN:VCARD/i.test(l))c={};else if(/^END:VCARD/i.test(l)){if(c)out.push(c);c=null}else if(c){const m=l.match(/^([A-Za-z]+)[^:]*:(.*)$/);if(m){const k=m[1].toUpperCase(),v=m[2].trim();if(k==='FN')c.n=v;else if(k==='TEL')(c.t=c.t||[]).push(v);else if(k==='EMAIL')(c.e=c.e||[]).push(v);else if(k==='ORG')c.o=v.replace(/;/g,' ')}}}return out};
+document.addEventListener('change',e=>{const t=e.target;if(!t||t.id!=='fi')return;const f=t.files&&t.files[0];if(!f||!/\.vcf$/i.test(f.name))return;e.stopPropagation();t.value='';
+const r=new FileReader();r.onload=()=>{const L=vc(String(r.result));docTxt={name:f.name,text:('Daftar kontak ('+L.length+'):\n'+(L.map(c=>(c.n||'(tanpa nama)')+(c.o?' ['+c.o+']':'')+(c.t?' | Telp: '+c.t.join(', '):'')+(c.e?' | Email: '+c.e.join(', '):'')).join('\n')||'(tidak ada kontak terbaca)')).slice(0,30000)};img=null;note('📎 kontak terlampir: '+f.name+' ('+L.length+')')};r.readAsText(f)},true);
+XT.kontak_pilih=async()=>{if(!fi)return E('Pemilih berkas tidak tersedia');const r=await ask('Lampirkan kontak?','Pilih file kontak (.vcf) dari Berkas. Cara: di aplikasi Kontak buka kontaknya, Bagikan, lalu Simpan ke Berkas.',()=>fi.click());
+return r.ok?{ok:true,catatan:'Pemilih file dibuka. Kontak yang dipilih akan terlampir ke pesan berikutnya; bot hanya melihat kontak itu.'}:C};
+
+/* 3. kalender .ics */
+const p2=n=>String(n).padStart(2,'0'),fd=(d,all)=>''+d.getFullYear()+p2(d.getMonth()+1)+p2(d.getDate())+(all?'':'T'+p2(d.getHours())+p2(d.getMinutes())+'00');
+const ie=s=>String(s||'').replace(/\\/g,'\\\\').replace(/\r?\n/g,'\\n').replace(/[,;]/g,m=>'\\'+m);
+const ics=a=>{const j=String(a.judul||'').trim();if(!j)throw new Error('Judul kosong');const all=!!a.seharian,s=new Date(String(a.mulai||'').replace(' ','T'));if(isNaN(s))throw new Error('"mulai" harus berformat YYYY-MM-DDTHH:MM');
+let e=a.selesai?new Date(String(a.selesai).replace(' ','T')):null;if(!e||isNaN(e)){e=new Date(s);if(all)e.setDate(e.getDate()+1);else e.setHours(e.getHours()+1)}
+const R={harian:'DAILY',mingguan:'WEEKLY',bulanan:'MONTHLY',tahunan:'YEARLY'}[String(a.ulang||'').toLowerCase()],z=new Date().toISOString().replace(/[-:]|\.\d+/g,'');
+return['BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//EdhyX//ID','BEGIN:VEVENT','UID:'+Date.now().toString(36)+Math.random().toString(36).slice(2,8)+'@edhyx','DTSTAMP:'+z,
+ all?'DTSTART;VALUE=DATE:'+fd(s,1):'DTSTART:'+fd(s),all?'DTEND;VALUE=DATE:'+fd(e,1):'DTEND:'+fd(e),'SUMMARY:'+ie(j),a.lokasi?'LOCATION:'+ie(a.lokasi):'',a.catatan?'DESCRIPTION:'+ie(a.catatan):'',R?'RRULE:FREQ='+R:'',
+ 'BEGIN:VALARM','ACTION:DISPLAY','DESCRIPTION:'+ie(j),'TRIGGER:-PT15M','END:VALARM','END:VEVENT','END:VCALENDAR'].filter(Boolean).join('\r\n')+'\r\n'};
+XT.kalender_buat=async(a={})=>{const t=ics(a),F=window.XF;if(!F||!F.q)throw new Error('Penampung berkas tidak tersedia');if(F.q.length>=5)throw new Error('Maksimal 5 berkas per jawaban');
+const nama=(String(a.judul).replace(/[\\\/:*?"<>|\u0000-\u001f]+/g,'_').slice(0,40)||'acara')+'.ics';F.q.push({name:nama,blob:new Blob([t],{type:'text/calendar;charset=utf-8'}),t:Date.now()});
+return{ok:true,nama,catatan:'Tombol Unduh/Bagikan sudah tampil di chat. Minta pengguna menekan Bagikan lalu memilih Kalender (atau membuka file) untuk menambahkannya.'}};
+
+/* 4. papan klip */
+XT.papan_klip_baca=async()=>{if(!navigator.clipboard||!navigator.clipboard.readText)return E('Browser ini tidak mendukung membaca papan klip');
+const r=await ask('Baca papan klip?','Bot akan membaca teks yang terakhir kamu salin. iPhone mungkin menampilkan tombol Tempel.',()=>navigator.clipboard.readText());if(!r.ok)return C;
+try{const t=String(await r.v||'');return{ok:true,teks:t.slice(0,4000),dipotong:t.length>4000,catatan:t?undefined:'Papan klip kosong'}}catch(e){return E('Papan klip tidak bisa dibaca: '+(e.message||e))}};
+
+/* 5. rekam suara/video lalu dilampirkan */
+XT.rekam=async(a={})=>{const vid=/vid/i.test(String(a.jenis||'')),max=Math.min(120,Math.max(5,+a.detik||60));
+const r=await ask(vid?'Rekam video?':'Rekam suara?','Rekaman mulai setelah Lanjut. Kamu bisa menghentikannya kapan saja.',()=>navigator.mediaDevices.getUserMedia(vid?{video:{facingMode:'user'},audio:true}:{audio:true}));if(!r.ok)return C;
+let s;try{s=await r.v}catch(e){return E('Izin kamera/mikrofon ditolak atau tidak tersedia: '+(e.message||e))}
+if(!window.MediaRecorder){stop(s);return E('Perekaman tidak didukung browser ini')}
+const d=ov((vid?'<video playsinline muted style="'+VS+'"></video>':'<div style="font-size:56px">🎙️</div>')+'<div>🔴 0 dtk</div><div style="display:flex;gap:12px"><button style="'+BT+'">Batal</button><button style="'+BT+';background:#ff3b30">Selesai</button></div>');
+if(vid){const v=d.querySelector('video');v.srcObject=s;v.play().catch(()=>{})}
+const mr=new MediaRecorder(s),ch=[],tl=d.children[1],bs=d.querySelectorAll('button');mr.ondataavailable=e=>{if(e.data&&e.data.size)ch.push(e.data)};
+return new Promise(res=>{let ok=1,n=0;const sp=()=>{try{mr.state!=='inactive'&&mr.stop()}catch(e){}},tk=setInterval(()=>{n++;tl.textContent='🔴 '+n+' dtk';if(n>=max)sp()},1000);
+mr.onstop=()=>{clearInterval(tk);stop(s);d.remove();if(!ok||!ch.length)return res(C);const ty=(mr.mimeType||(vid?'video/mp4':'audio/mp4')).split(';')[0],ex=/webm/.test(ty)?'webm':/ogg/.test(ty)?'ogg':(vid?'mp4':'m4a');
+ try{const f=new File([new Blob(ch,{type:ty})],'rekaman-'+Date.now()+'.'+ex,{type:ty}),dt=new DataTransfer();dt.items.add(f);fi.files=dt.files;fi.dispatchEvent(new Event('change',{bubbles:true}))}catch(e){return res(E('Rekaman tidak bisa dilampirkan: '+(e.message||e)))}
+ res({ok:true,lama_detik:n,catatan:vid?'Video terlampir ke pesan berikutnya; bot hanya melihat satu cuplikan gambar, bukan suaranya.':'Audio terlampir ke pesan berikutnya sebagai file suara. Bot TIDAK bisa mendengar isinya; sampaikan itu dengan jujur.'})};
+bs[0].onclick=()=>{ok=0;sp()};bs[1].onclick=sp;mr.start()})};
+
+/* 6. pindai QR / barcode */
+const lq=async()=>{for(const u of['https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js','https://cdnjs.cloudflare.com/ajax/libs/jsQR/1.4.0/jsQR.min.js']){try{await new Promise((o,n)=>{const e=document.createElement('script');e.src=u;e.onload=o;e.onerror=n;document.head.appendChild(e)});if(window.jsQR)return}catch(e){}}};
+XT.scan_qr=async()=>{const r=await ask('Buka kamera untuk pindai?','Arahkan kamera ke QR atau barcode.',()=>navigator.mediaDevices.getUserMedia({video:{facingMode:'environment'}}));if(!r.ok)return C;
+let s;try{s=await r.v}catch(e){return E('Kamera tidak bisa dibuka: '+(e.message||e))}
+let det=null;try{if(window.BarcodeDetector)det=new BarcodeDetector()}catch(e){}
+if(!det){await lq();if(!window.jsQR){stop(s);return E('Pustaka pemindai gagal dimuat (cek internet)')}}
+const d=ov('<video playsinline muted style="'+VS+'"></video><div>Mencari kode…</div><button style="'+BT+'">Tutup</button>'),v=d.querySelector('video');v.srcObject=s;try{await v.play()}catch(e){}
+return new Promise(res=>{let z=0;const cv=document.createElement('canvas'),cx=cv.getContext('2d',{willReadFrequently:true}),end=x=>{if(z)return;z=1;clearInterval(iv);clearTimeout(to);stop(s);d.remove();res(x)};
+d.querySelector('button').onclick=()=>end(C);const to=setTimeout(()=>end(E('Tidak ada kode terbaca dalam 60 detik')),60000);
+const iv=setInterval(async()=>{if(!v.videoWidth||z)return;const k=Math.min(1,640/v.videoWidth);cv.width=v.videoWidth*k;cv.height=v.videoHeight*k;cx.drawImage(v,0,0,cv.width,cv.height);let t='';
+ try{if(det){const b=await det.detect(cv);if(b[0])t=b[0].rawValue}else{const im=cx.getImageData(0,0,cv.width,cv.height),q=jsQR(im.data,im.width,im.height);if(q)t=q.data}}catch(e){}
+ if(t)end({ok:true,isi:t.slice(0,2000)})},300)})};
+
+/* 9. peta (OpenStreetMap): cari tempat & rute */
+const jf=async u=>{const r=await fetch(u);if(!r.ok)throw new Error('HTTP '+r.status);return r.json()};
+const geo=async q=>(await jf('https://nominatim.openstreetmap.org/search?format=jsonv2&limit=5&accept-language=id&q='+en(q))).map(x=>({nama:x.name||String(x.display_name).split(',')[0],alamat:x.display_name,lat:+x.lat,lon:+x.lon}));
+XT.peta_cari=async(a={})=>{const q=String(a.q||'').trim();if(!q)throw new Error('Isi "q"');const h=await geo(q);return h.length?{hasil:h,sumber:'OpenStreetMap'}:{hasil:[],catatan:'Tempat tidak ditemukan'}};
+const here=()=>{try{if(typeof gps!=='undefined'&&gps&&gps.coords)return Promise.resolve({lat:gps.coords.latitude,lon:gps.coords.longitude})}catch(e){}
+ return new Promise((o,n)=>navigator.geolocation?navigator.geolocation.getCurrentPosition(p=>o({lat:p.coords.latitude,lon:p.coords.longitude}),()=>n(new Error('Lokasi tidak tersedia; aktifkan Bagikan GPS atau sebut kota asal')),{timeout:8000}):n(new Error('GPS tidak didukung')))};
+XT.rute=async(a={})=>{const ke=String(a.ke||'').trim();if(!ke)throw new Error('Isi "ke"');const dr=String(a.dari||'').trim();
+ const A=!dr||/lokasi saya|sini|posisi/i.test(dr)?await here():(await geo(dr))[0],B=(await geo(ke))[0];if(!A||!B)throw new Error('Tempat asal/tujuan tidak ditemukan');
+ const m=String(a.mode||'mobil').toLowerCase(),pf=/jalan|kaki|foot/.test(m)?'routed-foot':/sepeda|bike/.test(m)?'routed-bike':'routed-car';
+ const j=await jf('https://routing.openstreetmap.de/'+pf+'/route/v1/driving/'+A.lon+','+A.lat+';'+B.lon+','+B.lat+'?overview=false'),r=j.routes&&j.routes[0];if(!r)throw new Error('Rute tidak ditemukan');
+ return{ok:true,tujuan:B.alamat,jarak_km:+(r.distance/1000).toFixed(1),durasi_menit:Math.round(r.duration/60),moda:pf.replace('routed-',''),sumber:'OpenStreetMap/OSRM',catatan:'Estimasi tanpa lalu lintas. Untuk navigasi langsung pakai alat buka_aplikasi jenis peta.'}};
+
+/* 10. data luar */
+const via=async u=>{try{return await jf(u)}catch(e){const r=await fetch('https://r.jina.ai/'+u);if(!r.ok)throw e;const t=await r.text();return JSON.parse(t.slice(t.indexOf('{'),t.lastIndexOf('}')+1))}};
+const CG={btc:'bitcoin',eth:'ethereum',bnb:'binancecoin',sol:'solana',xrp:'ripple',doge:'dogecoin',ada:'cardano',usdt:'tether',ton:'the-open-network'};
+XT.info_luar=async(a={})=>{const j=String(a.jenis||'').toLowerCase(),q=String(a.q||'').trim();
+if(j==='kripto'){const k=q.toLowerCase()||'bitcoin',id=CG[k]||k,x=(await via('https://api.coingecko.com/api/v3/simple/price?ids='+en(id)+'&vs_currencies=idr,usd&include_24hr_change=true'))[id];if(!x)throw new Error('Koin tidak ditemukan');return{koin:id,idr:x.idr,usd:x.usd,perubahan_24j_persen:x.idr_24h_change!=null?+x.idr_24h_change.toFixed(2):null,sumber:'CoinGecko'}}
+if(j==='salat'){const d=(await via('https://api.aladhan.com/v1/timingsByCity?city='+en(q||'Jakarta')+'&country=Indonesia&method=20')).data,t=d.timings;return{kota:q||'Jakarta',tanggal:d.date.readable,jadwal:{Subuh:t.Fajr,Terbit:t.Sunrise,Zuhur:t.Dhuhr,Asar:t.Asr,Magrib:t.Maghrib,Isya:t.Isha},sumber:'Aladhan (metode Kemenag RI)'}}
+if(j==='gempa'){const g=(await via('https://data.bmkg.go.id/DataMKG/TEWS/autogempa.json')).Infogempa.gempa;return{tanggal:g.Tanggal,jam:g.Jam,magnitudo:g.Magnitude,kedalaman:g.Kedalaman,wilayah:g.Wilayah,potensi:g.Potensi,dirasakan:g.Dirasakan,sumber:'BMKG'}}
+if(j==='saham'){let s=q.toUpperCase();if(!s)throw new Error('Isi kode saham di "q"');if(/^[A-Z]{4}$/.test(s))s+='.JK';const m=(await via('https://query1.finance.yahoo.com/v8/finance/chart/'+en(s)+'?interval=1d&range=1d')).chart.result[0].meta;return{simbol:m.symbol,harga:m.regularMarketPrice,tutup_sebelumnya:m.chartPreviousClose,mata_uang:m.currency,sumber:'Yahoo Finance'}}
+if(j==='emas'||j==='resi'){if(j==='resi'&&!q)throw new Error('Isi nomor resi di "q"');const r=await XT.run('search',{q:j==='emas'?'harga emas Antam hari ini per gram':'lacak resi '+q});return{hasil:r&&r.hasil,catatan:'Dari pencarian web, bukan sumber resmi; sampaikan keterbatasan ini ke pengguna'+(j==='resi'?' dan sarankan cek di situs/aplikasi kurirnya':'')}}
+throw new Error('jenis harus: kripto, saham, emas, salat, gempa, resi')};
+
+/* 11. sensor gerak/arah + status online */
+XT.sensor=async(a={})=>{if(a.hanya_online)return{online:navigator.onLine};
+const r=await ask('Baca sensor gerak?','Aplikasi membaca arah kompas dan kemiringan HP sebentar. iPhone akan meminta izin.',()=>Promise.all([window.DeviceOrientationEvent,window.DeviceMotionEvent].filter(x=>x&&x.requestPermission).map(x=>x.requestPermission())));if(!r.ok)return C;
+try{if((await r.v).some(x=>x!=='granted'))return E('Izin sensor ditolak')}catch(e){return E('Izin sensor gagal: '+(e.message||e))}
+return new Promise(res=>{let o=null,m=null;const fo=e=>{o=e},fm=e=>{m=e},n=x=>x==null?null:+(+x).toFixed(1);addEventListener('deviceorientation',fo);addEventListener('devicemotion',fm);
+setTimeout(()=>{removeEventListener('deviceorientation',fo);removeEventListener('devicemotion',fm);const g=m&&m.accelerationIncludingGravity;
+ res(o||m?{ok:true,online:navigator.onLine,arah_kompas_derajat:o&&n(o.webkitCompassHeading!=null?o.webkitCompassHeading:o.alpha),kemiringan_depan_belakang:o&&n(o.beta),kemiringan_kiri_kanan:o&&n(o.gamma),percepatan:g?{x:n(g.x),y:n(g.y),z:n(g.z)}:null}:{error:'Sensor tidak mengirim data',online:navigator.onLine})},1500)})};
+
+/* pengetahuan alat untuk bot: hanya dikirim bila pesan pengguna memuat kata terkait */
+const KW=/telepon|telpon|sms|whatsapp|\bwa\b|email|surel|facetime|maps|peta|rute|navigasi|kontak|vcf|kalender|agenda|jadwal|acara|\.ics|tempel|clipboard|papan klip|rekam|qr|barcode|pindai|scan|sensor|kompas|online|offline|kripto|bitcoin|saham|emas|salat|sholat|gempa|resi|pintasan|shortcut/i;
+const SYS='\n\n[Alat akses luar] Untuk permintaan ini panggil alat dengan satu baris <tool>{"name":...,"args":{...}}</tool> tanpa teks lain. Semua alat yang menyentuh HP meminta persetujuan Lanjut/Batal sendiri; jangan menyatakan sudah terkirim/terhubung sebelum hasil alat ada.\n- buka_aplikasi {"jenis":"telepon|sms|email|whatsapp|facetime|peta","nomor":"","teks":"","email":"","subjek":"","tujuan":""} : membuka aplikasi lain dengan isi terisi; pengguna sendiri yang menekan kirim/panggil\n- pintasan {"nama":"nama Pintasan iOS","teks":""} : jalankan Pintasan iOS\n- kontak_pilih {} : pengguna melampirkan kontak (file .vcf)\n- kalender_buat {"judul":"","mulai":"YYYY-MM-DDTHH:MM","selesai":"","lokasi":"","catatan":"","seharian":false,"ulang":"harian|mingguan|bulanan|tahunan"} : buat file .ics untuk Kalender\n- papan_klip_baca {} : baca teks yang disalin pengguna\n- rekam {"jenis":"audio|video","detik":60} : rekam lalu lampirkan (bot tidak bisa mendengar audio)\n- scan_qr {} : pindai QR/barcode dengan kamera\n- peta_cari {"q":"tempat"} dan rute {"dari":"kosong=lokasi saya","ke":"","mode":"mobil|jalan|sepeda"}\n- info_luar {"jenis":"kripto|saham|emas|salat|gempa|resi","q":"btc | BBCA | kota | nomor resi"}\n- sensor {} : arah kompas dan kemiringan; {"hanya_online":true} untuk status koneksi';
+const pg=window.galeriSysFor;window.galeriSysFor=function(b){let s='';try{s=pg?pg.call(this,b)||'':''}catch(e){}
+ try{const ms=Array.isArray(b&&b.messages)?b.messages:[];let u='';for(let i=ms.length-1;i>=0;i--)if(ms[i]&&ms[i].role==='user'){const c=ms[i].content;u=typeof c==='string'?c:Array.isArray(c)?c.map(x=>(x&&x.text)||'').join(' '):'';break}if(KW.test(u))s+=SYS}catch(e){}return s};
+window._x111Ext={vc,ics};
+})();
+</script>
+<!-- ===== AKHIR TAMBAHAN AKSES LUAR ===== -->
+<!-- ===== TAMBAHAN: ALAT GAMBAR (HTML -> JPG/PNG) - hapus blok ini sampai AKHIR untuk membatalkan ===== -->
+<script>
+(()=>{
+if(window._xGambar)return;
+window._xGambar=1;
+try{
+const XT=window.XT;
+if(!XT)return;
+
+const kb=n=>n<1024?n+' B':n<1048576?Math.round(n/1024)+' KB':(n/1048576).toFixed(1)+' MB';
+const loadH2C=()=>window.html2canvas?Promise.resolve():new Promise((ok,no)=>{
+  const s=document.createElement('script');
+  s.src='https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js';
+  s.onload=ok;
+  s.onerror=()=>no(new Error('Pustaka gambar gagal dimuat (cek koneksi internet)'));
+  document.head.appendChild(s);
+});
+
+/* gambar {"nama":"acara.jpg","html":"<!DOCTYPE html>...","lebar":640} : render HTML jadi JPG/PNG, tampil sebagai tombol Unduh/Bagikan */
+XT.gambar=async a=>{
+  a=a||{};
+  let nama=String(a.nama||a.name||'').trim();
+  let html=a.html!=null?a.html:a.isi!=null?a.isi:a.content;
+  if(html==null||String(html).trim()==='')throw new Error('HTML kosong');
+  html=String(html);
+  if(html.length>300000)throw new Error('HTML terlalu besar (maksimal 300 KB)');
+  nama=nama.replace(/[\\\/:*?"<>|\u0000-\u001f]+/g,'_').replace(/^\.+/,'').slice(0,80)||'gambar';
+  const m=nama.match(/\.(\w{1,5})$/);
+  let ext=m?m[1].toLowerCase():'';
+  if(!/^(jpe?g|png)$/.test(ext)){nama=nama.replace(/\.\w{1,5}$/,'')+'.jpg';ext='jpg'}
+  if(!window.XF||!Array.isArray(window.XF.q))throw new Error('Penampung berkas belum siap');
+  if(window.XF.q.length>=5)throw new Error('Maksimal 5 berkas per jawaban');
+  let w=parseInt(a.lebar||a.width,10);
+  if(!(w>=240&&w<=1400))w=640;
+  await loadH2C();
+  if(!window.html2canvas)throw new Error('Pustaka gambar tidak tersedia');
+
+  /* halaman dirender di iframe terpisah tanpa skrip, jadi tidak menyentuh tampilan aplikasi */
+  const fr=document.createElement('iframe');
+  fr.setAttribute('sandbox','allow-same-origin');
+  fr.setAttribute('aria-hidden','true');
+  fr.style.cssText='position:fixed;left:-99999px;top:0;width:'+w+'px;height:1px;border:0;opacity:0;pointer-events:none';
+  document.body.appendChild(fr);
+  try{
+    await new Promise((ok,no)=>{
+      const t=setTimeout(()=>no(new Error('Waktu habis saat menyiapkan halaman')),10000);
+      fr.onload=()=>{clearTimeout(t);ok()};
+      fr.srcdoc=html;
+    });
+    const d=fr.contentDocument;
+    if(!d||!d.documentElement)throw new Error('Halaman tidak bisa dibaca');
+    try{if(d.fonts&&d.fonts.ready)await Promise.race([d.fonts.ready,new Promise(r=>setTimeout(r,2000))])}catch(e){}
+    await new Promise(r=>setTimeout(r,150));
+    const root=d.documentElement;
+    const h=Math.max(Math.ceil(root.scrollHeight),50);
+    if(h>6000)throw new Error('Halaman terlalu panjang (maksimal 6000 px)');
+    fr.style.height=h+'px';
+    await new Promise(r=>setTimeout(r,60));
+    const sc=(w*h>2.2e6)?1:2;
+    const cv=await window.html2canvas(root,{backgroundColor:'#ffffff',scale:sc,useCORS:true,logging:false,width:w,height:h,windowWidth:w,windowHeight:h,imageTimeout:4000});
+    const mime=ext==='png'?'image/png':'image/jpeg';
+    const blob=await new Promise((ok,no)=>{
+      try{cv.toBlob(b=>b?ok(b):no(new Error('Gagal membuat gambar')),mime,0.92)}catch(e){no(e)}
+    });
+    if(window.XF.q.length>=5)throw new Error('Maksimal 5 berkas per jawaban');
+    window.XF.q.push({name:nama,blob,t:Date.now()});
+    (window._xGQ=window._xGQ||[]).push({name:nama,blob,w:cv.width,h:cv.height,t:Date.now()});
+    if(window._xGQ.length>5)window._xGQ.shift();
+    return{ok:true,nama,ukuran:kb(blob.size),resolusi:cv.width+'x'+cv.height,catatan:'Tombol Unduh/Bagikan sudah tampil di chat. Jangan menempelkan ulang kode HTML; cukup jelaskan singkat.'};
+  }finally{
+    try{fr.remove()}catch(e){}
+  }
+};
+
+/* pratinjau: gambar tampil langsung di chat, tepat di atas kartu Unduh/Bagikan miliknya.
+   Hanya aktif bila kartu berkas dengan nama yang sama sudah dipasang aplikasi pada balasan itu. */
+const msEl=document.getElementById('ms');
+if(msEl&&window.MutationObserver)new MutationObserver(ml=>{
+  try{
+    for(const m of ml)for(const n of m.addedNodes){
+      if(n.nodeType!==1||!n.classList.contains('bm')||n.classList.contains('xr'))continue;
+      const Q=window._xGQ;
+      if(!Q||!Q.length)continue;
+      const now=Date.now(),cards=[...n.querySelectorAll('.xfc b')];
+      window._xGQ=Q.filter(g=>{
+        if(now-g.t>=600000)return false;
+        const b=cards.find(x=>x.textContent==='\u{1F4C4} '+g.name);
+        if(!b||!b.parentNode||!b.parentNode.parentNode)return true;
+        const box=document.createElement('div');
+        box.style.cssText='margin:10px 0 2px';
+        const im=document.createElement('img');
+        im.alt=g.name;
+        im.width=g.w;im.height=g.h;
+        im.style.cssText='display:block;max-width:100%;height:auto;border-radius:14px;background:#fff';
+        im.src=URL.createObjectURL(g.blob);
+        box.appendChild(im);
+        b.parentNode.parentNode.insertBefore(box,b.parentNode);
+        return false;
+      });
+    }
+  }catch(e){}
+}).observe(msEl,{childList:true});
+
+/* pengetahuan alat untuk bot: hanya dikirim bila pesan pengguna menyebut format gambar */
+const KWG=/\b(jpe?g|png)\b|poster|undangan|flyer|banner|infografis|sertifikat|kartu ucapan|(jadi|jadikan|ke|dalam|bentuk|format|simpan sebagai|ekspor|export|ubah)\s+(sebuah\s+)?gambar/i;
+const GSYS='\n\n[Alat gambar] Kalau pengguna minta hasil dalam format gambar (JPG/JPEG/PNG), misalnya poster, undangan, kartu, atau "jadikan gambar": JANGAN pakai alat file dan JANGAN hanya menulis kode HTML. Panggil alat gambar dengan satu baris: <tool>{"name":"gambar","args":{"nama":"acara.jpg","html":"<!DOCTYPE html>..."}}</tool> tanpa teks lain. Wajib: "nama" dan "html" berada di dalam "args"; penutup harus </tool>; JSON valid satu baris (baris baru di dalam teks ditulis \\n, tanda kutip ganda di dalam html ditulis \\"); html berupa halaman lengkap dengan CSS di <style> (tanpa JavaScript dan tanpa gambar dari internet); lebar halaman 640 px (bisa diatur dengan "lebar"). Setelah hasil alat muncul, jelaskan singkat bahwa gambarnya siap diunduh atau dibagikan.';
+const pg=window.galeriSysFor;
+window.galeriSysFor=function(b){
+  let s='';
+  try{s=pg?pg.apply(this,arguments)||'':''}catch(e){}
+  try{
+    if(b&&!b.image_gen&&String(b.system||'').includes('[Info perangkat pengguna]')){
+      const ms=Array.isArray(b.messages)?b.messages:[];
+      let u='';
+      for(let i=ms.length-1;i>=0;i--)if(ms[i]&&ms[i].role==='user'){
+        const c=ms[i].content;
+        u=typeof c==='string'?c:Array.isArray(c)?c.map(x=>(x&&x.text)||'').join(' '):'';
+        break;
+      }
+      if(KWG.test(u))s+=GSYS;
+    }
+  }catch(e){}
+  return s;
+};
+}catch(e){try{console.warn('Alat gambar tidak aktif:',e)}catch(_){}}
+})();
+</script>
+<!-- ===== AKHIR TAMBAHAN ALAT GAMBAR ===== -->
+<!-- ===== TAMBAHAN: ALAT ARTEFAK (halaman HTML + JavaScript tampil di chat, terisolasi) - hapus blok ini sampai AKHIR untuk membatalkan ===== -->
+<script>
+(()=>{
+if(window._xArtefak)return;
+window._xArtefak=1;
+try{
+const XT=window.XT;
+if(!XT)return;
+
+const kb=n=>n<1024?n+' B':n<1048576?Math.round(n/1024)+' KB':(n/1048576).toFixed(1)+' MB';
+
+/* Isolasi: iframe sandbox "allow-scripts" TANPA "allow-same-origin" = asal "null".
+   Kode di dalamnya tidak bisa membaca DOM, penyimpanan, cookie, atau API key aplikasi.
+   CSP di bawah memblokir permintaan jaringan (fetch/XHR/WebSocket); skrip hanya dari 2 CDN. */
+const CSP_OFF="default-src 'none'; script-src 'unsafe-inline' 'unsafe-eval' https://cdnjs.cloudflare.com https://cdn.jsdelivr.net; style-src 'unsafe-inline' https://fonts.googleapis.com; font-src data: https://fonts.gstatic.com; img-src data: blob:; media-src data: blob:; connect-src 'none'; frame-src 'none'; object-src 'none'; form-action 'none'; base-uri 'none'";
+/* terbuka hanya setelah pengguna menekan "Izinkan internet" pada artefak itu; tetap terisolasi dari data aplikasi */
+const CSP_ON="default-src 'none'; script-src 'unsafe-inline' 'unsafe-eval' https:; style-src 'unsafe-inline' https:; font-src data: https:; img-src data: blob: https:; media-src data: blob: https:; connect-src https: wss:; frame-src 'none'; object-src 'none'; form-action 'none'; base-uri 'none'";
+const inj=(h,csp)=>{
+  const M='<meta http-equiv="Content-Security-Policy" content="'+csp+'">';
+  if(/<head[^>]*>/i.test(h))return h.replace(/<head[^>]*>/i,m=>m+M);
+  if(/<html[^>]*>/i.test(h))return h.replace(/<html[^>]*>/i,m=>m+'<head>'+M+'</head>');
+  return '<!DOCTYPE html><html><head><meta charset="utf-8">'+M+'</head><body>'+h+'</body></html>';
+};
+const resizer=id=>'<script>(function(){var d=document.documentElement;function s(){try{var h=Math.ceil(Math.max(d.offsetHeight,document.body?document.body.offsetHeight:0));parent.postMessage({xa:"'+id+'",h:h},"*")}catch(e){}}addEventListener("load",s);try{new ResizeObserver(s).observe(d)}catch(e){}setTimeout(s,300)})()<\/script>';
+
+/* artefak {"judul":"Kalkulator","html":"<!DOCTYPE html>..."} : halaman HTML + JavaScript tampil di chat */
+XT.artefak=async a=>{
+  a=a||{};
+  const judul=String(a.judul||a.title||a.nama||'').trim().replace(/[\\\/:*?"<>|\u0000-\u001f]+/g,'_').replace(/\.html?$/i,'').slice(0,60)||'artefak';
+  let html=a.html!=null?a.html:a.isi!=null?a.isi:a.content;
+  if(html==null||String(html).trim()==='')throw new Error('HTML kosong');
+  html=String(html);
+  if(html.length>300000)throw new Error('HTML terlalu besar (maksimal 300 KB)');
+  if(!window.XF||!Array.isArray(window.XF.q))throw new Error('Penampung berkas belum siap');
+  if(window.XF.q.length>=5)throw new Error('Maksimal 5 berkas per jawaban');
+  let nama=judul+'.html',k=2;
+  while(window.XF.q.some(f=>f.name===nama))nama=judul+'-'+(k++)+'.html';
+  const blob=new Blob([html],{type:'text/html;charset=utf-8'});
+  window.XF.q.push({name:nama,blob,t:Date.now()});
+  (window._xAQ=window._xAQ||[]).push({name:nama,judul,html,t:Date.now()});
+  if(window._xAQ.length>5)window._xAQ.shift();
+  return{ok:true,nama,ukuran:kb(blob.size),catatan:'Artefak tampil di chat dengan tombol Unduh/Bagikan. Jangan menempelkan ulang kode; cukup jelaskan singkat.'};
+};
+
+const copyTxt=async t=>{
+  try{await navigator.clipboard.writeText(t);return true}
+  catch(e){
+    try{
+      const ta=document.createElement('textarea');
+      ta.value=t;ta.style.cssText='position:fixed;left:-9999px;top:0;opacity:0';
+      document.body.appendChild(ta);ta.focus();ta.select();
+      const ok=document.execCommand('copy');ta.remove();return ok;
+    }catch(e2){return false}
+  }
+};
+const mkBtn=(t,fn)=>{
+  const b=document.createElement('button');
+  b.type='button';b.textContent=t;
+  b.style.cssText='flex:none;padding:7px 12px;border:0;border-radius:10px;background:#2c2c2e;color:#fff;font:inherit;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap';
+  b.onclick=fn;
+  return b;
+};
+
+/* Tampilan penuh artefak (dibuka saat kartu diketuk). Isolasi iframe & CSP sama seperti sebelumnya. */
+const openView=g=>{
+  if(document.getElementById('xa-ov'))return;
+  let net=false;
+  const mkDoc=n=>inj(g.html,n?CSP_ON:CSP_OFF);
+  let doc=mkDoc(false);
+  const ov=document.createElement('div');
+  ov.id='xa-ov';
+  ov.setAttribute('role','dialog');ov.setAttribute('aria-label',g.judul);
+  ov.style.cssText='position:fixed;left:0;top:0;right:0;bottom:0;z-index:2147483000;background:#121212;color:#fff;display:flex;flex-direction:column;font-family:inherit';
+  const hd=document.createElement('div');
+  hd.style.cssText='flex:none;display:flex;flex-direction:column;gap:8px;padding:calc(env(safe-area-inset-top,0px) + 8px) 12px 10px;background:#1c1c1e;border-bottom:1px solid #2e2e32';
+  const r1=document.createElement('div');
+  r1.style.cssText='display:flex;align-items:center;gap:10px;min-width:0';
+  const bk=document.createElement('button');
+  bk.type='button';bk.setAttribute('aria-label','Tutup');
+  bk.innerHTML='<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg>';
+  bk.style.cssText='flex:none;width:38px;height:38px;border:0;border-radius:50%;background:#2c2c2e;color:#fff;display:flex;align-items:center;justify-content:center;cursor:pointer;padding:0';
+  const tw=document.createElement('div');
+  tw.style.cssText='min-width:0;flex:1';
+  const tt=document.createElement('div');
+  tt.textContent=g.judul;
+  tt.style.cssText='font-size:16px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap';
+  const sub=document.createElement('div');
+  sub.textContent='Kode · HTML';
+  sub.style.cssText='font-size:12px;color:#9a9aa0';
+  tw.append(tt,sub);r1.append(bk,tw);
+  const r2=document.createElement('div');
+  r2.style.cssText='display:flex;gap:8px;overflow-x:auto;-webkit-overflow-scrolling:touch';
+  const fr=document.createElement('iframe');
+  fr.setAttribute('sandbox','allow-scripts');
+  fr.setAttribute('title',g.judul);
+  fr.style.cssText='flex:1 1 auto;display:block;width:100%;min-height:0;border:0;background:#fff';
+  const reload=()=>{fr.srcdoc='';setTimeout(()=>{fr.srcdoc=doc},30)};
+  const bCopy=mkBtn('Salin',()=>{copyTxt(g.html).then(ok=>{bCopy.textContent=ok?'Tersalin':'Gagal';setTimeout(()=>{bCopy.textContent='Salin'},1500)})});
+  const bNet=mkBtn('Izinkan internet',()=>{
+    if(!net){
+      let ok=false;
+      try{ok=window.confirm('Izinkan artefak ini mengakses internet?\n\nKode di dalamnya bisa mengirim apa yang Anda ketik di artefak ini ke situs luar. Izinkan hanya jika Anda percaya. Data dan API key bot tetap aman.')}catch(e){}
+      if(!ok)return;
+      net=true;
+    }else net=false;
+    doc=mkDoc(net);
+    bNet.textContent=net?'Matikan internet':'Izinkan internet';
+    bNet.style.background=net?'#7a2e2e':'#2c2c2e';
+    sub.textContent='Kode · HTML'+(net?' · internet aktif':'');
+    reload();
+  });
+  const bReload=mkBtn('Ulang',reload);
+  r2.append(bNet,bCopy,bReload);
+  hd.append(r1,r2);
+  ov.append(hd,fr);
+  const close=()=>{document.removeEventListener('keydown',onKey,true);ov.remove()};
+  const onKey=e=>{if(e.key==='Escape'){e.stopPropagation();close()}};
+  document.addEventListener('keydown',onKey,true);
+  bk.onclick=close;
+  fr.srcdoc=doc;
+  document.body.appendChild(ov);
+  try{bk.focus()}catch(e){}
+};
+
+/* Kartu artefak di chat: gaya kartu Claude (ikon, judul, jenis), bisa diketuk untuk membuka */
+const buildCard=g=>{
+  const box=document.createElement('div');
+  box.setAttribute('role','button');box.tabIndex=0;
+  box.setAttribute('aria-label','Buka artefak '+g.judul);
+  box.style.cssText='margin:10px 0 6px;display:flex;align-items:stretch;gap:16px;height:70px;border:1px solid #2c2c31;border-radius:14px;overflow:hidden;background:#17171c;color:#fff;cursor:pointer;-webkit-tap-highlight-color:transparent;transition:background .15s,border-color .15s';
+  const th=document.createElement('div');
+  th.style.cssText='flex:none;width:57px;margin:14px 0 0 18px;border-radius:12px 12px 0 0;display:flex;align-items:center;justify-content:center;background:linear-gradient(160deg,#352208,#251806);color:#f0a020';
+  th.innerHTML='<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 7l-5 5 5 5"/><path d="M16 7l5 5-5 5"/><path d="M13.5 5l-3 14"/></svg>';
+  const tx=document.createElement('div');
+  tx.style.cssText='min-width:0;flex:1;display:flex;flex-direction:column;justify-content:center;gap:2px;padding:0 14px 0 0';
+  const t1=document.createElement('div');
+  t1.textContent=g.judul;
+  t1.style.cssText='font-size:17px;font-weight:500;line-height:1.25;overflow:hidden;text-overflow:ellipsis;white-space:nowrap';
+  const t2=document.createElement('div');
+  t2.textContent='Kode · HTML';
+  t2.style.cssText='font-size:13px;color:#9a9aa0';
+  tx.append(t1,t2);box.append(th,tx);
+  const hov=on=>{box.style.background=on?'#202026':'#17171c';box.style.borderColor=on?'#3c3c42':'#2c2c31'};
+  box.addEventListener('pointerdown',()=>hov(1));
+  ['pointerup','pointerleave','pointercancel'].forEach(ev=>box.addEventListener(ev,()=>hov(0)));
+  box.onclick=e=>{e.preventDefault();e.stopPropagation();openView(g)};
+  box.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();openView(g)}};
+  return box;
+};
+
+/* tampil di atas kartu Unduh/Bagikan miliknya; hanya bila aplikasi sudah memasang kartu dengan nama yang sama */
+const msEl=document.getElementById('ms');
+if(msEl&&window.MutationObserver)new MutationObserver(ml=>{
+  try{
+    for(const m of ml)for(const n of m.addedNodes){
+      if(n.nodeType!==1||!n.classList.contains('bm')||n.classList.contains('xr'))continue;
+      const Q=window._xAQ;
+      if(!Q||!Q.length)continue;
+      const now=Date.now(),cards=[...n.querySelectorAll('.xfc b')];
+      window._xAQ=Q.filter(g=>{
+        if(now-g.t>=600000)return false;
+        const b=cards.find(x=>x.textContent==='\u{1F4C4} '+g.name);
+        if(!b||!b.parentNode||!b.parentNode.parentNode)return true;
+        b.parentNode.parentNode.insertBefore(buildCard(g),b.parentNode);
+        return false;
+      });
+    }
+  }catch(e){}
+}).observe(msEl,{childList:true});
+
+/* pengetahuan alat untuk bot: hanya dikirim bila pesan pengguna jelas meminta artefak / tampil langsung di chat */
+const KWA=/\bartefak\b|\bartifacts?\b|(pratinjau|preview|tampilkan|munculkan|jalankan)[^.\n]{0,25}(langsung|di chat|dalam chat)/i;
+const ASYS='\n\n[Alat artefak] Kalau pengguna minta hasil tampil langsung di chat seperti artefak (halaman HTML yang bisa dijalankan: kalkulator, game kecil, kuis, simulasi, dasbor, halaman interaktif): JANGAN hanya menempelkan kode. Panggil alat artefak dengan satu baris: <tool>{"name":"artefak","args":{"judul":"Kalkulator","html":"<!DOCTYPE html>..."}}</tool> tanpa teks lain. Wajib: "judul" dan "html" berada di dalam "args"; penutup harus </tool>; JSON valid satu baris (baris baru di dalam teks ditulis \\n, tanda kutip ganda di dalam html ditulis \\"); html = satu halaman lengkap dengan CSS dan JavaScript langsung di dalamnya; tanpa localStorage/cookie dan tanpa alert/confirm/prompt; internet MATI secara default dan baru aktif bila pengguna menekan tombol Izinkan internet di kartu artefak, jadi bila halaman butuh data dari internet (fetch ke API https yang mengizinkan CORS, gambar https, pustaka dari CDN) wajib tampilkan pesan ramah "Tekan Izinkan internet di atas untuk memuat data" saat gagal, dan jangan menaruh kunci rahasia di kode; tanpa itu pakai data: URI atau SVG dan pustaka dari cdnjs.cloudflare.com atau cdn.jsdelivr.net; jangan ada loop tak berujung; tampilan harus muat di lebar HP (sekitar 360 px). Setelah hasil alat muncul, jelaskan singkat apa yang dibuat.';
+const pg=window.galeriSysFor;
+window.galeriSysFor=function(b){
+  let s='';
+  try{s=pg?pg.apply(this,arguments)||'':''}catch(e){}
+  try{
+    if(b&&!b.image_gen&&String(b.system||'').includes('[Info perangkat pengguna]')){
+      const ms=Array.isArray(b.messages)?b.messages:[];
+      let u='';
+      for(let i=ms.length-1;i>=0;i--)if(ms[i]&&ms[i].role==='user'){
+        const c=ms[i].content;
+        u=typeof c==='string'?c:Array.isArray(c)?c.map(x=>(x&&x.text)||'').join(' '):'';
+        break;
+      }
+      if(KWA.test(u)&&!(/\b(jpe?g|png)\b/i.test(u)&&!/artefak|artifact/i.test(u)))s+=ASYS;
+    }
+  }catch(e){}
+  return s;
+};
+}catch(e){try{console.warn('Alat artefak tidak aktif:',e)}catch(_){}}
+})();
+</script>
+<!-- ===== AKHIR TAMBAHAN ALAT ARTEFAK ===== -->
 </body></html>
