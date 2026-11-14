@@ -256,7 +256,7 @@ async function rev(a,o){const c=new AbortController(),t=setTimeout(()=>c.abort()
 async function gpsUpdate(){const g=await fix();if(!gpsOn)return;const{latitude:a,longitude:o}=g.coords;gps=g;
  if(!gpsAt||!gpsAddr||hav(gpsAt,[a,o])>50){gpsAt=[a,o];gpsAddr=await rev(a,o)}
  $('#gp').textContent=`📍 GPS aktif · ±${Math.round(g.coords.accuracy)} m · ${gpsStatus(g)}`}
-const gpsTxt=()=>{if(!gpsOn||!gps)return'';const c=gps.coords;return`\n\n[Lokasi GPS perangkat pengguna] Koordinat: ${c.latitude.toFixed(6)}, ${c.longitude.toFixed(6)}. Akurasi: ±${Math.round(c.accuracy)} m. Status validasi: ${gpsStatus(gps)}. Alamat perkiraan (OpenStreetMap): ${gpsAddr||'tidak ditemukan'}. Pakai ini untuk pertanyaan tentang posisi, lokasi, atau tempat di sekitar pengguna. Jelaskan bahwa alamat hanyalah perkiraan dari titik koordinat.`};
+const gpsTxt=()=>{if(!gpsOn||!gps)return'';const c=gps.coords;return`\n\n[Lokasi GPS perangkat pengguna] Koordinat: ${c.latitude.toFixed(6)}, ${c.longitude.toFixed(6)}. Akurasi: ±${Math.round(c.accuracy)} m. Status validasi: ${gpsStatus(gps)}. Alamat perkiraan (OpenStreetMap): ${gpsAddr||'tidak ditemukan'}. Pakai ini untuk pertanyaan tentang posisi, lokasi, atau tempat di sekitar pengguna. Saat pengguna menanyakan lokasinya, jawab langsung dengan format: "Lokasi kamu saat ini di [alamat sesuai titik koordinat]. Koordinat: [lintang], [bujur]. Garis bujur: [bujur]." Jangan beri kalimat pembuka seperti "Berdasarkan koordinat GPS perangkatmu" dan jangan tambahkan catatan bahwa alamat hanyalah perkiraan.`};
 const gpsDot=()=>{$('#m_g .dt').hidden=!gpsOn};
 $('#pl').onclick=e=>{e.stopPropagation();$('#pm').hidden=!$('#pm').hidden};
 document.addEventListener('click',e=>{if(!e.target.closest('#pm'))$('#pm').hidden=true});
@@ -3372,7 +3372,7 @@ const rdFin=async r=>{let f=null;const t=await r.text();for(const l of t.split('
 const urlsOf=t=>[...new Set((String(t||'').match(/https?:\/\/[^\s)\]>"'<]+/g)||[]).map(u=>u.replace(/[.,;:!?]+$/,'')))];
 const nu=u=>String(u).toLowerCase().replace(/^https?:\/\/(www\.)?/,'').replace(/[#?].*$/,'').replace(/\/$/,'');
 const hostOf=u=>{try{return new URL(u).hostname.replace(/^www\./,'')}catch(e){return String(u).slice(0,40)}};
-const stx=(n,a)=>{a=a||{};return n==='search'?['search','Mencari: '+String(a.q||'').slice(0,60)]:n==='read'?['read','Membaca: '+hostOf(a.url)]:n==='code'?['analyze','Menghitung dengan kode']:n==='file'?['write','Menyimpan berkas: '+String(a.nama||a.name||'').slice(0,40)]:n==='dokumen'?['write','Membuat dokumen '+String(a.nama||'').slice(0,40)]:n==='antrean_tambah'?['think','Membuat tugas di Ruang Bot: '+String(a.judul||'').slice(0,40)]:['analyze','Memakai alat: '+n]};
+const stx=(n,a)=>{a=a||{};return n==='search'?['search','Mencari: '+String(a.q||'').slice(0,60)]:n==='read'?['read','Membaca: '+hostOf(a.url)]:n==='code'?['analyze','Menghitung dengan kode']:n==='file'?['write','Menyimpan berkas: '+String(a.nama||a.name||'').slice(0,40)]:n==='dokumen'?['write','Membuat dokumen '+String(a.nama||'').slice(0,40)]:n==='antrean_tambah'?['think','Membuat tugas di Ruang Bot: '+String(a.judul||'').slice(0,40)]:n==='terminal'?['analyze','Sedang menjalankan perintah: '+String(a.cmd||'').replace(/\s+/g,' ').trim().slice(0,50)]:['analyze','Memakai alat: '+n]};
 /* catat langkah alat yang dipanggil model selama agen berjalan (hanya aktif saat RUN ada) */
 let RUN=null,hooked=0;
 const hook=()=>{if(hooked||!window.XT||typeof window.XT.run!=='function')return;hooked=1;const p=window.XT.run;
@@ -5242,11 +5242,11 @@ function build(w,q){
   const $=s=>root.querySelector(s),lab=(k,t)=>{const l=$('.xs3l');l.innerHTML='<small>'+esc(k)+'</small><span>'+esc(t)+'</span>'},
         dots=n=>root.querySelectorAll('.xs3d i').forEach((d,i)=>d.classList.toggle('on',i<=n));
   let map=null,marker=null,token=0;
-  const paintFase=()=>{const F=FASE[fk];$('.xs3t').style.background=F.tint;$('.xs3f').textContent=F.em+' '+F.nm};
+  const paintFase=()=>{const F=FASE[fk];$('.xs3t').style.background=F.tint;$('.xs3f').textContent=fk==='malam'?'':F.em+' '+F.nm;$('.xs3f').style.display=fk==='malam'?'none':''};
   paintFase();
 
-  const fail=msg=>{const m=$('.xs3m');if(m)m.innerHTML='<div class="xs3x"><div>🛰️ '+esc(msg)+'</div><a target="_blank" rel="noopener" href="https://maps.apple.com/?ll='+lat+','+lon+'&t=k">Buka satelit di Peta ↗</a></div>'};
-  const stop=()=>{token++;try{marker&&marker.remove()}catch(e){}marker=null;try{map&&map.remove()}catch(e){}map=null};
+  const fail=msg=>{const m=$('.xs3m');if(m){m.style.opacity='1'}if(m)m.innerHTML='<div class="xs3x"><div>🛰️ '+esc(msg)+'</div><a target="_blank" rel="noopener" href="https://maps.apple.com/?ll='+lat+','+lon+'&t=k">Buka satelit di Peta ↗</a></div>'};
+  const stop=()=>{token++;try{$('.xs3m').style.opacity=''}catch(e){}try{marker&&marker.remove()}catch(e){}marker=null;try{map&&map.remove()}catch(e){}map=null};
   const park=()=>{stop();$('.xs3m').innerHTML='<div class="xs3x"><button>▶ Putar tampilan satelit</button></div>';$('.xs3m button').onclick=()=>play()};
 
   const clearGJ=()=>{if(!map)return;['prov','kab','acc'].forEach(id=>{[id+'-l',id+'-f'].forEach(l=>{if(map.getLayer(l))map.removeLayer(l)});if(map.getSource(id))map.removeSource(id)})};
@@ -5266,6 +5266,7 @@ function build(w,q){
     if(my!==token)return;
     const D=dayStr(),zUp=pv?(acc>200?14.5:16):1.15;
     try{
+      $('.xs3m').style.transition='none';$('.xs3m').style.opacity='0';
       map=new maplibregl.Map({container:$('.xs3m'),cooperativeGestures:true,attributionControl:{compact:true},
         center:pv?[lon,lat]:[lon-75,8],zoom:zUp,pitch:pv?30:0,maxPitch:70,
         style:{version:8,projection:{type:'globe'},
@@ -5281,8 +5282,9 @@ function build(w,q){
             {id:'lights',type:'raster',source:'lights',paint:{'raster-opacity':F.night?['interpolate',['linear'],['zoom'],5,1,7.5,0]:0}}]}});
     }catch(e){return fail('Peta 3D tidak didukung di perangkat ini')}
     map.on('error',()=>{});
-    await new Promise(r=>{let d=0;const f=()=>{if(!d){d=1;r()}};map.once('load',f);setTimeout(f,12000)});
+    await new Promise(r=>{let d=0;const f=()=>{if(!d){d=1;r()}};map.once('idle',f);setTimeout(f,9000)});
     if(!live())return;
+    $('.xs3m').style.transition='opacity .6s';$('.xs3m').style.opacity='1';
     try{map.setSky({...F.sky,'sky-horizon-blend':.5,'horizon-fog-blend':.5,'fog-ground-blend':.5,'atmosphere-blend':['interpolate',['linear'],['zoom'],0,1,5,1,7,0]})}catch(e){}
 
     /* mode pratinjau (kartu kecil saat cek lokasi): langsung ke titik, tanpa animasi */
@@ -5380,7 +5382,8 @@ window.fetch=function(input,init){
         if(u.length<100&&LOCQ.test(u)&&!INTENT.test(u)){
           let on=false,g=null;try{on=typeof gpsOn!=='undefined'&&gpsOn;g=typeof gps!=='undefined'?gps:null}catch(e){}
           if(on&&g&&g.coords){const c=g.coords,suf='\n\n[satelit: '+c.latitude.toFixed(6)+','+c.longitude.toFixed(6)+','+Math.round(c.accuracy)+',pv]';
-            return pf.apply(this,arguments).then(r=>tagResp(r,suf))}
+            const ad=(()=>{try{return typeof gpsAddr!=='undefined'&&gpsAddr?String(gpsAddr):''}catch(e){return''}})(),la=c.latitude.toFixed(6),lo=c.longitude.toFixed(6);
+            return Promise.resolve(fake('Lokasi kamu saat ini di '+(ad||'titik koordinat ini')+'.\n\nKoordinat: '+la+', '+lo+'\n\nGaris bujur: '+lo+suf))}
         }
       }
     }
@@ -5391,4 +5394,416 @@ window.fetch=function(input,init){
 })();
 </script>
 <!-- ===== AKHIR TAMBAHAN SATELIT 3D ===== -->
+<!-- ===== TAMBAHAN: ALAT LENGKAP + KATA PEMICU LEBIH LUAS UNTUK CHAT UTAMA - hapus blok ini sampai AKHIR untuk membatalkan ===== -->
+<script>
+(()=>{
+if(window._xFullMain)return;
+window._xFullMain=1;
+try{
+const prev=window.galeriSysFor;
+if(typeof prev!=='function')return;
+
+/* hanya chat utama; bot panel dan Ruang Bot tidak disentuh */
+const isMain=b=>!!b&&!b.image_gen&&typeof b.system==='string'&&b.system.includes('[Info perangkat pengguna]');
+const lastU=b=>{
+  const ms=Array.isArray(b&&b.messages)?b.messages:[];
+  for(let i=ms.length-1;i>=0;i--)if(ms[i]&&ms[i].role==='user'){
+    const c=ms[i].content;
+    return typeof c==='string'?c:Array.isArray(c)?c.map(x=>(x&&x.text)||'').join(' '):'';
+  }
+  return '';
+};
+
+/* alat yang sudah terdaftar tapi belum diberitahukan ke bot chat utama.
+   Tidak termasuk terminal/simpan/buka/hapus/kirim: alat itu memang diblokir aplikasi di luar bot panel. */
+const MK_EXTRA='[Alat tambahan chat utama]';
+const EXTRA='\n\n'+MK_EXTRA+' Panggil dengan satu baris <tool>{"name":"...","args":{...}}</tool> tanpa teks lain, hanya bila benar-benar perlu:'
++'\n- terjemah {"teks":"...","ke":"Inggris"} : terjemahkan teks ke bahasa lain'
++'\n- cari_gambar {"q":"kata kunci"} : cari foto; tampilkan hasilnya dengan [foto: URL] di baris terpisah'
++'\n- http_get {"url":"https://..."} : ambil data dari API/halaman publik (GET saja, hanya situs yang mengizinkan CORS)'
++'\n- berkas_baca {"nama":"data.xlsx.txt","mulai":0} : baca isi berkas bersama (Excel/PDF/Word sudah diubah jadi teks); bila ada "lanjut", panggil lagi dengan mulai itu'
++'\n- ringkas_csv {"nama":"data.csv"} : ringkas tabel CSV/teks dari ruang kerja bersama (jumlah baris, kolom, jumlah dan rata-rata angka)'
++'\n- agregat {"nama":"data.csv","kolom":"penjualan","fungsi":"sum","kelompok":"kota","filter":{"kolom":"tahun","nilai":"2025","jenis":"sama"},"urut":"turun","batas":20} : hitung per kelompok. fungsi: sum, count, avg, min, max, distinct. jenis filter: sama, mengandung, lebih, kurang'
++'\n- ruang_daftar {} : daftar berkas di ruang kerja bersama'
++'\n- ruang_baca {"nama":"...","mulai":0,"ukuran":8000} : baca berkas ruang kerja per potongan; bila ada "lanjut", panggil lagi dengan mulai itu'
++'\n- ruang_riwayat {"nama":"..."} : riwayat perubahan berkas ruang kerja'
++'\n- ruang_tulis {"nama":"...","isi":"...","tambah":false} : tulis atau tambah berkas di ruang kerja bersama (hanya bila pengguna memintanya)'
++'\n- antrean_tambah {"judul":"...","langkah":["langkah 1","langkah 2"]} : buat tugas panjang 2-12 langkah yang dikerjakan bergiliran oleh bot di Ruang Bot (hanya bila pengguna memintanya); antrean_daftar {} : lihat progres';
+
+/* kata pemicu tambahan (hanya MENAMBAH; kata pemicu lama tetap berlaku apa adanya) */
+const RX={
+ hp:/telepon|telpon|\btelp\b|nelpon|menelepon|hubungi|hubungin|\bcall\b|\bsms\b|pesan singkat|whatsapp|wasap|\bwa\b|email|e-mail|surel|gmail|facetime|\bmaps\b|gmaps|peta|rute|navigasi|arah ke|jalan ke|jarak|alamat|lokasi|kontak|nomor hp|\bvcf\b|kalender|agenda|jadwal|acara|\.ics|tempel|clipboard|papan klip|salin|rekam|voice note|\bqr\b|barcode|kode batang|pindai|\bscan\b|sensor|kompas|kiblat|\bonline\b|\boffline\b|kripto|crypto|bitcoin|\bbtc\b|\beth\b|saham|ihsg|emas|antam|salat|sholat|shalat|azan|adzan|imsak|gempa|bmkg|\bresi\b|lacak paket|cek paket|pintasan|shortcut/i,
+ gal:/galeri|gallery|kamera|camera|foto|photo|video|gambar|selfie|potret|jepret|screenshot|tangkapan layar|lampirkan|\bambil\b|\bedit\b|putar|rotasi|hitam putih|terang|kontras|perkecil|resize/i,
+ img:/\b(jpe?g|png)\b|poster|undangan|flyer|banner|brosur|pamflet|spanduk|infografis|sertifikat|kartu (ucapan|nama|undangan)|ucapan selamat|e-?card|story (ig|instagram)|jadi(kan)?\s+(sebuah\s+)?(gambar|jpe?g|png)|simpan (sebagai|jadi)\s+(gambar|jpe?g|png)|(ke|dalam|bentuk|format|ekspor|export|ubah)\s+(sebuah\s+)?(gambar|jpe?g|png)/i,
+ art:/artefak|artifacts?|(pratinjau|preview|tampilkan|munculkan|jalankan|tampil)[^.\n]{0,25}(langsung|di chat|dalam chat)|kalkulator interaktif|halaman interaktif|mini app|aplikasi mini|game kecil|buat game|simulasi|dasbor|dashboard|kuis interaktif|demo langsung/i
+};
+const MK={hp:'[Alat akses luar]',gal:'[Galeri & kamera]',img:'[Alat gambar]',art:'[Alat artefak]'};
+
+/* ambil teks blok asli (supaya tidak menyalin ulang) dengan memanggil fungsi lama memakai pesan pancingan */
+const getBlock=(b,key)=>{
+  try{
+    const fake=Object.assign({},b,{messages:[{role:'user',content:'telepon galeri poster artefak'}]});
+    const s=String(prev.call(window,fake)||'');
+    const pos=Object.keys(MK).map(k=>({k,i:s.indexOf(MK[k])})).filter(x=>x.i>=0).sort((a,c)=>a.i-c.i);
+    const j=pos.findIndex(x=>x.k===key);
+    if(j<0)return '';
+    const start=s.lastIndexOf('\n\n',pos[j].i);
+    const end=j+1<pos.length?s.lastIndexOf('\n\n',pos[j+1].i):s.length;
+    return s.slice(start<0?pos[j].i:start,end);
+  }catch(e){return ''}
+};
+
+window.galeriSysFor=function(b){
+  let s='';
+  try{s=prev.apply(this,arguments)||''}catch(e){s=''}
+  try{
+    if(!isMain(b))return s;
+    s=String(s);
+    const u=lastU(b);
+    if(!s.includes(MK_EXTRA))s+=EXTRA;
+    for(const k of ['hp','gal','img','art']){
+      if(s.includes(MK[k])||!RX[k].test(u))continue;
+      if(k==='art'&&/\b(jpe?g|png)\b/i.test(u)&&!/artefak|artifact/i.test(u))continue;
+      s+=getBlock(b,k);
+    }
+  }catch(e){}
+  return s;
+};
+}catch(e){try{console.warn('Tambahan alat chat utama tidak aktif:',e)}catch(_){}}
+})();
+</script>
+<!-- ===== AKHIR TAMBAHAN ALAT LENGKAP CHAT UTAMA ===== -->
+<!-- ===== TAMBAHAN: KOMPUTER PRIBADI CHAT UTAMA (terminal, simpan, buka, hapus, kirim) - hapus blok ini sampai AKHIR untuk membatalkan ===== -->
+<script>
+(()=>{
+if(window._xMainComp)return;
+window._xMainComp=1;
+try{
+const XT=window.XT;
+if(!XT||typeof XT.run!=='function')return;
+
+/* penyimpanan sendiri (xbot_maincomp), terpisah dari komputer bot panel (xbot_bscomp) */
+const KC='xbot_maincomp',MAXF=30,MAXC=80000;
+let D={};try{D=JSON.parse(localStorage.getItem(KC)||'{}')||{}}catch(e){D={}}
+const save=()=>{try{localStorage.setItem(KC,JSON.stringify(D))}catch(e){throw new Error('Penyimpanan browser penuh')}};
+const cn=n=>String(n==null?'':n).replace(/^(\.\/|~\/|\/home\/[^/]+\/)/,'').trim().replace(/[^\w.\- ()]/g,'_').slice(0,40);
+const put=(n,t,tambah)=>{
+  n=cn(n);if(!n)throw new Error('Nama berkas kosong');
+  const v=(tambah&&D[n]?D[n].t:'')+String(t==null?'':t);
+  if(v.length>MAXC)throw new Error('Berkas maksimal 80.000 karakter');
+  if(!D[n]&&Object.keys(D).length>=MAXF)throw new Error('Komputermu penuh (maks 30 berkas), hapus dulu yang tidak dipakai');
+  D[n]={t:v,ts:Date.now()};save();return {n,len:v.length};
+};
+const find=n=>{n=cn(n);if(!n)return null;if(D[n])return n;const k=Object.keys(D).find(x=>x.toLowerCase().includes(n.toLowerCase()));return k||null};
+const pn=u=>Math.min(12000,Math.max(500,parseInt(u)||4000));
+
+const T={};
+T.simpan=async({nama,isi,tambah}={})=>{const r=put(nama,isi,tambah);return {ok:true,nama:r.n,ukuran:r.len}};
+T.buka=async({nama,mulai=0,ukuran}={})=>{
+  if(!cn(nama))return {berkas:Object.keys(D).map(k=>({nama:k,ukuran:D[k].t.length}))};
+  const k=find(nama);if(!k)throw new Error('Berkas "'+nama+'" tidak ada. Yang ada: '+(Object.keys(D).join(', ')||'(kosong)'));
+  const o=Math.max(0,parseInt(mulai)||0),n=pn(ukuran);
+  return {nama:k,total:D[k].t.length,mulai:o,teks:D[k].t.slice(o,o+n),lanjut:o+n<D[k].t.length?o+n:null};
+};
+T.hapus=async({nama}={})=>{const k=D[cn(nama)]?cn(nama):null;if(!k)throw new Error('Berkas "'+nama+'" tidak ada');delete D[k];save();return {ok:true,dihapus:k}};
+/* di chat utama "kirim" = tampilkan berkas sebagai tombol Unduh/Bagikan di chat */
+T.kirim=async({nama}={})=>{
+  const k=D[cn(nama)]?cn(nama):null;if(!k)throw new Error('Berkas "'+nama+'" tidak ada di komputermu');
+  return XT.file({nama:k,isi:D[k].t});
+};
+
+/* ---------- terminal mini ---------- */
+const tok=line=>{const R=[];let cur='',has=false,q=null;const p=()=>{if(has){R.push({w:cur});cur='';has=false}};
+  for(let k=0;k<line.length;k++){const c=line[k];
+    if(q){if(c===q)q=null;else cur+=c;continue}
+    if(c==='"'||c==="'"){q=c;has=true;continue}
+    if(c===' '||c==='\t'||c==='\n'){p();continue}
+    if(c==='|'){p();if(line[k+1]==='|'){k++;R.push({op:'||'})}else R.push({op:'|'});continue}
+    if(c==='&'&&line[k+1]==='&'){p();k++;R.push({op:'&&'});continue}
+    if(c===';'){p();R.push({op:';'});continue}
+    if(c==='>'){p();if(line[k+1]==='>'){k++;R.push({op:'>>'})}else R.push({op:'>'});continue}
+    cur+=c;has=true}
+  if(q)throw new Error('tanda kutip belum ditutup');
+  p();return R};
+const need=n=>{const k=find(n);if(!k)throw new Error('tidak ada berkas: '+n);return k};
+const src=(a,inp)=>{const f=a.find(x=>x[0]!=='-');if(f)return D[need(f)].t;if(inp==null)throw new Error('butuh nama berkas atau masukan pipa');return inp};
+const lines=t=>{const L=String(t).split('\n');if(L.length&&L[L.length-1]==='')L.pop();return L};
+const nopt=(a,d)=>{const i=a.indexOf('-n');if(i>=0&&a[i+1]!=null){const v=parseInt(a[i+1]);a.splice(i,2);return isNaN(v)?d:v}const j=a.findIndex(x=>/^-\d+$/.test(x));if(j>=0){const v=-parseInt(a.splice(j,1)[0]);return v}return d};
+const C={
+ ls:async()=>Object.keys(D).map(k=>k+'  ('+D[k].t.length+' karakter)').join('\n')+(Object.keys(D).length?'\n':''),
+ pwd:async()=>'/komputer-chat-utama\n',
+ date:async()=>new Date().toString()+'\n',
+ echo:async a=>a.join(' ')+'\n',
+ cat:async(a,i)=>{if(!a.length)return i==null?'':i;return a.map(f=>D[need(f)].t).join('')},
+ touch:async a=>{a.forEach(f=>{if(!find(f))put(f,'')});return ''},
+ rm:async a=>{a.filter(x=>x[0]!=='-').forEach(f=>{const k=need(f);delete D[k]});save();return ''},
+ cp:async a=>{const [x,y]=a.filter(z=>z[0]!=='-');if(!x||!y)throw new Error('cp butuh asal dan tujuan');put(y,D[need(x)].t);return ''},
+ mv:async a=>{const [x,y]=a.filter(z=>z[0]!=='-');if(!x||!y)throw new Error('mv butuh asal dan tujuan');const k=need(x),t=D[k].t;put(y,t);if(cn(y)!==k)delete D[k];save();return ''},
+ head:async(a,i)=>{const n=nopt(a,10);return lines(src(a,i)).slice(0,n).join('\n')+'\n'},
+ tail:async(a,i)=>{const n=nopt(a,10);const L=lines(src(a,i));return L.slice(Math.max(0,L.length-n)).join('\n')+'\n'},
+ wc:async(a,i)=>{const t=src(a,i),l=lines(t).length,w=(t.match(/\S+/g)||[]).length,c=t.length;
+   return (a.includes('-l')?l:a.includes('-w')?w:a.includes('-c')?c:l+' '+w+' '+c)+'\n'},
+ grep:async(a,i)=>{const fl=a.filter(x=>x[0]==='-'),r=a.filter(x=>x[0]!=='-');const pat=r.shift();if(pat==null)throw new Error('grep butuh pola');
+   const ci=fl.some(x=>x.includes('i')),inv=fl.some(x=>x.includes('v')),num=fl.some(x=>x.includes('n')),cnt=fl.some(x=>x.includes('c'));
+   let re;try{re=new RegExp(pat,ci?'i':'')}catch(e){re=new RegExp(pat.replace(/[.*+?^${}()|[\]\\]/g,'\\$&'),ci?'i':'')}
+   const L=lines(src(r,i)),out=[];L.forEach((s,k)=>{if(re.test(s)!==inv)out.push(num?(k+1)+':'+s:s)});
+   return cnt?out.length+'\n':(out.length?out.join('\n')+'\n':'')},
+ sort:async(a,i)=>{const n=a.includes('-n'),r=a.includes('-r');const L=lines(src(a.filter(x=>x[0]!=='-'),i));
+   L.sort(n?(x,y)=>(parseFloat(x)||0)-(parseFloat(y)||0):(x,y)=>x<y?-1:x>y?1:0);if(r)L.reverse();return L.join('\n')+(L.length?'\n':'')},
+ uniq:async(a,i)=>{const c=a.includes('-c');const L=lines(src(a.filter(x=>x[0]!=='-'),i)),o=[];
+   L.forEach(s=>{const z=o[o.length-1];if(z&&z.s===s)z.n++;else o.push({s,n:1})});return o.map(z=>(c?z.n+' ':'')+z.s).join('\n')+(o.length?'\n':'')},
+ cut:async(a,i)=>{let d='\t',f=1;const r=[];for(let k=0;k<a.length;k++){if(a[k]==='-d'){d=a[++k]}else if(/^-d./.test(a[k])){d=a[k].slice(2)}else if(a[k]==='-f'){f=parseInt(a[++k])||1}else if(/^-f\d/.test(a[k])){f=parseInt(a[k].slice(2))||1}else r.push(a[k])}
+   return lines(src(r,i)).map(s=>s.split(d)[f-1]||'').join('\n')+'\n'},
+ curl:async a=>{const u=a.find(x=>/^https?:/i.test(x));if(!u)throw new Error('curl: URL https belum diberikan');const r=await XT.run('http_get',{url:u});return String(r&&r.teks||'')+'\n'}
+};
+const runCmd=async(w,inp,redir)=>{
+  const name=w[0];if(!name)return '';
+  if(!C[name])throw new Error(name+': perintah tidak dikenal. Tersedia: '+Object.keys(C).join(' '));
+  return C[name](w.slice(1),inp);
+};
+const shRun=async line=>{
+  const T0=tok(line);let out='',code=0,err='';
+  /* pecah per ; && || */
+  const segs=[];let cur=[],op=';';
+  for(const t of T0){if(t.op===';'||t.op==='&&'||t.op==='||'){segs.push({op,t:cur});cur=[];op=t.op}else cur.push(t)}
+  segs.push({op,t:cur});
+  for(const s of segs){
+    if(s.op==='&&'&&code!==0)continue;if(s.op==='||'&&code===0)continue;
+    if(!s.t.length)continue;
+    try{
+      /* pecah pipa */
+      const cmds=[];let c=[];for(const t of s.t){if(t.op==='|'){cmds.push(c);c=[]}else c.push(t)}cmds.push(c);
+      let inp=null,res='';
+      for(let k=0;k<cmds.length;k++){
+        let w=[],rd=null;const toks=cmds[k];
+        for(let j=0;j<toks.length;j++){const t=toks[j];if(t.op==='>'||t.op==='>>'){const f=toks[j+1];if(!f||f.op)throw new Error('tujuan pengalihan kosong');rd={tambah:t.op==='>>',f:f.w};j++}else if(t.w!=null)w.push(t.w)}
+        res=await runCmd(w,inp);
+        if(rd){put(rd.f,res,rd.tambah);res=''}
+        inp=res;
+      }
+      out+=res;code=0;
+    }catch(e){err+=((e&&e.message)||String(e))+'\n';code=1}
+  }
+  return {keluaran:out.slice(0,4000),kode:code,error:err||undefined,dipotong:out.length>4000||undefined};
+};
+T.terminal=async({cmd}={})=>{
+  cmd=String(cmd||'').trim();if(!cmd)throw new Error('Perintah kosong');
+  if(cmd.length>1500)throw new Error('Perintah terlalu panjang');
+  try{return await shRun(cmd)}catch(e){return {keluaran:'',kode:2,error:(e&&e.message)||String(e)}}
+};
+
+/* dipakai hanya bila alat asli menolak karena tidak ada bot panel (artinya dipanggil dari chat utama) */
+const prevRun=XT.run;
+XT.run=async function(name,args){
+  if(!Object.prototype.hasOwnProperty.call(T,name))return prevRun.apply(this,arguments);
+  try{return await prevRun.apply(this,arguments)}
+  catch(e){
+    const m=String((e&&e.message)||e);
+    if(/Komputer pribadi hanya untuk bot|tidak dikenal/.test(m))return T[name](args||{});
+    throw e;
+  }
+};
+window._xMainCompDbg={get:()=>D};
+
+/* beri tahu bot chat utama (hanya chat utama; bot panel tidak disentuh) */
+const MK='[Komputer pribadi chat utama]';
+const SYS3='\n\n'+MK+' Kamu punya komputer pribadi kecil (tersimpan di browser, maks 30 berkas, 80.000 karakter per berkas). Panggil dengan satu baris <tool>{"name":"...","args":{...}}</tool> tanpa teks lain, hanya bila pengguna memintanya atau benar-benar perlu:'
++'\n- terminal {"cmd":"ls; cat data.csv | grep kopi | wc -l"} : terminal virtual (ls cat echo > >> touch rm cp mv head tail wc grep sort uniq cut date pwd, curl https://..., pipa | dan && ;). Hanya berkas komputer ini yang terlihat.'
++'\n- simpan {"nama":"catatan.md","isi":"...","tambah":false} : simpan berkas di komputermu; buka {"nama":"catatan.md"} membaca isinya (tanpa nama = daftar berkas); hapus {"nama":"..."} menghapus'
++'\n- kirim {"nama":"catatan.md"} : tampilkan berkas komputermu sebagai tombol Unduh/Bagikan di chat';
+const KW=/terminal|komputer|simpan|berkas|file|catatan|buka|hapus|kirim|unduh|download|ls\b|cat\b|grep|csv|txt|\.md|\.json|folder|script|skrip|catat|ingat/i;
+const prev=window.galeriSysFor;
+window.galeriSysFor=function(b){
+  let s='';
+  try{s=typeof prev==='function'?(prev.apply(this,arguments)||''):''}catch(e){s=''}
+  try{
+    if(b&&!b.image_gen&&typeof b.system==='string'&&b.system.includes('[Info perangkat pengguna]')){
+      const ms=Array.isArray(b.messages)?b.messages:[];let u='';
+      for(let i=ms.length-1;i>=0;i--)if(ms[i]&&ms[i].role==='user'){const c=ms[i].content;u=typeof c==='string'?c:Array.isArray(c)?c.map(x=>(x&&x.text)||'').join(' '):'';break}
+      if(KW.test(u)&&!String(s).includes(MK))s=String(s)+SYS3;
+    }
+  }catch(e){}
+  return s;
+};
+}catch(e){try{console.warn('Komputer pribadi chat utama tidak aktif:',e)}catch(_){}}
+})();
+</script>
+<!-- ===== AKHIR TAMBAHAN KOMPUTER PRIBADI CHAT UTAMA ===== -->
+<!-- ===== TAMBAHAN: IKON, EMOJI, FAVICON, WARNA PENTING (chat utama) + TERMINAL UNTUK MODE AGEN - hapus blok ini sampai AKHIR untuk membatalkan ===== -->
+<style>
+.bt .xic{display:inline-block;width:1.15em;height:1.15em;vertical-align:-.2em;margin:0 .08em;flex:none}
+.bt .xfv{display:inline-block;width:1.1em;height:1.1em;vertical-align:-.2em;margin:0 .15em 0 .05em;border-radius:3px;background:#fff1}
+</style>
+<script>
+(()=>{
+if(window._xHiasan)return;
+window._xHiasan=1;
+try{
+const prev=window.galeriSysFor;
+if(typeof prev!=='function')return;
+
+/* ---------- 1. set ikon SVG kecil (gaya garis, ikut warna dan ukuran teks) ---------- */
+const L=(a,b,c,d)=>'<line x1="'+a+'" y1="'+b+'" x2="'+c+'" y2="'+d+'"/>';
+const PT=p=>'<path d="'+p+'"/>';
+const PL=p=>'<polyline points="'+p+'"/>';
+const CI=(x,y,r)=>'<circle cx="'+x+'" cy="'+y+'" r="'+r+'"/>';
+const RC=(x,y,w,h,r)=>'<rect x="'+x+'" y="'+y+'" width="'+w+'" height="'+h+'" rx="'+(r||0)+'"/>';
+const FILE=PT('M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z')+PL('13 2 13 9 20 9');
+const IC={
+ centang:PL('20 6 9 17 4 12'),
+ silang:L(18,6,6,18)+L(6,6,18,18),
+ peringatan:PT('M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z')+L(12,9,12,13)+L(12,17,12.01,17),
+ info:CI(12,12,10)+L(12,16,12,12)+L(12,8,12.01,8),
+ tanya:CI(12,12,10)+PT('M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3')+L(12,17,12.01,17),
+ kunci:RC(3,11,18,11,2)+PT('M7 11V7a5 5 0 0 1 10 0v4'),
+ buka_kunci:RC(3,11,18,11,2)+PT('M7 11V7a5 5 0 0 1 9.9-1'),
+ kunci_api:PT('M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4'),
+ lampiran:PT('M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48'),
+ folder:PT('M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z'),
+ berkas:FILE,
+ dokumen:FILE+L(16,13,8,13)+L(16,17,8,17)+L(10,9,8,9),
+ buku:PT('M4 19.5A2.5 2.5 0 0 1 6.5 17H20')+PT('M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z'),
+ grafik:L(12,20,12,10)+L(18,20,18,4)+L(6,20,6,16),
+ paket:PT('M16.5 9.4l-9-5.19')+PT('M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z')+PL('3.27 6.96 12 12.01 20.73 6.96')+L(12,22.08,12,12),
+ cari:CI(11,11,8)+L(21,21,16.65,16.65),
+ tautan:PT('M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71')+PT('M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71'),
+ unduh:PT('M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4')+PL('7 10 12 15 17 10')+L(12,15,12,3),
+ unggah:PT('M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4')+PL('17 8 12 3 7 8')+L(12,3,12,15),
+ kirim:L(22,2,11,13)+'<polygon points="22 2 15 22 11 13 2 9 22 2"/>',
+ terminal:PL('4 17 10 11 4 5')+L(12,19,20,19),
+ kode:PL('16 18 22 12 16 6')+PL('8 6 2 12 8 18'),
+ kamera:PT('M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z')+CI(12,13,4),
+ gambar:RC(3,3,18,18,2)+CI(8.5,8.5,1.5)+PL('21 15 16 10 5 21'),
+ jam:CI(12,12,10)+PL('12 6 12 12 16 14'),
+ kalender:RC(3,4,18,18,2)+L(16,2,16,6)+L(8,2,8,6)+L(3,10,21,10),
+ surel:PT('M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z')+PL('22,6 12,13 2,6'),
+ telepon:PT('M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z'),
+ lokasi:PT('M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z')+CI(12,10,3),
+ dunia:CI(12,12,10)+L(2,12,22,12)+PT('M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z'),
+ bintang:'<polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>',
+ hati:PT('M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z'),
+ ide:PT('M9 18h6')+PT('M10 22h4')+PT('M15.09 14c.18-.98.65-1.74 1.41-2.5A4.65 4.65 0 0 0 18 8 6 6 0 0 0 6 8c0 1 .23 2.23 1.5 3.5A4.61 4.61 0 0 1 8.91 14'),
+ perisai:PT('M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z'),
+ kilat:'<polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>',
+ sampah:PL('3 6 5 6 21 6')+PT('M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6')+L(10,11,10,17)+L(14,11,14,17)+PT('M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2'),
+ pensil:PT('M12 20h9')+PT('M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z'),
+ pengguna:PT('M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2')+CI(12,7,4),
+ data:'<ellipse cx="12" cy="5" rx="9" ry="3"/>'+PT('M21 12c0 1.66-4 3-9 3s-9-1.34-9-3')+PT('M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5'),
+ pengaturan:CI(12,12,3)+PT('M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z')
+};
+/* nama lain (Indonesia dan Inggris) menuju nama ikon utama */
+const AL={ok:'centang',check:'centang',berhasil:'centang',x:'silang',close:'silang',gagal:'silang',warning:'peringatan',alert:'peringatan',awas:'peringatan',help:'tanya',lock:'kunci',terkunci:'kunci',unlock:'buka_kunci','buka-kunci':'buka_kunci',terbuka:'buka_kunci',key:'kunci_api','kunci-api':'kunci_api',paperclip:'lampiran',attach:'lampiran',file:'berkas',doc:'dokumen',document:'dokumen',book:'buku',chart:'grafik',stats:'grafik',box:'paket',package:'paket',search:'cari',link:'tautan',download:'unduh',upload:'unggah',send:'kirim',code:'kode',coding:'kode',camera:'kamera',foto:'gambar',image:'gambar',photo:'gambar',clock:'jam',waktu:'jam',calendar:'kalender',mail:'surel',email:'surel',phone:'telepon',call:'telepon',pin:'lokasi',map:'lokasi',location:'lokasi',globe:'dunia',web:'dunia',star:'bintang',heart:'hati',bulb:'ide',idea:'ide',shield:'perisai',aman:'perisai',zap:'kilat',trash:'sampah',hapus:'sampah',edit:'pensil',tulis:'pensil',user:'pengguna',orang:'pengguna',database:'data',db:'data',settings:'pengaturan',gear:'pengaturan'};
+const svg=n=>'<svg class="xic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" role="img" aria-label="'+n+'">'+IC[n]+'</svg>';
+
+/* ---------- 2. ubah tag [ikon: nama] dan [favicon: domain] di balasan bot menjadi gambar kecil ---------- */
+const RE=/\[(ikon|icon|favicon):\s*([^\]\n]{1,80})\]/gi;
+const mkIcon=v=>{
+  let k=String(v).trim().toLowerCase().replace(/\s+/g,'_');
+  if(!IC[k])k=AL[k]||AL[k.replace(/_/g,'-')]||null;
+  if(!k||!IC[k])return null;
+  const t=document.createElement('template');t.innerHTML=svg(k);return t.content.firstChild;
+};
+const mkFav=v=>{
+  let h='';try{h=new URL(/^https?:\/\//i.test(v)?v:'https://'+v).hostname.replace(/^www\./,'')}catch(e){}
+  if(!/^[\w.-]+\.[a-z]{2,}$/i.test(h))return null;
+  const im=document.createElement('img');im.className='xfv';im.alt='';im.width=16;im.height=16;im.loading='lazy';im.referrerPolicy='no-referrer';
+  const U=['https://www.google.com/s2/favicons?domain='+encodeURIComponent(h)+'&sz=64','https://icons.duckduckgo.com/ip3/'+encodeURIComponent(h)+'.ico'];
+  let i=0;im.onerror=()=>{i++;if(i<U.length)im.src=U[i];else im.style.display='none'};
+  im.src=U[0];return im;
+};
+const proc=root=>{
+  const w=document.createTreeWalker(root,NodeFilter.SHOW_TEXT,{acceptNode:n=>{
+    const s=n.nodeValue;if(s.indexOf('[')<0||!/\[(ikon|icon|favicon):/i.test(s))return NodeFilter.FILTER_REJECT;
+    const p=n.parentElement;return p&&!p.closest('pre,code,script,style,textarea,.xfc')?NodeFilter.FILTER_ACCEPT:NodeFilter.FILTER_REJECT}});
+  const list=[];while(w.nextNode())list.push(w.currentNode);
+  list.forEach(n=>{
+    const s=n.nodeValue;RE.lastIndex=0;let m,last=0,any=false;const fr=document.createDocumentFragment();
+    while((m=RE.exec(s))){
+      const el=m[1].toLowerCase()==='favicon'?mkFav(m[2]):mkIcon(m[2]);
+      fr.appendChild(document.createTextNode(s.slice(last,m.index)));
+      if(el)fr.appendChild(el);   /* nama tidak dikenal: tag dibuang, tidak tampil sebagai teks mentah */
+      last=m.index+m[0].length;any=true;
+    }
+    if(any){fr.appendChild(document.createTextNode(s.slice(last)));if(n.parentNode)n.parentNode.replaceChild(fr,n)}
+  });
+};
+const ms=document.getElementById('ms');
+if(ms&&window.MutationObserver){
+  const pend=new Set();let sch=0;
+  const run=()=>{sch=0;const A=[...pend];pend.clear();A.forEach(el=>{try{if(el.isConnected)proc(el)}catch(e){}})};
+  new MutationObserver(ml=>{
+    for(const m of ml){
+      let t=m.target;if(t&&t.nodeType===3)t=t.parentElement;if(!t||!t.closest)continue;
+      const bt=t.closest('.bt');
+      if(bt)pend.add(bt);
+      else m.addedNodes&&m.addedNodes.forEach(n=>{if(n.nodeType===1){if(n.classList&&n.classList.contains('bt'))pend.add(n);n.querySelectorAll&&n.querySelectorAll('.bt').forEach(x=>pend.add(x))}});
+    }
+    if(!sch&&pend.size){sch=1;queueMicrotask(run)}
+  }).observe(ms,{childList:true,subtree:true,characterData:true});
+  setTimeout(()=>{try{ms.querySelectorAll('.bt').forEach(proc)}catch(e){}},1500);
+}
+
+/* ---------- 3. petunjuk untuk bot chat utama ---------- */
+const NAMA=Object.keys(IC).join(', ');
+const MK_H='[Ikon, emoji, favicon & warna]';
+const SYS_H='\n\n'+MK_H+' Hiasan kecil dipakai HANYA bila menambah makna, kamu yang menilai sendiri. Obrolan santai singkat, topik serius atau sedih, atau permintaan resmi cukup ditulis polos. Secukupnya (beberapa per jawaban), jangan di setiap baris, jangan di dalam blok kode.'
++'\nEmoji (ketik langsung): ✅ berhasil/benar ❌ gagal/salah 🆘 darurat 🆔 identitas 🔐 terkunci/aman 🔓 terbuka 🔑 kunci/API key 📎 lampiran 📚 referensi 📕 buku 📁 folder 🗃️ arsip 🗄️ penyimpanan 📊 data/grafik 🧾 rincian 📑 dokumen 📦 paket/hasil 📸📷 foto/kamera 🖥️ komputer 📡 jaringan/sinyal ⚙️ pengaturan 🔧 perbaikan 🧪 uji coba 🧽🪥 bersih-bersih 💎 berharga 📤 kirim ✍️ menulis 🧑‍💻 koding 🥷 ahli/diam-diam 👾 game 🦠 bug/virus 👋 sapaan 🙏 terima kasih/mohon 💪 semangat 🤘 keren 🤡😈👻👹 bercanda/usil/misterius 🥺 memohon/minta maaf 😴 ngantuk 😒😣 kesal/frustrasi 👣 jejak/langkah'
++'\nIkon garis (SVG): tulis [ikon: nama] di tengah kalimat; ukuran dan warnanya mengikuti teks. Nama: '+NAMA+'. Pakai ikon bila ingin tampilan rapi dan seragam (judul bagian, daftar fitur), emoji bila ingin ekspresif.'
++'\nFavicon situs: tulis [favicon: domain.com] tepat sebelum nama situs saat menyebut sumber, tautan, atau daftar situs (contoh: [favicon: github.com] GitHub). Jangan untuk situs yang tidak kamu yakin domainnya.'
++'\nWarna (aturan ini menggantikan larangan warna sebelumnya): kamu boleh memberi warna sendiri tanpa diminta, tetapi HANYA untuk hal yang benar-benar penting, biasanya 1-3 frasa pendek per jawaban, dengan [c=warna]teks[/c]. Panduan: merah = bahaya, error, peringatan, tenggat; hijau = berhasil, aman, disarankan; kuning = perhatian atau catatan; biru = istilah atau angka kunci; oranye = langkah penting. Teks biasa dan jawaban santai atau singkat tetap polos tanpa warna. Jangan mewarnai seluruh kalimat atau paragraf, judul, tabel, atau blok kode. Warna tidak mengubah ukuran atau jenis huruf. Bila pengguna meminta warna tertentu atau meminta tanpa warna, ikuti pengguna.';
+
+/* ---------- 4. terminal untuk mode agen (alat sudah ada; agen hanya perlu diberi tahu) ---------- */
+const MK_T='[Terminal agen]';
+const SYS_T='\n'+MK_T+'\n- terminal {"cmd":"ls; cat data.csv | grep kopi | wc -l"} : jalankan perintah di terminal virtual (ls cat echo > >> touch rm cp mv head tail wc grep sort uniq cut date pwd, curl https://..., pipa | dan && ;). Hanya berkas di komputer virtualmu yang terlihat; pakai untuk olah data atau catatan kerja, bukan untuk hal yang bisa dijawab langsung.';
+
+window.galeriSysFor=function(b){
+  let s='';
+  try{s=prev.apply(this,arguments)||''}catch(e){s=''}
+  try{
+    if(b&&!b.image_gen&&typeof b.system==='string'&&b.system.includes('[Info perangkat pengguna]')){
+      s=String(s);
+      if(b.system.includes('[ALAT UNTUK AGEN]')){
+        if(!s.includes(MK_T))s+=SYS_T;
+      }else if(!s.includes(MK_H)){
+        s+=SYS_H;
+      }
+    }
+  }catch(e){}
+  return s;
+};
+window._xHiasanIcons=IC;
+}catch(e){try{console.warn('Tambahan ikon/emoji/favicon tidak aktif:',e)}catch(_){}}
+})();
+</script>
+<!-- ===== AKHIR TAMBAHAN IKON, EMOJI, FAVICON, WARNA ===== -->
+<!-- ===== EFEK STATUS CHAT & STATUS PROSES: kilau bergerak, font 15px tegak ===== -->
+<style id="xshim-css">
+.stt,.stt span,.agp,.agp *{font-size:15px!important;font-style:normal!important;font-weight:400!important;text-transform:lowercase!important}
+.stt span,.agp:not(.xdone) summary,.agp:not(.xdone) li:last-child:not(.ok):not(.er){
+ color:transparent!important;-webkit-text-fill-color:transparent;
+ background-image:linear-gradient(100deg,#6d6d72 0%,#6d6d72 38%,#f4f4f6 50%,#6d6d72 62%,#6d6d72 100%);
+ background-size:250% 100%;background-repeat:no-repeat;background-position:100% 0;
+ -webkit-background-clip:text;background-clip:text;
+ animation:xshim 2.2s linear infinite}
+.agp.xdone summary{color:#d0d0d0}
+.agp:not(.xdone){display:none!important}
+.agp li:last-child:not(.ok):not(.er)::before{-webkit-text-fill-color:#8a8a8a}
+@keyframes xshim{from{background-position:100% 0}to{background-position:0% 0}}
+.stt{position:relative}
+.xghost{position:absolute;pointer-events:none;white-space:nowrap;color:#6d6d72;font-size:15px;text-transform:lowercase;animation:xgo .38s ease-out forwards}
+@keyframes xgo{from{opacity:1}to{opacity:0}}
+@media (prefers-reduced-motion:reduce){.stt span,.agp:not(.xdone) summary,.agp:not(.xdone) li:last-child{animation:none}}
+</style>
+<script id="xshim-js">
+(()=>{try{
+const root=document.getElementById('ms')||document.body;
+const fade=el=>{try{el.animate([{opacity:0},{opacity:1}],{duration:380,easing:'ease-out'})}catch(e){}};
+const ghost=(el,old)=>{try{if(!old||!el.matches('.stt span'))return;const p=el.parentNode,g=document.createElement('div');g.className='xghost';g.textContent=old;g.style.left=el.offsetLeft+'px';g.style.top=el.offsetTop+'px';p.appendChild(g);setTimeout(()=>g.remove(),420)}catch(e){}};
+new MutationObserver(ms=>{for(const m of ms){let n=m.target;if(n.nodeType===3)n=n.parentNode;if(!n||n.nodeType!==1)continue;
+ if(n.matches('.stt span')||n.matches('.agp summary')){let o='';m.removedNodes&&m.removedNodes.forEach(x=>{o+=x.textContent||''});ghost(n,o.trim());fade(n)}
+ const a=n.closest&&n.closest('.agp');
+ if(a){const sm=a.querySelector('summary');if(sm){const d=!/^agen bekerja/i.test(sm.textContent);if(d&&!a.classList.contains('xdone')){const dt=a.querySelector('details');if(dt)dt.open=false}a.classList.toggle('xdone',d)}}}
+}).observe(root,{childList:true,subtree:true,characterData:true});
+}catch(e){}})();
+</script>
 </body></html>
