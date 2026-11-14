@@ -1801,19 +1801,24 @@ const ANTI_HALU=`
   body.system=(body.system||'')+TOOL_SYS+(MAINC?TOOL_SYS2:'')+ANTI_HALU;
   body.system+=(typeof window.galeriSysFor==='function'?window.galeriSysFor(body):'');
   let fin=null;
+  const MAXSTEP=25,SEEN=new Map();
   try{
-    for(let step=0;step<6;step++){
+    for(let step=0;step<MAXSTEP;step++){
       fin=await callChat(input,init,body);
       if(!fin||fin.error||!fin.text) break;
       const blk=[...String(fin.text).matchAll(/<tool>\s*([\s\S]*?)\s*<\/tool>/g)].map(m=>jp(m[1])).filter(c=>c&&c.name);
       const calls=blk.length?blk:(()=>{const pt=parseTool(fin.text);return pt?[pt.call]:[]})();
       if(!calls.length) break;
       const outs=[];
-      for(const c of calls){let res;try{res=await XT.run(c.name,c.args)}catch(e){res={error:e.message||String(e)}}outs.push(`[HASIL ALAT ${c.name}]: ${JSON.stringify(res)}`)}
+      for(const c of calls){let res;const key=c.name+'|'+JSON.stringify(c.args||{}),n=(SEEN.get(key)||0)+1;SEEN.set(key,n);if(n>=3){res={error:'Panggilan yang sama sudah diulang '+n+' kali. Jangan ulangi; pakai hasil yang sudah ada dan jawab pengguna.'}}else try{res=await XT.run(c.name,c.args)}catch(e){res={error:e.message||String(e)}}outs.push(`[HASIL ALAT ${c.name}]: ${JSON.stringify(res)}`)}
       body.messages=[...body.messages,
         {role:'assistant',content:fin.text},
         {role:'user',content:outs.join('\n')+'\nSekarang jawab pengguna dengan bahasa biasa.'}];
       fin=null;
+    }
+    if(!fin){
+      body.messages=[...body.messages,{role:'user',content:'Jangan panggil alat lagi. Jawab pengguna sekarang dengan bahasa biasa berdasarkan hasil alat di atas.'}];
+      fin=await callChat(input,init,body);
     }
   }catch(e){fin={error:'Alat gagal: '+(e.message||e)}}
   if(fin&&fin.text) fin.text=stripTool(fin.text);
@@ -5805,5 +5810,79 @@ new MutationObserver(ms=>{for(const m of ms){let n=m.target;if(n.nodeType===3)n=
  if(a){const sm=a.querySelector('summary');if(sm){const d=!/^agen bekerja/i.test(sm.textContent);if(d&&!a.classList.contains('xdone')){const dt=a.querySelector('details');if(dt)dt.open=false}a.classList.toggle('xdone',d)}}}
 }).observe(root,{childList:true,subtree:true,characterData:true});
 }catch(e){}})();
+</script>
+<!-- ===== LABEL STATUS + KOTAK "COMPUTER" SAAT CHAT UTAMA MEMANGGIL ALAT ===== -->
+<style id="xcomp-css">
+.xcomp .gxh span{display:flex;align-items:center;gap:10px;font-size:16px}
+.xcomp .gxh svg{width:20px;height:20px;flex:none}
+.xcomp .xcb{margin:0;padding:12px 14px;background:none;border-radius:0;font:13px/1.55 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;white-space:pre-wrap;overflow-wrap:anywhere;overflow:auto;color:#cfcfcf}
+.xcomp .xcb div{min-height:1.55em}
+.xcomp .xcb .p{color:#6ab0ff}.xcomp .xcb .cm{color:#f2f2f2}.xcomp .xcb .o{color:#9a9a9f}.xcomp .xcb .e{color:#ff6b6b}.xcomp .xcb .k{color:#25e870}
+.xcomp .xcb .run::after{content:"";display:inline-block;width:7px;height:14px;margin-left:5px;vertical-align:-2px;background:#cfcfcf;animation:xblink 1s steps(2,start) infinite}
+@keyframes xblink{to{visibility:hidden}}
+</style>
+<script id="xtoolstat-js">
+(()=>{try{
+const XT=window.XT;if(!XT||typeof XT.run!=='function'||XT._xStat)return;XT._xStat=1;
+const clip=(x,n)=>String(x==null?'':x).replace(/\s+/g,' ').trim().slice(0,n);
+const COMP=new Set(['terminal','simpan','buka','hapus','kirim','code']);
+const L={
+ code:()=>'sedang menjalankan kode',file:a=>'sedang membuat berkas: '+clip(a.nama,30),
+ dokumen:a=>'sedang membuat dokumen: '+clip(a.nama,30),dokumen_edit:a=>'sedang mengedit dokumen: '+clip(a.nama,30),
+ search:a=>'sedang mencari: '+clip(a.q,40),read:a=>'sedang membaca halaman: '+clip(a.url,40),
+ news:()=>'sedang mencari berita',wiki:a=>'sedang membuka wikipedia: '+clip(a.q,30),weather:a=>'sedang cek cuaca: '+clip(a.kota,24),
+ calc:()=>'sedang menghitung',time:()=>'sedang cek waktu',rate:()=>'sedang cek kurs',remind:()=>'sedang membuat pengingat',
+ terjemah:()=>'sedang menerjemahkan',cari_gambar:a=>'sedang mencari gambar: '+clip(a.q,30),http_get:a=>'sedang mengambil data: '+clip(a.url,40),
+ berkas_baca:a=>'sedang membaca berkas: '+clip(a.nama,30)};
+const lastStt=()=>{const all=document.querySelectorAll('#ms .stt');return all[all.length-1]||null};
+const setSt=t=>{try{const st=lastStt(),sp=st&&st.querySelector('span');if(sp&&sp.isConnected&&sp.textContent!==t)sp.textContent=t}catch(e){}};
+/* ---- kotak Computer ---- */
+const WIN='<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M3 3h8.5v8.5H3zM12.5 3H21v8.5h-8.5zM3 12.5h8.5V21H3zM12.5 12.5H21V21h-8.5z"/></svg>';
+let CARD=null;
+const lines=c=>c.querySelectorAll('.xcb>div').length;
+const getCard=()=>{
+  const st=lastStt(),ms=document.getElementById('ms');if(!ms)return null;
+  if(CARD&&CARD.isConnected&&CARD._st===st)return CARD;
+  const d=document.createElement('div');d.className='gxc xcomp';
+  d.innerHTML='<div class="gxh"><span>'+WIN+'Computer</span><button data-k="c" aria-label="Salin"></button><button data-k="x" aria-label="Perbesar"></button></div><pre class="xcb"></pre>';
+  d._c='';d._st=st;
+  if(st&&st.parentNode)st.parentNode.insertBefore(d,st.nextSibling);else ms.appendChild(d);
+  CARD=d;return d};
+const addLine=(c,cls,txt,plain)=>{const pre=c.querySelector('.xcb'),dv=document.createElement('div');
+  if(cls==='cmd'){const p=document.createElement('span');p.className='p';p.textContent='$ ';const m=document.createElement('span');m.className='cm';m.textContent=txt;dv.append(p,m)}
+  else{dv.className=cls;dv.textContent=txt}
+  pre.appendChild(dv);c._c+=(plain!=null?plain:txt)+'\n';
+  if(lines(c)>15&&!c.dataset.fdSet){c.dataset.fdSet='1';c.classList.add('fd');const b=document.createElement('button');b.className='gxm2';b.dataset.k='m';b.textContent='Perluas';c.appendChild(b)}
+  if(c.classList.contains('fd'))pre.scrollTop=pre.scrollHeight;
+  return dv};
+const out=(c,t,cls)=>{String(t==null?'':t).replace(/\n+$/,'').split('\n').slice(0,200).forEach(l=>addLine(c,cls||'o',l))};
+const cmdText=(n,a)=>n==='terminal'?String(a.cmd||''):n==='code'?'node  # kode '+(a.lang||'js'):n+' '+clip(a.nama,40);
+const showRes=(c,n,a,r)=>{
+  if(r&&r.error&&!r.keluaran){out(c,r.error,'e');return}
+  if(n==='terminal'){if(r&&r.keluaran)out(c,r.keluaran);if(r&&r.error)out(c,r.error,'e');if(r&&r.kode)addLine(c,'e','(kode keluar '+r.kode+')');return}
+  if(n==='simpan'){addLine(c,'k','✓ tersimpan: '+(r&&r.nama||a.nama||'')+(r&&r.ukuran!=null?' ('+r.ukuran+' karakter)':''));return}
+  if(n==='hapus'){addLine(c,'k','✓ dihapus: '+(r&&r.dihapus||a.nama||''));return}
+  if(n==='kirim'){addLine(c,'k','✓ berkas dikirim ke chat: '+(a.nama||''));return}
+  if(n==='buka'){if(r&&r.berkas){out(c,r.berkas.length?r.berkas.map(x=>x.nama+'  ('+x.ukuran+')').join('\n'):'(komputer kosong)')}else if(r&&r.teks!=null)out(c,String(r.teks).slice(0,1500)+(String(r.teks).length>1500?'\n…':''));return}
+  let t=r&&(r.keluaran||r.hasil||r.output||r.teks);if(t==null)try{t=JSON.stringify(r)}catch(e){t=String(r)}
+  out(c,String(t).slice(0,1500))};
+const prev=XT.run;
+XT.run=async function(name,args){
+  args=args||{};
+  let card=null,run=null;
+  try{
+    if(COMP.has(name)){card=getCard();if(card){run=addLine(card,'cmd',cmdText(name,args),'$ '+cmdText(name,args));run.classList.add('run')}}
+    else if(L[name])setSt(L[name](args)+'...');
+  }catch(e){}
+  try{
+    const r=await prev.apply(this,arguments);
+    try{if(card){run&&run.classList.remove('run');showRes(card,name,args,r)}}catch(e){}
+    return r;
+  }catch(e){
+    try{if(card){run&&run.classList.remove('run');out(card,(e&&e.message)||String(e),'e')}}catch(_){}
+    throw e;
+  }
+};
+}catch(e){try{console.warn('Kotak Computer tidak aktif:',e)}catch(_){}}})();
 </script>
 </body></html>
