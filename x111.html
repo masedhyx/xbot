@@ -4012,6 +4012,20 @@ X.foto_edit=async({aksi,nilai}={})=>{
 };
 })();
 
+/* ===== GALERI DI CHAT UTAMA: beri tahu bot alat galeri, kamera, dan edit foto ===== */
+(function(){
+ if(typeof A==='undefined'||!A||!A.get||typeof A.get.sysA!=='function'||!A.set||typeof A.set.sysA!=='function') return;
+ const prevSys=A.get.sysA();
+ A.set.sysA(function(f,t,k){
+   const s=prevSys.apply(this,arguments);
+   try{
+     const u=typeof lastUserTxt==='function'?String(lastUserTxt()||''):'';
+     if(!/galeri|kamera|foto|video|gambar|edit|ambil/i.test(u)) return s;
+     return s+'\n\n[Galeri & kamera] Kalau pengguna minta membuka galeri, mengambil foto, mengedit foto, atau mengambil video: JANGAN jawab dengan teks saja dan JANGAN tulis [foto:] atau [video:]. Panggil alat dengan satu baris <tool>...</tool> tanpa teks lain:\n- galeri_pilih {"jenis":"foto"} atau {"jenis":"video"} : buka galeri HP pengguna\n- kamera_ambil {} : buka kamera untuk foto\n- foto_edit {"aksi":"putar|hitam_putih|terang|kontras|lebar","nilai":90} : edit foto yang sedang dilampirkan\nAplikasi akan meminta persetujuan pengguna (Lanjut/Batal) sebelum alat berjalan.';
+   }catch(e){return s}
+ });
+})();
+
 /* pengolah data: membaca CSV/teks tabel dari komputer pribadi atau ruang kerja, tanpa menulis kode */
 function parseCsv(t){
   t=String(t||'').replace(/^\uFEFF/,'');
