@@ -5189,6 +5189,9 @@ window.galeriSysFor=function(b){
 .xs3t{position:absolute;inset:0;z-index:2;pointer-events:none;transition:background 1s}
 .xs3f{position:absolute;right:56px;top:10px;z-index:4;border:0;border-radius:12px;padding:8px 11px;font-size:13px;color:#fff;background:rgba(0,0,0,.55);-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px)}
 .xs3.pv .xs3f{right:10px}.xs3.pv .xs3l{max-width:calc(100% - 130px)}
+/* chip pagi/siang/sore/malam disembunyikan; latar bintang untuk tampilan dari luar angkasa */
+.xs3f{display:none!important}
+.xs3{background-color:#000;background-image:radial-gradient(1.2px 1.2px at 7% 12%,rgba(255,255,255,.95),transparent),radial-gradient(1px 1px at 19% 71%,rgba(255,255,255,.8),transparent),radial-gradient(1.4px 1.4px at 31% 33%,rgba(255,255,255,.9),transparent),radial-gradient(1px 1px at 44% 8%,rgba(255,255,255,.7),transparent),radial-gradient(1.2px 1.2px at 58% 88%,rgba(255,255,255,.85),transparent),radial-gradient(1px 1px at 66% 22%,rgba(255,255,255,.75),transparent),radial-gradient(1.5px 1.5px at 79% 61%,rgba(255,255,255,.95),transparent),radial-gradient(1px 1px at 91% 17%,rgba(255,255,255,.8),transparent),radial-gradient(1.2px 1.2px at 94% 79%,rgba(255,255,255,.7),transparent),radial-gradient(1px 1px at 12% 92%,rgba(255,255,255,.65),transparent),radial-gradient(1px 1px at 50% 50%,rgba(255,255,255,.5),transparent),radial-gradient(1.3px 1.3px at 3% 48%,rgba(255,255,255,.8),transparent),radial-gradient(1px 1px at 86% 41%,rgba(255,255,255,.6),transparent),radial-gradient(1px 1px at 37% 95%,rgba(255,255,255,.7),transparent)}
 </style>
 <script>
 (()=>{
@@ -5228,7 +5231,7 @@ let LIVE=null;
 const FASE={
  pagi:{em:'🌅',nm:'pagi',tint:'linear-gradient(180deg,rgba(255,206,140,.22),rgba(255,255,255,0) 60%)',esri:{'raster-brightness-max':.98,'raster-saturation':.05},
   sky:{'sky-color':'#8ec5ff','horizon-color':'#ffe0b0','fog-color':'#bfdcff'},night:0,clouds:1},
- siang:{em:'☀️',nm:'siang',tint:'none',esri:{},sky:{'sky-color':'#199EF3','horizon-color':'#ffffff','fog-color':'#5aa9ff'},night:0,clouds:1},
+ siang:{em:'☀️',nm:'siang',tint:'none',esri:{},sky:{'sky-color':'#199EF3','horizon-color':'#a8d4ff','fog-color':'#5aa9ff'},night:0,clouds:1},
  sore:{em:'🌇',nm:'sore',tint:'linear-gradient(0deg,rgba(255,105,40,.34),rgba(255,160,60,.10) 55%,rgba(110,60,150,.16))',esri:{'raster-brightness-max':.9,'raster-saturation':.12,'raster-hue-rotate':-8},
   sky:{'sky-color':'#ff9a5c','horizon-color':'#ffd08a','fog-color':'#7a4a8a'},night:0,clouds:1},
  malam:{em:'🌙',nm:'malam',tint:'linear-gradient(180deg,rgba(6,12,50,.34),rgba(6,12,50,.20))',esri:{'raster-brightness-max':.42,'raster-saturation':-.35,'raster-contrast':.1},
@@ -5269,7 +5272,7 @@ function build(w,q){
     $('.xs3m').innerHTML='';dots(-1);lab('satelit','memuat peta…');
     try{await loadLib()}catch(e){return fail(e.message)}
     if(my!==token)return;
-    const D=dayStr(),zUp=pv?(acc>200?14.5:16):1.15;
+    const D=dayStr(),zUp=pv?(acc>200?14.5:16):1.0;
     try{
       $('.xs3m').style.transition='none';$('.xs3m').style.opacity='0';
       map=new maplibregl.Map({container:$('.xs3m'),cooperativeGestures:true,attributionControl:{compact:true},
@@ -5277,7 +5280,7 @@ function build(w,q){
         style:{version:8,projection:{type:'globe'},
           sources:{
             esri:{type:'raster',tileSize:256,maxzoom:19,tiles:['https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'],attribution:'Esri, Maxar, Earthstar Geographics'},
-            gibs:{type:'raster',tileSize:256,maxzoom:9,tiles:['https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/MODIS_Terra_CorrectedReflectance_TrueColor/default/'+D+'/GoogleMapsCompatible_Level9/{z}/{y}/{x}.jpg'],attribution:'NASA GIBS'},
+            gibs:{type:'raster',tileSize:256,maxzoom:9,tiles:['https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/VIIRS_SNPP_CorrectedReflectance_TrueColor/default/'+D+'/GoogleMapsCompatible_Level9/{z}/{y}/{x}.jpg'],attribution:'NASA GIBS'},
             lights:{type:'raster',tileSize:256,maxzoom:8,tiles:['https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/VIIRS_Black_Marble/default/2016-01-01/GoogleMapsCompatible_Level8/{z}/{y}/{x}.png'],attribution:'NASA Black Marble'}},
           layers:[
             {id:'bg',type:'background',paint:{'background-color':'#000'}},
@@ -5303,7 +5306,7 @@ function build(w,q){
       info.kab=await nom(lat,lon,8)})();
 
     /* 1. bumi 3D, berputar pelan (berawan di siang hari, lampu kota di malam hari) */
-    dots(0);lab('bumi',F.em+' '+F.nm+' hari · dilihat dari luar angkasa');
+    dots(0);lab('bumi','dilihat dari luar angkasa');
     const t0=performance.now(),R=3200,lng0=map.getCenter().lng,tgt=inIdn(lat,lon)?118:lon;
     await new Promise(res=>{const tick=now=>{if(!live())return res();const p=Math.min(1,(now-t0)/R);
       try{map.jumpTo({center:[lng0+(tgt-lng0)*p,8-p*10]})}catch(e){}
@@ -5885,4 +5888,366 @@ XT.run=async function(name,args){
 };
 }catch(e){try{console.warn('Kotak Computer tidak aktif:',e)}catch(_){}}})();
 </script>
+<!-- ===== TAMBAHAN: PYTHON AMAN UNTUK ALAT code (Pyodide di Web Worker) - hapus blok ini sampai AKHIR untuk membatalkan ===== -->
+<script>
+(()=>{
+if(window._xPy)return;
+window._xPy=1;
+try{
+const XT=window.XT;
+if(!XT||typeof XT.code!=='function'){console.warn('Python: XT.code tidak ditemukan, blok tidak aktif');return}
+const PREV=XT.code;                                   /* alat code lama (JavaScript) tetap dipakai apa adanya */
+const BASE='https://cdn.jsdelivr.net/pyodide/v0.26.4/full/';
+const LOAD_MS=90000,EXEC_MS=10000;
+
+/* Kode Worker. Python berjalan di sini, terpisah dari halaman: tidak bisa menyentuh DOM, localStorage, kunci API, atau data aplikasi. */
+const workerMain=function(){
+ 'use strict';
+ const L=[];let cnt=0,len=0;
+ const put=(p,s)=>{if(cnt++<300){const x=p+String(s);len+=x.length;if(len<20000)L.push(x)}};
+ const PK={numpy:'numpy',pandas:'pandas',scipy:'scipy',sympy:'sympy',networkx:'networkx',bs4:'beautifulsoup4',yaml:'pyyaml',sklearn:'scikit-learn',statsmodels:'statsmodels'};
+ self.onmessage=async e=>{
+  const d=e.data||{};let py;
+  try{
+   importScripts(d.base+'pyodide.js');
+   py=await loadPyodide({indexURL:d.base});
+   /* muat paket yang di-import kode SEBELUM jaringan ditutup */
+   const mods=[...new Set([...String(d.code).matchAll(/^\s*(?:import|from)\s+([A-Za-z_]\w*)/gm)].map(m=>m[1]))].filter(m=>PK[m]);
+   if(mods.length){try{await py.loadPackage([...new Set(mods.map(m=>PK[m]))])}catch(x){put('[peringatan] gagal memuat paket: ',(x&&x.message)||x)}
+    for(const m of mods){try{py.runPython('import '+m)}catch(x){}}}
+  }catch(err){postMessage({error:'Gagal memuat Python (Pyodide). Pemuatan pertama butuh internet. Detail: '+String((err&&err.message)||err).slice(0,200)});return}
+  /* tutup semua jalur keluar: tidak ada jaringan, tidak ada Worker lain, tidak ada penyimpanan */
+  for(const k of['fetch','XMLHttpRequest','WebSocket','EventSource','importScripts','Worker','SharedWorker','indexedDB','caches','BroadcastChannel','WebTransport','RTCPeerConnection']){try{Object.defineProperty(self,k,{value:undefined,configurable:true,writable:true})}catch(x){}}
+  try{py.runPython("import sys\nfor _m in ('micropip','pyodide.http'):\n    sys.modules[_m]=None",{globals:py.globals.get('dict')()})}catch(x){}
+  try{py.setStdout({batched:s=>put('',s)});py.setStderr({batched:s=>put('[stderr] ',s)});py.setStdin({stdin:()=>undefined})}catch(x){}
+  if(d.data!=null){try{py.globals.set('_d_',String(d.data));py.runPython('import json\nDATA=json.loads(_d_)\ndel _d_')}catch(x){put('[peringatan] DATA gagal dibaca: ',(x&&x.message)||x)}}
+  postMessage({ready:1});
+  const t0=Date.now();let val,err=null;
+  try{val=await py.runPythonAsync(String(d.code))}catch(x){err=x}
+  let out=L.join('\n');if(out.length>4000)out=out.slice(0,4000)+'\n…(output dipotong)';
+  const r={ms:Date.now()-t0,lang:'python'};if(out)r.output=out;
+  if(err){const m=String((err&&err.message)||err).trim().split('\n').slice(-8).join('\n');r.error=m.slice(0,1500)}
+  else if(val!==undefined&&val!==null){let s;try{s=(typeof val==='string')?val:String(val)}catch(x){s='(hasil tidak bisa ditampilkan)'}try{if(val&&typeof val.destroy==='function')val.destroy()}catch(x){}if(s.length>2000)s=s.slice(0,2000)+'…';r.hasil=s}
+  postMessage(r);
+ };
+};
+const WSRC='('+workerMain.toString()+')()';
+
+const runPy=(code,data,base)=>new Promise(res=>{
+ let w,url,done=false,t;
+ const fin=r=>{if(done)return;done=true;clearTimeout(t);try{w.terminate()}catch(e){}try{URL.revokeObjectURL(url)}catch(e){}res(r)};
+ try{url=URL.createObjectURL(new Blob([WSRC],{type:'text/javascript'}));w=new Worker(url)}catch(e){return res({error:'Worker tidak tersedia di browser ini: '+(e.message||e)})}
+ w.onmessage=e=>{const m=e.data||{};
+  if(m.ready){clearTimeout(t);t=setTimeout(()=>fin({error:'Waktu habis ('+EXEC_MS/1000+' detik), kode Python dihentikan (mungkin loop tak berujung)'}),EXEC_MS);return}
+  fin(m)};
+ w.onerror=e=>fin({error:'Kesalahan saat menjalankan Python: '+((e&&e.message)||'tidak diketahui')});
+ t=setTimeout(()=>fin({error:'Python terlalu lama dimuat (lebih dari '+LOAD_MS/1000+' detik). Cek koneksi internet.'}),LOAD_MS);
+ w.postMessage({base:base||BASE,code,data});
+});
+
+/* hanya lang python yang dicegat; selain itu langsung diteruskan ke alat code lama tanpa perubahan */
+XT.code=async function(a){
+ const lang=String((a&&a.lang)||'js').toLowerCase();
+ if(!/^(py|python|python3|pyodide)$/.test(lang))return PREV.apply(this,arguments);
+ let code=String((a&&a.code)||'');
+ if(!code.trim())throw new Error('Kode kosong');
+ if(code.length>20000)throw new Error('Kode terlalu panjang (maks 20.000 karakter)');
+ let data=null;const m=/^const DATA=([\s\S]*?);\n/.exec(code);   /* bot panel menyisipkan DATA gaya JS; ubah jadi variabel Python */
+ if(m){data=m[1];code=code.slice(m[0].length)}
+ return runPy(code,data,window._xPyBase);
+};
+
+/* beri tahu bot chat utama bahwa Python tersedia (hanya chat utama, hanya menambah teks di akhir) */
+const MK='[Python di alat code]';
+const HINT='\n\n'+MK+' Alat code juga bisa menjalankan Python: <tool>{"name":"code","args":{"lang":"python","code":"print(sum(range(10)))"}}</tool>. Jalan di browser (Pyodide), tanpa internet; output print dan nilai ekspresi terakhir ditampilkan. Paket numpy, pandas, scipy, sympy, networkx, scikit-learn, statsmodels dimuat otomatis saat di-import; matplotlib tidak ada. Pemuatan pertama butuh internet dan bisa 10-30 detik; batas jalan 10 detik. Pakai Python hanya bila pengguna memintanya atau untuk olah data yang lebih mudah dengan pandas/numpy; selain itu tetap pakai JavaScript.';
+const prevG=window.galeriSysFor;
+window.galeriSysFor=function(b){
+ let s='';
+ try{s=typeof prevG==='function'?(prevG.apply(this,arguments)||''):''}catch(e){s=''}
+ try{
+  if(b&&!b.image_gen&&typeof b.system==='string'&&b.system.includes('[Info perangkat pengguna]')&&!String(s).includes(MK))s=String(s)+HINT;
+ }catch(e){}
+ return s;
+};
+}catch(e){try{console.warn('Python tidak aktif:',e)}catch(_){}}
+})();
+</script>
+<!-- ===== AKHIR TAMBAHAN PYTHON ===== -->
+<!-- ===== TAMBAHAN: GRAFIK PINTAR (CSV titik koma/negatif/banyak kolom + tombol "Buat grafik" di tabel jawaban bot). Hapus blok ini sampai AKHIR untuk membatalkan ===== -->
+<style>
+.xgf-bar{padding:10px 14px 12px;border-top:1px solid #1f2226}
+.xgf-btn{font:inherit;font-size:13.5px;line-height:1.2;color:#fff;background:#1d9bf0;border:0;border-radius:999px;padding:8px 14px;cursor:pointer}
+.xgf-out{margin-top:10px}
+.xgf-card{background:#111214;border:1px solid #2b2b2e;border-radius:14px;padding:14px;width:100%;max-width:520px}
+.xchart.xgf-c{max-width:520px}
+.xgf-card h5,.xchart.xgf-c h5{margin:0 0 10px;font-size:14px;color:#fff;font-weight:600}
+.xgf-lg{display:flex;flex-wrap:wrap;gap:6px 14px;margin:0 0 10px;font-size:12px;color:#aaa}
+.xgf-lg i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:6px;vertical-align:-1px}
+.xgf-r{display:grid;grid-template-columns:72px 1fr;gap:10px;align-items:start;padding:5px 0}
+.xgf-l{font-size:12px;color:#aaa;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding-top:1px;text-align:right}
+.xgf-bs{display:flex;flex-direction:column;gap:4px;min-width:0}
+.xgf-b{display:grid;grid-template-columns:1fr 58px;gap:8px;align-items:center}
+.xgf-t{position:relative;height:10px;background:#2c2c2e;border-radius:6px;overflow:hidden}
+.xgf-f{position:absolute;top:0;bottom:0;border-radius:6px}
+.xgf-z{position:absolute;top:0;bottom:0;width:1px;background:#6c7480}
+.xgf-v{font-size:12px;color:#fff;font-weight:600;font-variant-numeric:tabular-nums;text-align:right;white-space:nowrap}
+.xgf-n{margin:8px 0 0;font-size:11.5px;color:#8b93a1}
+</style>
+<script>
+(function(){
+try{
+if(document.documentElement.dataset.xgf)return;
+document.documentElement.dataset.xgf='1';
+var COL=['#1d9bf0','#f0a020','#2dc4ae'],MAXR=12;
+var esc=function(s){return String(s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})};
+var fmt=function(n){try{return Number(n).toLocaleString('id-ID',{maximumFractionDigits:2})}catch(e){return String(n)}};
+
+/* angka: 15.000 / 1,5 / -50 / Rp 12.000 / 32°C / 45% */
+function toNum(s){
+  var t=String(s==null?'':s).replace(/[−–]/g,'-').replace(/[\s ]/g,'');
+  var m=t.match(/^[^\d\-+.,]{0,4}([-+]?\d[\d.,]*)[^\d]{0,6}$/);
+  if(!m)return NaN;
+  var x=m[1];
+  if(x.indexOf('.')>-1&&x.indexOf(',')>-1){
+    if(x.lastIndexOf(',')>x.lastIndexOf('.'))x=x.replace(/\./g,'').replace(',','.');else x=x.replace(/,/g,'');
+  }else if(x.indexOf(',')>-1){
+    x=/^[-+]?\d{1,3}(,\d{3})+$/.test(x)?x.replace(/,/g,''):x.replace(',','.');
+  }else if(x.indexOf('.')>-1){
+    if(/^[-+]?\d{1,3}(\.\d{3})+$/.test(x))x=x.replace(/\./g,'');
+  }
+  var n=Number(x);return isFinite(n)?n:NaN;
+}
+
+function splitLine(line,d){
+  var out=[],cur='',q=false;
+  for(var i=0;i<line.length;i++){var ch=line[i];
+    if(ch==='"'){q=!q;continue}
+    if(ch===d&&!q){out.push(cur.trim());cur=''}else cur+=ch;
+  }
+  out.push(cur.trim());return out;
+}
+function parseCSV(text){
+  var lines=String(text).replace(/^﻿/,'').split(/\r?\n/).map(function(l){return l.trim()}).filter(Boolean);
+  if(lines.length<3)return null;
+  var best=',',bc=0;
+  [',',';','\t','|'].forEach(function(d){var c=lines[0].split(d).length;if(c>bc){bc=c;best=d}});
+  if(bc<2)return null;
+  return {headers:splitLine(lines[0],best),rows:lines.slice(1).map(function(l){return splitLine(l,best)})};
+}
+
+/* pilih kolom label dan kolom angka */
+function analyze(headers,rows){
+  if(!headers||rows.length<2)return null;
+  var n=headers.length,isNum=[],i;
+  for(i=0;i<n;i++){
+    var ok=0;rows.forEach(function(r){if(!isNaN(toNum(r[i])))ok++});
+    isNum.push(ok>=rows.length*0.7);
+  }
+  var idRe=/^(no|nomor|#|tahun|year|id)$/i;
+  var lab=-1;
+  for(i=0;i<n;i++){if(!isNum[i]){lab=i;break}}
+  if(lab<0){for(i=0;i<n;i++){if(idRe.test(headers[i].trim())){lab=i;break}}}
+  if(lab<0)lab=0;
+  var ser=[];
+  for(i=0;i<n&&ser.length<3;i++){if(i!==lab&&isNum[i]&&!idRe.test(headers[i].trim()))ser.push(i)}
+  if(!ser.length)return null;
+  return {lab:lab,ser:ser};
+}
+
+/* gambar grafik (batang mendatar, mendukung negatif dan banyak kolom) */
+function build(headers,rows,an,title){
+  var use=rows.slice(0,MAXR),all=[];
+  use.forEach(function(r){an.ser.forEach(function(i){var v=toNum(r[i]);if(!isNaN(v))all.push(v)})});
+  if(!all.length)return null;
+  var lo=Math.min.apply(null,[0].concat(all)),hi=Math.max.apply(null,[0].concat(all)),span=(hi-lo)||1,z=(0-lo)/span*100;
+  var h='';
+  if(an.ser.length>1){h+='<div class="xgf-lg">'+an.ser.map(function(i,k){return '<span><i style="background:'+COL[k]+'"></i>'+esc(headers[i])+'</span>'}).join('')+'</div>'}
+  use.forEach(function(r){
+    h+='<div class="xgf-r"><div class="xgf-l" title="'+esc(r[an.lab]||'')+'">'+esc(r[an.lab]||'')+'</div><div class="xgf-bs">';
+    an.ser.forEach(function(i,k){
+      var v=toNum(r[i]);if(isNaN(v))return;
+      var left=(Math.min(v,0)-lo)/span*100,w=Math.abs(v)/span*100;
+      h+='<div class="xgf-b"><div class="xgf-t"><div class="xgf-f" style="left:'+left+'%;width:'+w+'%;background:'+COL[k]+'"></div>'+(lo<0?'<div class="xgf-z" style="left:'+z+'%"></div>':'')+'</div><div class="xgf-v">'+fmt(v)+'</div></div>';
+    });
+    h+='</div></div>';
+  });
+  if(rows.length>MAXR)h+='<p class="xgf-n">Menampilkan '+MAXR+' dari '+rows.length+' baris.</p>';
+  return '<h5>'+esc(title)+'</h5>'+h;
+}
+
+var ms=document.getElementById('ms');
+if(!ms)return;
+
+/* ---------- A. CSV yang dilampirkan: ganti pratinjau lama bila hasil baru tersedia ---------- */
+var pend=null;
+var fi=document.getElementById('fi');
+if(fi){
+  fi.addEventListener('change',function(e){
+    try{
+      var f=e.target.files&&e.target.files[0];
+      if(f&&/\.csv$/i.test(f.name)&&f.text){pend={name:f.name,t:Date.now(),p:f.text().catch(function(){return null})}}
+    }catch(_){}
+  },true);
+}
+function upgradeCsv(card){
+  var job=pend;
+  if(!job||Date.now()-job.t>20000)return;
+  card.setAttribute('data-xgf','1');
+  job.p.then(function(text){
+    try{
+      if(!text||!card.isConnected)return;
+      var P=parseCSV(text);if(!P)return;
+      var an=analyze(P.headers,P.rows);if(!an)return;
+      var html=build(P.headers,P.rows,an,'📊 '+job.name);if(!html)return;
+      card.innerHTML=html;card.classList.add('xgf-c');
+    }catch(_){}
+  });
+}
+
+/* ---------- B. Tombol "Buat grafik" pada tabel di jawaban bot ---------- */
+function readTable(tbc){
+  var t=tbc.querySelector('table');if(!t)return null;
+  var headers=[].map.call(t.querySelectorAll('thead th'),function(th){return th.textContent.trim()});
+  var rows=[].map.call(t.querySelectorAll('tbody tr'),function(tr){return [].map.call(tr.children,function(td){return td.textContent.trim()})});
+  if(!headers.length||rows.length<2)return null;
+  return {headers:headers,rows:rows};
+}
+function attach(tbc){
+  tbc.setAttribute('data-xgf','1');
+  var T=readTable(tbc);if(!T)return;
+  var an=analyze(T.headers,T.rows);if(!an)return;
+  var bar=document.createElement('div');bar.className='xgf-bar';
+  var btn=document.createElement('button');btn.type='button';btn.className='xgf-btn';btn.textContent='📊 Buat grafik';
+  var out=document.createElement('div');out.className='xgf-out';out.hidden=true;
+  btn.addEventListener('click',function(ev){
+    ev.stopPropagation();
+    try{
+      if(!out.hidden){out.hidden=true;btn.textContent='📊 Buat grafik';return}
+      var cur=readTable(tbc)||T,a=analyze(cur.headers,cur.rows)||an;
+      var title=a.ser.length===1?cur.headers[a.ser[0]]+' per '+String(cur.headers[a.lab]||'').toLowerCase():'Grafik tabel';
+      var html=build(cur.headers,cur.rows,a,title);
+      if(!html)return;
+      out.innerHTML='<div class="xgf-card">'+html+'</div>';
+      out.hidden=false;btn.textContent='Sembunyikan grafik';
+    }catch(_){}
+  });
+  bar.appendChild(btn);bar.appendChild(out);tbc.appendChild(bar);
+}
+
+var timer=0;
+function scan(){
+  try{
+    var list=ms.querySelectorAll('.bt .tbc:not([data-xgf])');
+    for(var i=0;i<list.length;i++){try{attach(list[i])}catch(_){list[i].setAttribute('data-xgf','1')}}
+  }catch(_){}
+}
+new MutationObserver(function(muts){
+  try{
+    if(pend&&Date.now()-pend.t<=20000){
+      var cs=ms.querySelectorAll('.xchart:not([data-xgf])'),c=cs[cs.length-1];
+      if(c&&/\(Preview\)/.test(c.textContent))upgradeCsv(c);
+    }
+    clearTimeout(timer);timer=setTimeout(scan,600);
+  }catch(_){}
+}).observe(ms,{childList:true,subtree:true});
+scan();
+}catch(e){try{console.warn('Grafik pintar tidak aktif:',e)}catch(_){}}
+})();
+</script>
+<!-- ===== AKHIR TAMBAHAN GRAFIK PINTAR ===== -->
+<!-- ===== TAMBAHAN MONITOR TRADING LIVE (BTC, ETH, SOL) - blok mandiri, tidak mengubah kode lain ===== -->
+<style id="xtl-css">
+.xtl{margin:10px 0 14px;max-width:360px;background:#111214;border:1px solid #2a2c31;border-radius:20px;padding:12px 14px 12px;color:#eef2f7;font:14px/1.4 -apple-system,system-ui,sans-serif;--xu:#35d0a0;--xd:#ff6b6b;animation:xtlin .25s ease backwards}
+@keyframes xtlin{from{opacity:0;transform:translateY(6px)}}
+.xtl *{box-sizing:border-box}
+.xtl .xh{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:9px;font-size:12px}
+.xtl .xs{display:flex;align-items:center;gap:6px;font-weight:600;color:var(--xu)}
+.xtl .xs i{width:8px;height:8px;border-radius:50%;background:currentColor;animation:xtlp 1.4s infinite}
+.xtl.off .xs{color:#ffb454}.xtl.err .xs{color:var(--xd)}
+@keyframes xtlp{0%{box-shadow:0 0 0 0 currentColor}100%{box-shadow:0 0 0 8px transparent}}
+.xtl .xc{color:#8b96a7;font-variant-numeric:tabular-nums}
+.xtl .xx{margin-left:6px;border:0;background:none;color:#8b96a7;font-size:15px;line-height:1;padding:2px 4px;cursor:pointer}
+.xtl .xt{display:flex;gap:6px;margin-bottom:9px}
+.xtl .xt button{flex:1;display:flex;align-items:center;justify-content:center;gap:6px;border:1px solid #2a2c31;background:#0b0c0e;color:#8b96a7;border-radius:11px;padding:7px 0;font:600 13px/1 -apple-system,system-ui,sans-serif;cursor:pointer}
+.xtl .xt button[aria-pressed="true"]{color:#fff;border-color:var(--cc);box-shadow:0 0 0 1px var(--cc) inset}
+.xtl .xt svg{width:17px;height:17px;flex:none}
+.xtl .xr{display:flex;align-items:baseline;justify-content:space-between;gap:8px}
+.xtl .xp{font-size:30px;font-weight:700;letter-spacing:-.02em;font-variant-numeric:tabular-nums;transition:color .25s}
+.xtl .xp.u{color:var(--xu)}.xtl .xp.d{color:var(--xd)}
+.xtl .xg{font-size:13px;font-weight:600;font-variant-numeric:tabular-nums;color:var(--xu)}.xtl .xg.d{color:var(--xd)}
+.xtl .xv{background:#0b0c0e;border:1px solid #2a2c31;border-radius:12px;margin:9px 0 8px;overflow:hidden}
+.xtl .xv svg{display:block;width:100%;height:88px}
+.xtl .xm{display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:12px;color:#8b96a7}
+.xtl .xm b{display:block;color:#eef2f7;font-size:13px;font-variant-numeric:tabular-nums}
+.xtl .xy{margin-top:9px;padding-top:9px;border-top:1px solid #2a2c31;font-size:13.5px}
+.xtl .xf{font-size:11px;color:#8b96a7;margin-top:7px}
+@media (prefers-reduced-motion:reduce){.xtl,.xtl .xs i{animation:none}}
+</style>
+<script id="xtl-js">
+(function(){
+try{
+var ms=document.getElementById('ms');if(!ms)return;
+var COIN={BTC:{s:'BTCUSDT',g:'bitcoin',c:'#F7931A'},ETH:{s:'ETHUSDT',g:'ethereum',c:'#627EEA'},SOL:{s:'SOLUSDT',g:'solana',c:'#9945FF'}};
+var ICO={
+BTC:'<svg viewBox="0 0 32 32" aria-hidden="true"><circle cx="16" cy="16" r="16" fill="#F7931A"/><path d="M12 9v14M12 9h5a3 3 0 0 1 0 6h-5M12 15h5.5a3.5 3.5 0 0 1 0 7H12M15 6.5V9M18 6.5V9M15 23v2.5M18 23v2.5" fill="none" stroke="#fff" stroke-width="2.3" stroke-linejoin="round" stroke-linecap="round"/></svg>',
+ETH:'<svg viewBox="0 0 32 32" aria-hidden="true"><polygon points="16,3 6.5,16.3 16,12.1" fill="#8FA2F3"/><polygon points="16,3 16,12.1 25.5,16.3" fill="#627EEA"/><polygon points="6.5,16.3 16,12.1 16,20.8" fill="#4F68D0"/><polygon points="25.5,16.3 16,12.1 16,20.8" fill="#3E55B5"/><polygon points="6.5,18.3 16,22.6 16,29" fill="#8FA2F3"/><polygon points="25.5,18.3 16,22.6 16,29" fill="#627EEA"/></svg>',
+SOL:'<svg viewBox="0 0 32 32" aria-hidden="true"><defs><linearGradient id="xtlsg" gradientUnits="userSpaceOnUse" x1="5" y1="27" x2="28" y2="5"><stop offset="0" stop-color="#9945FF"/><stop offset="1" stop-color="#14F195"/></linearGradient></defs><path fill="url(#xtlsg)" d="M8.5 5h19l-4 5H4.5zM4.5 13.5h19l4 5h-19zM8.5 21.5h19l-4 5H4.5z"/></svg>'};
+var KEYS=Object.keys(COIN),N=60,D={},cards=[],ws=null,poll=null,wsTry=0,wsTimer=0,gotWs=false,src='',lastAct=0;
+KEYS.forEach(function(k){D[k]={h:[],p:0,pc:0,hi:0,lo:0,t:0}});
+function fmt(n){return n>=1000?n.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2}):n>=1?n.toFixed(2):n.toFixed(4)}
+function setP(k,p,pc,hi,lo){var d=D[k];if(!isFinite(p)||p<=0)return;var prev=d.p;d.p=p;if(isFinite(pc))d.pc=pc;if(isFinite(hi))d.hi=hi;if(isFinite(lo))d.lo=lo;d.dir=prev?(p>prev?1:p<prev?-1:d.dir||0):0;var now=Date.now();if(now-d.t>=900||!d.h.length){d.h.push(p);if(d.h.length>N)d.h.shift();d.t=now}else d.h[d.h.length-1]=p;d.up=now}
+function tick(){cards=cards.filter(function(c){return c.el.isConnected});cards.forEach(paint);if(!cards.length)stop()}
+function stop(){if(ws){try{ws.onclose=null;ws.close()}catch(e){}ws=null}clearInterval(poll);poll=null;clearTimeout(wsTimer);wsTry=0;gotWs=false;src=''}
+function status(){var fresh=Date.now()-Math.max.apply(null,KEYS.map(function(k){return D[k].up||0}))<8000;return fresh?'live':(src?'off':'conn')}
+function paint(c){var k=c.k,d=D[k],el=c.el,s=status();
+ el.classList.toggle('off',s!=='live');el.classList.toggle('err',false);
+ el.querySelector('.xs b').textContent=s==='live'?'LIVE':s==='off'?'Terputus, mencoba lagi':'Menyambung…';
+ el.querySelector('.xc').textContent=new Date().toLocaleTimeString('id-ID',{timeZone:'Asia/Jakarta',hour12:false}).replace(/\./g,':')+' WIB';
+ if(!d.p){el.querySelector('.xy').textContent='Menunggu data pertama…';return}
+ var px=el.querySelector('.xp'),g=el.querySelector('.xg');px.textContent='$'+fmt(d.p);px.className='xp '+(d.dir>0?'u':d.dir<0?'d':'');
+ g.textContent=(d.pc>=0?'+':'')+d.pc.toFixed(2).replace('.',',')+'% (24 jam)';g.className='xg'+(d.pc<0?' d':'');
+ el.querySelector('.xH').textContent='$'+fmt(d.hi);el.querySelector('.xL').textContent='$'+fmt(d.lo);
+ var h=d.h;if(h.length>1){var mn=Math.min.apply(null,h),mx=Math.max.apply(null,h),r=(mx-mn)||1,pts=h.map(function(v,i){return[i/Math.max(h.length-1,1)*300,80-((v-mn)/r)*68]}),
+  ln='M'+pts.map(function(p){return p[0].toFixed(1)+' '+p[1].toFixed(1)}).join(' L'),col=h[h.length-1]>=h[0]?'#35d0a0':'#ff6b6b',e=pts[pts.length-1];
+  el.querySelector('.xv svg').innerHTML='<path d="'+ln+' L'+e[0].toFixed(1)+' 88 L'+pts[0][0].toFixed(1)+' 88Z" fill="'+col+'" opacity=".12"/><path d="'+ln+'" fill="none" stroke="'+col+'" stroke-width="2" stroke-linejoin="round" vector-effect="non-scaling-stroke"/><circle cx="'+e[0].toFixed(1)+'" cy="'+e[1].toFixed(1)+'" r="4" fill="'+col+'"/>';
+  var w=h.slice(-10),m=(w[w.length-1]-w[0])/w[0]*100;
+  el.querySelector('.xy').textContent=k+' '+(m>=0?'naik':'turun')+' '+Math.abs(m).toFixed(2).replace('.',',')+'% dalam sekitar 10 detik terakhir. '+(Math.abs(m)>.06?'Gerakannya cukup cepat.':'Masih bergerak tenang.')}
+ el.querySelector('.xf').textContent='Sumber: '+(src||'-')+'. Bukan saran keuangan.'}
+function openWS(){if(ws||!cards.length)return;var u='wss://stream.binance.com:9443/stream?streams='+KEYS.map(function(k){return COIN[k].s.toLowerCase()+'@ticker'}).join('/');
+ try{ws=new WebSocket(u)}catch(e){ws=null;return fb()}
+ ws.onmessage=function(m){try{var j=JSON.parse(m.data).data;if(!j||!j.s)return;var k=KEYS.filter(function(x){return COIN[x].s===j.s})[0];if(!k)return;gotWs=true;src='Binance (WebSocket)';wsTry=0;setP(k,+j.c,+j.P,+j.h,+j.l)}catch(e){}};
+ ws.onclose=function(){ws=null;if(!cards.length)return;fb();wsTry++;clearTimeout(wsTimer);wsTimer=setTimeout(openWS,Math.min(30000,2000*wsTry))};
+ ws.onerror=function(){try{ws.close()}catch(e){}}}
+function fb(){if(poll||!cards.length)return;var go=async function(){if(gotWs&&Date.now()-Math.max.apply(null,KEYS.map(function(k){return D[k].up||0}))<8000)return;
+  try{var r=await fetch('https://data-api.binance.vision/api/v3/ticker/24hr?symbols='+encodeURIComponent(JSON.stringify(KEYS.map(function(k){return COIN[k].s}))));var a=await r.json();a.forEach(function(j){var k=KEYS.filter(function(x){return COIN[x].s===j.symbol})[0];if(k)setP(k,+j.lastPrice,+j.priceChangePercent,+j.highPrice,+j.lowPrice)});src='Binance (REST)';return}catch(e){}
+  try{var r2=await fetch('https://api.coingecko.com/api/v3/simple/price?ids='+KEYS.map(function(k){return COIN[k].g}).join(',')+'&vs_currencies=usd&include_24hr_change=true');var o=await r2.json();KEYS.forEach(function(k){var x=o[COIN[k].g];if(x)setP(k,x.usd,x.usd_24h_change,D[k].hi||x.usd,D[k].lo||x.usd)});src='CoinGecko'}catch(e){}};
+ go();poll=setInterval(go,4000)}
+function loadHist(k){fetch('https://data-api.binance.vision/api/v3/klines?symbol='+COIN[k].s+'&interval=1m&limit='+N).then(function(r){return r.json()}).then(function(a){if(a&&a.length&&!D[k].h.length){D[k].h=a.map(function(x){return +x[4]})}}).catch(function(){})}
+function mk(first){var el=document.createElement('div');el.className='xtl';el.setAttribute('aria-live','polite');
+ el.innerHTML='<div class="xh"><span class="xs"><i></i><b>Menyambung…</b></span><span><span class="xc"></span><button class="xx" type="button" aria-label="Tutup">✕</button></span></div><div class="xt"></div><div class="xr"><div class="xp">-</div><div class="xg"></div></div><div class="xv"><svg viewBox="0 0 300 88" preserveAspectRatio="none" aria-label="Grafik harga"></svg></div><div class="xm"><div>Tertinggi 24 jam<b class="xH">-</b></div><div>Terendah 24 jam<b class="xL">-</b></div></div><div class="xy">Menunggu data pertama…</div><div class="xf"></div>';
+ var c={el:el,k:first},tb=el.querySelector('.xt');
+ KEYS.forEach(function(k){var b=document.createElement('button');b.type='button';b.innerHTML=ICO[k]+'<span>'+k+'</span>';b.style.setProperty('--cc',COIN[k].c);b.setAttribute('aria-pressed',k===c.k);
+  b.onclick=function(){c.k=k;[].forEach.call(tb.children,function(x){x.setAttribute('aria-pressed',x.textContent===k)});paint(c)};tb.appendChild(b)});
+ el.querySelector('.xx').onclick=function(){el.remove();tick()};return c}
+function show(after,first){var c=mk(first);after.parentNode.insertBefore(c.el,after.nextSibling);cards.push(c);paint(c);loadHist(first);openWS();fb2();
+ try{var near=ms.scrollHeight-ms.scrollTop-ms.clientHeight<400;if(near)ms.scrollTop=ms.scrollHeight}catch(e){}}
+function fb2(){if(!poll&&!gotWs)setTimeout(function(){if(!gotWs)fb()},5000)}
+var TR=/(pantau|monitor|memantau|memonitor|live|langsung|real\s?-?time|harga|chart|grafik|cek|lihat|liat|trading|update)/i,CO=/\b(btc|bitcoin|eth|ethereum|sol|solana|kripto|crypto)\b/i;
+['pointerdown','keydown','touchstart'].forEach(function(e){document.addEventListener(e,function(){lastAct=Date.now()},true)});
+new MutationObserver(function(list){list.forEach(function(m){m.addedNodes.forEach(function(n){
+ if(n.nodeType!==1||!n.classList.contains('um')||Date.now()-lastAct>6000)return;var t=n.textContent||'';if(t.length>200||!TR.test(t)||!CO.test(t))return;
+ var f=/\beth|ethereum/i.test(t)?'ETH':/\bsol|solana/i.test(t)?'SOL':'BTC';try{show(n,f)}catch(e){}})})}).observe(ms,{childList:true});
+setInterval(function(){try{tick()}catch(e){}},1000);
+window.xtlShow=function(k){var last=ms.lastElementChild;if(last)show(last,COIN[k]?k:'BTC')};
+function ctx(){if(!cards.length)return'';var lm=(typeof hist!=='undefined'&&hist.length)?hist[hist.length-1]:null,tx=lm&&typeof lm.content==='string'?lm.content:'';if(!tx||!CO.test(tx))return'';
+ var now=Date.now(),ps=[];KEYS.forEach(function(k){var d=D[k];if(!d.p||now-(d.up||0)>30000)return;var w=d.h.slice(-10),m=w.length>1?(w[w.length-1]-w[0])/w[0]*100:0;
+  ps.push(k+': $'+fmt(d.p)+' (24 jam '+(d.pc>=0?'+':'')+d.pc.toFixed(2)+'%, tertinggi $'+fmt(d.hi)+', terendah $'+fmt(d.lo)+'; sekitar 10 detik terakhir '+(m>=0?'naik ':'turun ')+Math.abs(m).toFixed(2)+'%)')});
+ if(!ps.length)return'';var t=new Date().toLocaleTimeString('id-ID',{timeZone:'Asia/Jakarta',hour12:false}).replace(/\./g,':');
+ return'\n\n[Data harga kripto LIVE dari kartu di layar pengguna] Sumber: '+(src||'-')+', waktu data: '+t+' WIB. '+ps.join('; ')+'. Pakai data ini untuk menjawab pertanyaan tentang harga atau arah pasar saat ini dan sebut bahwa angkanya dari kartu live. Jangan menebak harga di luar data ini. Ini bukan saran keuangan.'}
+try{var PXo=window.PX;if(PXo&&typeof PXo.sys==='function'){var s0=PXo.sys;PXo.sys=function(i,main){var r=s0.apply(this,arguments);try{if(main){var x=ctx();if(x&&typeof r==='string')r+=x}}catch(e){}return r}}}catch(e){}
+
+}catch(e){}
+})();
+</script>
+<!-- ===== AKHIR TAMBAHAN MONITOR TRADING LIVE ===== -->
 </body></html>
