@@ -60,11 +60,12 @@ footer{padding:6px 18px calc(env(safe-area-inset-bottom) + 12px);position:relati
  <div id="ms"><div id="wl"></div></div>
  <footer>
   <div id="pv"></div><div id="gp"></div>
-  <div id="pm" hidden><button id="m_f">Lampirkan file</button><button id="m_c">Ambil foto</button><button id="m_g"><span>Bagikan GPS</span><i class="dt" hidden></i></button><button id="m_w"><span>Cari di web</span><i class="dt" hidden></i></button><button id="m_i">Buat gambar</button><button id="m_a"><span>Agen</span><i class="dt" hidden></i></button><div id="agd" hidden><div class="agr"><button data-d="cepat">Cepat</button><button data-d="std">Seimbang</button><button data-d="dalam">Mendalam</button></div><button id="m_r">Laporan tersimpan</button></div><button id="m_v">Telephone</button></div>
+  <div id="pm" hidden><button id="m_f">Lampirkan file</button><button id="m_c">Ambil foto</button><button id="m_g"><span>Bagikan GPS</span><i class="dt" hidden></i></button><button id="m_w"><span>Cari di web</span><i class="dt" hidden></i></button><button id="m_i">Buat gambar</button><button id="m_a"><span>Agen</span><i class="dt" hidden></i></button><div id="agd" hidden><div class="agr"><button data-d="cepat">Cepat</button><button data-d="std">Seimbang</button><button data-d="dalam">Mendalam</button></div><button id="m_r">Laporan tersimpan</button></div><button id="m_e1"><span>Mata live · Depan</span><i class="dt" hidden></i></button><button id="m_e2"><span>Mata live · Belakang</span><i class="dt" hidden></i></button><button id="m_v">Telephone</button></div>
   <div id="qc"><button data-t="m_w"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.6 2.4 4 5.5 4 9s-1.4 6.6-4 9c-2.6-2.4-4-5.5-4-9s1.4-6.6 4-9z"/></svg><span>Cari di web</span></button><button data-t="m_i"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="3.5" width="17" height="17" rx="4"/><circle cx="9" cy="9.2" r="1.5"/><path d="M20.5 15.5l-4.8-4.8L6 20.5"/></svg><span>Buat gambar</span></button><button data-t="m_f"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20.5 11.5l-8.2 8.2a5.2 5.2 0 0 1-7.4-7.4l8.5-8.5a3.5 3.5 0 0 1 5 5l-8.5 8.5a1.8 1.8 0 0 1-2.5-2.5l7.8-7.8"/></svg><span>Lampirkan file</span></button><button data-t="m_g"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s-6.8-5.9-6.8-11.2a6.8 6.8 0 0 1 13.6 0C18.8 15.1 12 21 12 21z"/><circle cx="12" cy="9.8" r="2.4"/></svg><span>Bagikan GPS</span></button></div>
   <div id="ib"><button id="pl">+</button><textarea id="tx" rows="1" placeholder="Ketik pesan..."></textarea><button id="sd">↑</button></div>
  </footer>
  <input type="file" id="fi" accept="image/*,video/*,audio/*,.txt,.md,.csv,.json,.js,.html,.css,.py,.xml,.log,.pdf,.docx,.pptx,.xlsx,.xlsm,.xls,.ods,.zip" hidden><input type="file" id="fc" accept="image/*" capture="environment" hidden>
+<video id="eyev" playsinline muted autoplay></video><style>#eyev{position:fixed;left:0;top:0;width:1px;height:1px;opacity:0;pointer-events:none}</style>
 </main>
 <div id="sm" hidden></div>
 <script>
@@ -269,6 +270,29 @@ $('#m_g').onclick=async()=>{$('#pm').hidden=true;
  if(gpsOn){gpsOn=false;gps=null;gpsAddr=null;gpsAt=null;$('#gp').textContent='';gpsDot();return}
  gpsOn=true;gpsDot();$('#gp').textContent='📍 mencari lokasi...';
  try{await gpsUpdate()}catch(er){gpsOn=false;gpsDot();$('#gp').textContent='⚠️ GPS gagal: '+(er.code==1?'izin lokasi ditolak (aktifkan di Pengaturan browser)':er.code==3?'waktu habis, coba lagi':er.message||'tidak diketahui');setTimeout(()=>{if(!gpsOn)$('#gp').textContent=''},5000)}};
+/* ===== MATA LIVE: kamera depan/belakang, aktif sampai titik hijau dimatikan ===== */
+let eyeOn=false,eyeFace=null,eyeStream=null;
+const eyeV=()=>document.getElementById('eyev');
+const eyeDot=()=>{$('#m_e1 .dt').hidden=!(eyeOn&&eyeFace==='user');$('#m_e2 .dt').hidden=!(eyeOn&&eyeFace==='environment')};
+const eyeStop=()=>{if(eyeStream)eyeStream.getTracks().forEach(t=>t.stop());eyeStream=null;eyeOn=false;eyeFace=null;const v=eyeV();if(v){v.srcObject=null;v.classList.remove('on')}eyeDot()};
+const eyeStart=async f=>{
+ if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia){note('⚠️ kamera tidak didukung browser ini');return}
+ if(!window.confirm('Nyalakan mata live?\n\nKamera '+(f==='user'?'depan':'belakang')+' akan aktif terus sampai titik hijau dimatikan. Bot hanya menerima gambar saat kamu mengirim pesan.'))return;
+ if(eyeStream)eyeStop();
+ note('⏳ membuka kamera...');
+ let s;
+ try{s=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:f}},audio:false})}
+ catch(e){note('⚠️ kamera gagal: '+(e.name==='NotAllowedError'?'izin kamera ditolak (aktifkan di Pengaturan)':(e.message||'tidak diketahui')));setTimeout(()=>{if(!eyeOn)note('')},5000);return}
+ eyeStream=s;eyeOn=true;eyeFace=f;
+ const v=eyeV();v.srcObject=s;v.classList.add('on');
+ try{await v.play()}catch(e){}
+ note('');eyeDot();
+};
+const eyeShot=()=>{const v=eyeV();if(!v||!eyeOn||!v.videoWidth)return null;const k=Math.min(1,1280/Math.max(v.videoWidth,v.videoHeight)),c=document.createElement('canvas');c.width=Math.round(v.videoWidth*k);c.height=Math.round(v.videoHeight*k);c.getContext('2d').drawImage(v,0,0,c.width,c.height);return c.toDataURL('image/jpeg',.85)};
+const eyeTxt=()=>eyeOn?`\n\n[Mata live] Kamu punya mata dan sedang melihat langsung kondisi di sekitar pengguna saat ini. Gambar yang kamu terima adalah apa yang kamu lihat sekarang. Jawab seolah kamu melihat langsung dengan matamu sendiri, misalnya: "di depanmu ada meja dan segelas kopi". Jangan pernah menyebut kamera, kamera depan, kamera belakang, frame, foto, atau gambar yang diterima. Jika yang ditanyakan tidak terlihat jelas, katakan dengan jujur bahwa kamu tidak bisa melihatnya dengan jelas. Jangan mengarang hal yang tidak terlihat.`:'';
+const eyeBtn=f=>()=>{$('#pm').hidden=true;if(eyeOn&&eyeFace===f){eyeStop();note('');return}eyeStart(f)};
+$('#m_e1').onclick=eyeBtn('user');
+$('#m_e2').onclick=eyeBtn('environment');
 const note=m=>{$('#pv').textContent=m};
 const toImg=src=>{const i=new Image();i.onload=()=>{const k=Math.min(1,1280/Math.max(i.width,i.height)),c=document.createElement('canvas');c.width=i.width*k;c.height=i.height*k;c.getContext('2d').drawImage(i,0,0,c.width,c.height);img=c.toDataURL('image/jpeg',.85);docTxt=null;note('📎 foto terlampir')};i.onerror=()=>note('⚠️ foto tidak bisa dibaca');i.src=src};
 const FILEFN=e=>{const f=e.target.files[0];e.target.value='';if(!f)return;att=null;
@@ -330,18 +354,18 @@ async function send(){
  if(/(pake|pakai|pakek|dengan|lewat|via)\s+(suara|voice|vn)|(balas|bales|jawab)\w*\s+(suara|voice)|suara\s+dong|bicara\s+dong|ngomong\s+dong/i.test(t))VR=1;
  if(/(pake|pakai|pakek|balas|jawab)\s+(teks|tulisan|chat)\b|(matikan|matiin|stop|off)\s+(mode\s+)?suara|jangan\s+(pake|pakai)\s+suara/i.test(t))VR=0;
  if(VR&&window.speechSynthesis){try{const u=new SpeechSynthesisUtterance(' ');u.volume=0;speechSynthesis.speak(u)}catch(e){}}
- const dt=docTxt;docTxt=null;const at=att;att=null;const im=img,gen=/^\/gambar\s/i.test(t);$('#tx').value='';$('#tx').style.height='auto';img=null;$('#pv').textContent='';
+ const dt=docTxt;docTxt=null;const at=att;att=null;let im=img,gen=/^\/gambar\s/i.test(t),camIm=false;if(!im&&eyeOn&&!gen){im=eyeShot();camIm=!!im}const imShown=camIm?null:im;$('#tx').value='';$('#tx').style.height='auto';img=null;$('#pv').textContent='';
  if(window.kbClose)kbClose();
  hist.push({role:'user',content:dt?`[File "${dt.name}"]\n${dt.text}\n\n${t||'Jelaskan isi file ini.'}`:(window.MP&&at?MP.userText(t,at):(t||'Jelaskan foto ini.'))});
- anchor(add(`<div class="um">${window.MP?MP.att(at,im):(im?`<img src="${im}">`:'')}${dt?`<div style="opacity:.75">📄 ${esc(dt.name)}</div>`:''}${esc(t)}${window.MP?MP.urls(t):''}</div>`));
+ anchor(add(`<div class="um">${window.MP?MP.att(at,imShown):(imShown?`<img src="${imShown}">`:'')}${dt?`<div style="opacity:.75">📄 ${esc(dt.name)}</div>`:''}${esc(t)}${window.MP?MP.urls(t):''}</div>`));
  busy=true;$('#sd').textContent='■';$('#sd').dataset.b=1;ctrl=new AbortController();
  const b=cfg.bots[cur],st=add(`<div class="stt">${bot(COL[cur])}<span></span></div>`),eb=mk(st.querySelector('svg'),true,0,undefined,true);
- const stage=s=>{eb.set(s);st.querySelector('span').textContent=LBL[s]+'...'};stage(im?'look':'think');
+ const stage=s=>{eb.set(s);st.querySelector('span').textContent=LBL[s]+'...'};stage(im?'look':'think');if(camIm)st.querySelector('span').textContent='sedang melihat...';
  let fin;
  if(gpsOn){const fresh=gps&&Date.now()-gps.timestamp<60000,u=gpsUpdate().catch(()=>{});if(!fresh)await Promise.race([u,sleep(3000)])}
  try{
   const r=await fetch(cfg.url.replace(/\/$/,'')+'/chat',{method:'POST',headers:{'Content-Type':'application/json'},signal:ctrl.signal,
-   body:JSON.stringify({messages:hist.slice(-12),image:im,image_gen:gen,system:b.prompt+sysx()+gpsTxt()+(window.PX?PX.sys(cur,1):'')+(VR||window.XCALL?VRHINT:'')+(window.XCALL?CALLHINT:''),now:new Date().toISOString(),tz:Intl.DateTimeFormat().resolvedOptions().timeZone,model:cfg.model,imgModel:cfg.img,mode:webOn?'on':cfg.mode,keys:cfg.keys})});
+   body:JSON.stringify({messages:hist.slice(-12),image:im,image_gen:gen,system:b.prompt+sysx()+gpsTxt()+eyeTxt()+(window.PX?PX.sys(cur,1):'')+(VR||window.XCALL?VRHINT:'')+(window.XCALL?CALLHINT:''),now:new Date().toISOString(),tz:Intl.DateTimeFormat().resolvedOptions().timeZone,model:cfg.model,imgModel:cfg.img,mode:webOn?'on':cfg.mode,keys:cfg.keys})});
   const rd=r.body.getReader(),dc=new TextDecoder();let buf='';
   for(;;){const{done,value}=await rd.read();if(done)break;buf+=dc.decode(value,{stream:true});let i;
    while((i=buf.indexOf('\n'))>=0){const l=buf.slice(0,i);buf=buf.slice(i+1);if(!l)continue;const j=JSON.parse(l);if(j.s)stage(j.s);else fin=j}}
