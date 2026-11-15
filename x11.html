@@ -275,9 +275,9 @@ let eyeOn=false,eyeFace=null,eyeStream=null;
 const eyeV=()=>document.getElementById('eyev');
 const eyeDot=()=>{$('#m_e1 .dt').hidden=!(eyeOn&&eyeFace==='user');$('#m_e2 .dt').hidden=!(eyeOn&&eyeFace==='environment')};
 const eyeStop=()=>{if(eyeStream)eyeStream.getTracks().forEach(t=>t.stop());eyeStream=null;eyeOn=false;eyeFace=null;const v=eyeV();if(v){v.srcObject=null;v.classList.remove('on')}eyeDot()};
-const eyeStart=async f=>{
+const eyeStart=async (f,quiet)=>{
  if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia){note('⚠️ kamera tidak didukung browser ini');return}
- if(!window.confirm('Nyalakan mata live?\n\nKamera '+(f==='user'?'depan':'belakang')+' akan aktif terus sampai titik hijau dimatikan. Bot hanya menerima gambar saat kamu mengirim pesan.'))return;
+ if(!quiet&&!window.confirm('Nyalakan mata live?\n\nKamera '+(f==='user'?'depan':'belakang')+' akan aktif terus sampai titik hijau dimatikan. Bot hanya menerima gambar saat kamu mengirim pesan.'))return;
  if(eyeStream)eyeStop();
  note('⏳ membuka kamera...');
  let s;
@@ -350,17 +350,17 @@ function mountVC(box,raw,auto){const bt=box.querySelector('.bt');if(!bt||!window
  ui();if(auto)setTimeout(start,60)}
 async function send(){
  if(busy){stp=true;ctrl.abort();return}stp=false;
- const t=$('#tx').value.trim();if(!t&&!img&&!docTxt&&!att)return;
+ const t=$('#tx').value.trim();if(!t&&!img&&!docTxt&&!att)return;const lookCmd=/\blihat\s+(depan|belakang)\b/i.exec(t);if(lookCmd){const lf=lookCmd[1].toLowerCase()==='depan'?'user':'environment';if(!(eyeOn&&eyeFace===lf))await eyeStart(lf,true)}
  if(/(pake|pakai|pakek|dengan|lewat|via)\s+(suara|voice|vn)|(balas|bales|jawab)\w*\s+(suara|voice)|suara\s+dong|bicara\s+dong|ngomong\s+dong/i.test(t))VR=1;
  if(/(pake|pakai|pakek|balas|jawab)\s+(teks|tulisan|chat)\b|(matikan|matiin|stop|off)\s+(mode\s+)?suara|jangan\s+(pake|pakai)\s+suara/i.test(t))VR=0;
  if(VR&&window.speechSynthesis){try{const u=new SpeechSynthesisUtterance(' ');u.volume=0;speechSynthesis.speak(u)}catch(e){}}
- const dt=docTxt;docTxt=null;const at=att;att=null;let im=img,gen=/^\/gambar\s/i.test(t),camIm=false;if(!im&&eyeOn&&!gen){im=eyeShot();camIm=!!im}const imShown=camIm?null:im;$('#tx').value='';$('#tx').style.height='auto';img=null;$('#pv').textContent='';
+ const dt=docTxt;docTxt=null;const at=att;att=null;let im=img,gen=/^\/gambar\s/i.test(t),camIm=false;if(!im&&eyeOn&&!gen&&lookCmd){im=eyeShot();camIm=!!im}const imShown=camIm?null:im;$('#tx').value='';$('#tx').style.height='auto';img=null;$('#pv').textContent='';
  if(window.kbClose)kbClose();
  hist.push({role:'user',content:dt?`[File "${dt.name}"]\n${dt.text}\n\n${t||'Jelaskan isi file ini.'}`:(window.MP&&at?MP.userText(t,at):(t||'Jelaskan foto ini.'))});
  anchor(add(`<div class="um">${window.MP?MP.att(at,imShown):(imShown?`<img src="${imShown}">`:'')}${dt?`<div style="opacity:.75">📄 ${esc(dt.name)}</div>`:''}${esc(t)}${window.MP?MP.urls(t):''}</div>`));
  busy=true;$('#sd').textContent='■';$('#sd').dataset.b=1;ctrl=new AbortController();
  const b=cfg.bots[cur],st=add(`<div class="stt">${bot(COL[cur])}<span></span></div>`),eb=mk(st.querySelector('svg'),true,0,undefined,true);
- const stage=s=>{eb.set(s);st.querySelector('span').textContent=LBL[s]+'...'};stage(im?'look':'think');if(camIm)st.querySelector('span').textContent='sedang melihat...';
+ const stage=s=>{eb.set(s);st.querySelector('span').textContent=(VR&&s!=='look'?'sedang berbicara':LBL[s])+'...'};stage(im?'look':'think');if(camIm)st.querySelector('span').textContent='sedang melihat...';
  let fin;
  if(gpsOn){const fresh=gps&&Date.now()-gps.timestamp<60000,u=gpsUpdate().catch(()=>{});if(!fresh)await Promise.race([u,sleep(3000)])}
  try{
@@ -374,7 +374,7 @@ async function send(){
  if(fin&&!fin.error){stage('write');
   const box=add(`<div class="bm"><div class="bt"></div></div>`);const bt=box.querySelector('.bt'),mp=(q=>window.MP?MP.parse(q):{text:q,items:[],tags:''})(window.PX?PX.eat(cur,fin.text||''):(fin.text||'')),tx=mp.text,step=Math.max(2,Math.ceil(tx.length/160));
   if(fin.image)bt.innerHTML=`<img src="${fin.image}">`;
-  const tt=document.createElement('div');bt.appendChild(tt);
+  const tt=document.createElement('div');bt.appendChild(tt);if(VR&&window.speechSynthesis)bt.style.display='none';
   const CH=[],FD=520,fade=()=>{const now=performance.now();while(CH.length&&now-CH[0].t>FD)CH.shift();if(!CH.length)return;
    const w=document.createTreeWalker(tt,NodeFilter.SHOW_TEXT),L=[];let n;while(n=w.nextNode())L.push(n);let off=0;
    for(const nd of L){const len=nd.nodeValue.length,end=off+len;
@@ -390,7 +390,7 @@ async function send(){
   tt.innerHTML=md(tx);if(VR){mp.items=mp.items.filter(i=>i.k!=='audio');mp.tags=mp.tags.split('\n').filter(l=>!/^\[audio:/.test(l)).join('\n')}if(window.MP&&mp.items.length)MP.mount(box,mp.items);
   if(fin.sources?.length)box.insertAdjacentHTML('beforeend',`<div class="src">Sumber</div>${fin.sources.map(x=>{let h='';try{h=new URL(x.url).hostname.replace(/^www\./,'')}catch{}return `<a class="sc" href="${esc(x.url)}" target="_blank" rel="noopener"><img src="https://www.google.com/s2/favicons?domain=${encodeURIComponent(h)}&sz=64" alt="" onerror="this.style.visibility='hidden'"><div><b>${esc(x.title||h||x.url)}</b><span>${esc(h)}</span></div></a>`}).join('')}`);
   box.insertAdjacentHTML('beforeend',`<div class="ac"><button data-a="c">⧉</button><button data-a="s">🔊</button><button data-a="l">👍</button><button data-a="h">↗</button></div>`);
-  if(VR&&window.speechSynthesis&&tx){try{speechSynthesis.cancel()}catch(e){}mountVC(box,plain(tx),true)}
+  if(VR&&window.speechSynthesis&&tx){try{speechSynthesis.cancel()}catch(e){}mountVC(box,plain(tx),true);const vcOk=box.querySelector('.vc'),btx=box.querySelector('.bt');if(vcOk&&btx)btx.style.display='none'}{const vcF=box.querySelector('.vc'),btF=box.querySelector('.bt');if(btF)btF.style.display=vcF?'none':''}
   box.dataset.t=tx;hist.push({role:'assistant',content:(tx||'[gambar]')+(mp.tags?'\n'+mp.tags:'')});eb.set('done');alertMsg(b.name,tx);
  }else if(fin?.error)add(`<div class="bt err">⚠️ ${esc(fin.error)}</div>`);
  stOut(st,fin&&!fin.error);busy=false;$('#sd').textContent='↑';delete $('#sd').dataset.b;sb()}
