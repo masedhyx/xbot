@@ -349,10 +349,10 @@ function mountVC(box,raw,auto){const bt=box.querySelector('.bt');if(!bt||!window
  bar.onclick=e=>{e.stopPropagation();const r=bar.getBoundingClientRect();pos=Math.floor(Math.max(0,Math.min(1,(e.clientX-r.left)/r.width))*text.length);if(play)start();else ui()};
  ui();if(auto)setTimeout(start,60)}
 async function send(){
- if(window.__eyeSweeping)return;
+ if(window.__eyeSweeping||window.__sendPre)return;/* cegah kirim ganda saat kamera masih menyala */
  if(busy){stp=true;ctrl.abort();return}stp=false;
- const t=$('#tx').value.trim();if(!t&&!img&&!docTxt&&!att)return;const lookCmd=/\b(?:lihat|melihat\s+ke|perlihatkan\s+apa\s+yang\s+ada\s+di)\s+(depan|belakang)(?:mu)?\b/i.exec(t);if(lookCmd){const lf=lookCmd[1].toLowerCase()==='depan'?'user':'environment';if(!(eyeOn&&eyeFace===lf))await eyeStart(lf,true)}
- const sweepCmd=!lookCmd&&/\b(?:melihat|lihat)\s+(?:sekeliling|sekitar)\b/i.test(t);let sweepUsed=false;if(sweepCmd&&!eyeOn)await eyeStart('environment',true);
+ const t=$('#tx').value.trim();if(!t&&!img&&!docTxt&&!att)return;const lookCmd=/\b(?:lihat|melihat\s+ke|perlihatkan\s+apa\s+yang\s+ada\s+di)\s+(depan|belakang)(?:mu)?\b/i.exec(t);if(lookCmd){const lf=lookCmd[1].toLowerCase()==='depan'?'user':'environment';window.__sendPre=true;try{if(!(eyeOn&&eyeFace===lf))await eyeStart(lf,true);if(window.eyeWarm)await window.eyeWarm()}finally{window.__sendPre=false}}
+ const sweepCmd=!lookCmd&&/\b(?:melihat|lihat)\s+(?:sekeliling|sekitar)\b/i.test(t);let sweepUsed=false;if(sweepCmd){window.__sendPre=true;try{if(!eyeOn)await eyeStart('environment',true);if(window.eyeWarm)await window.eyeWarm()}finally{window.__sendPre=false}}
  if(/(pake|pakai|pakek|dengan|lewat|via)\s+(suara|voice|vn)|(balas|bales|jawab)\w*\s+(suara|voice)|suara\s+dong|bicara\s+dong|ngomong\s+dong/i.test(t))VR=1;
  if(/(pake|pakai|pakek|balas|jawab)\s+(teks|tulisan|chat)\b|(matikan|matiin|stop|off)\s+(mode\s+)?suara|jangan\s+(pake|pakai)\s+suara/i.test(t))VR=0;
  if(VR&&window.speechSynthesis){try{const u=new SpeechSynthesisUtterance(' ');u.volume=0;speechSynthesis.speak(u)}catch(e){}}
@@ -7648,6 +7648,37 @@ window.eyeSweep=async()=>{
 })();
 </script>
 <!-- ===== AKHIR TAMBAHAN MELIHAT SEKELILING ===== -->
+<!-- ===== TAMBAHAN: PEMANASAN KAMERA sebelum mata live memotret (hindari gambar hitam/gelap tepat setelah kamera menyala). Hanya dipanggil dari perintah lihat depan/belakang/sekitar. Hapus blok ini untuk membatalkan ===== -->
+<script>
+(()=>{
+'use strict';
+try{
+const MAX=2200,STEP=120,TH=25,MINMS=900;
+window.eyeWarm=async()=>{
+ try{
+  const v=eyeV();if(!v||!eyeOn)return;
+  const c=document.createElement('canvas');c.width=c.height=32;
+  const x=c.getContext('2d',{willReadFrequently:true});
+  const t0=Date.now(),hist=[];
+  while(eyeOn&&Date.now()-t0<MAX){
+   if(v.videoWidth&&v.readyState>=2){
+    x.drawImage(v,0,0,32,32);
+    const d=x.getImageData(0,0,32,32).data;let s=0;
+    for(let i=0;i<d.length;i+=4)s+=.299*d[i]+.587*d[i+1]+.114*d[i+2];
+    const m=s/(d.length/4);
+    if(m>=TH)return;                              /* sudah terang: langsung */
+    hist.push(m);if(hist.length>3)hist.shift();
+    /* gelap tapi stabil (ruangan memang redup, bukan hitam pekat): jangan menunggu terus */
+    if(m>2&&hist.length===3&&Date.now()-t0>=MINMS&&Math.max(...hist)-Math.min(...hist)<2)return;
+   }
+   await new Promise(r=>setTimeout(r,STEP));
+  }
+ }catch(e){}
+};
+}catch(e){}
+})();
+</script>
+<!-- ===== AKHIR TAMBAHAN PEMANASAN KAMERA ===== -->
 <!-- ===== TAMBAHAN: GERAK BADAN BOT STATUS DI CHAT UTAMA disamakan dengan bot panel aktif (hanya posisi/denyut badan; warna, bentuk, efek mata per tahap, ukuran tampilan, dan teks status tidak diubah). Hapus blok ini untuk membatalkan ===== -->
 <script>
 (()=>{
