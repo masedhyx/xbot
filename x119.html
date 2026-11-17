@@ -109,10 +109,12 @@ const blocks=(txt,T)=>{const L=txt.split('\n'),o=[];
     o.push(l)}
   return o.join('\n')};
 const DGR=/^```(?:diagram|mermaid|flowchart)[ \t]*\n([\s\S]*?)(\n?```)?$/i;
+/* ===== PEMBERSIH: bullet * jadi -, buang tanda * tunggal yang nyasar ===== */
+const XCLEAN=t=>String(t).split('\n').map(l=>{l=l.replace(/^([ \t]*)\*[ \t]+/,'$1- ');if(l.indexOf('*')<0)return l;let o='',op=false;for(let i=0;i<l.length;i++){const c=l[i];if(c!=='*'){o+=c;continue}if(l[i+1]==='*'){o+='**';i++;continue}const pv=l[i-1]||' ',nx=l[i+1]||' ',isOp=/[\s(\[]/.test(pv)&&!/\s/.test(nx),isCl=!/\s/.test(pv)&&/[\s.,;:!?)\]]/.test(nx);if(isOp&&!isCl){op=true;o+=c}else if(isCl&&!isOp){if(op){op=false;o+=c}}else o+=c}return o}).join('\n');
 const md=(s,p)=>{const TB=[],T=h=>{TB.push(h);return '\u0001'+(TB.length-1)+'\u0002'};
   const PR=s.split(/(```[\s\S]*?(?:```|$))/g);s=PR.map((x,i)=>{
     if(i%2){const m=x.match(DGR);if(m)return T(m[2]?`<div class="dg" data-src="${encodeURIComponent(m[1])}"><div class="dgp">Membuat diagram…</div></div>`:'<div class="dg"><div class="dgp">Membuat diagram…</div></div>');return x}
-    return blocks(CIT(x,p&&i===PR.length-1),T)}).join('');
+    return blocks(XCLEAN(CIT(x,p&&i===PR.length-1)),T)}).join('');
   return md0(s,p).replace(/(?:<br>)?\u0001(\d+)\u0002(?:<br>)?/g,(m,n)=>TB[n])};
 let BID=0;
 const bot=c=>{const k="k"+(++BID);return `<svg${c==='#3a3a38'?' style="--ey:#fff"':''} viewBox="114.4 21.35 411.4 411.4"><clipPath id="${k}"><circle class="cc" cx="320.1" cy="227.05" r="205.7"/></clipPath><circle class="bd" cx="320.1" cy="227.05" r="205.7" fill="${c}"/><g clip-path="url(#${k})"><path class="e"/><path class="e"/></g></svg>`};
@@ -1678,13 +1680,13 @@ XT.search=async({q})=>{
   if(!q) throw new Error('Query kosong');
   const r=await origFetch(SERVER_URL.replace(/\/$/,'')+'/chat',{method:'POST',headers:{'Content-Type':'application/json'},
     body:JSON.stringify({messages:[{role:'user',content:q}],image:null,image_gen:false,
-      system:'Cari informasi terbaru di web untuk pertanyaan ini lalu jawab ringkas dalam bahasa Indonesia.',
+      system:(()=>{let d='';try{d=new Intl.DateTimeFormat('id-ID',{dateStyle:'full'}).format(new Date())}catch(e){d=new Date().toDateString()}return 'Hari ini '+d+'. Cari informasi terbaru di web untuk pertanyaan ini lalu jawab dalam bahasa Indonesia. Hanya tulis fakta yang benar-benar ada di hasil pencarian; jangan menambah apa pun dari ingatan dan jangan mengarang. Setiap fakta ditutup (nama sumber, tanggal terbit). Salin nama, angka, versi, dan tanggal persis seperti di sumber. Utamakan sumber resmi dan yang bertanggal paling baru; kalau hanya ada sumber lama atau tidak ada hasil, katakan terus terang.'})(),
       now:new Date().toISOString(),tz:Intl.DateTimeFormat().resolvedOptions().timeZone,
       model:DEF_MODEL,imgModel:DEF_IMG,mode:'on',keys:(typeof cfg!=='undefined'&&cfg&&cfg.keys)||{}})});
   if(!r.ok) throw new Error('Pencarian gagal: HTTP '+r.status);
   const fin=await readFinal(r);
   if(!fin||fin.error||!fin.text) throw new Error(fin?.error||'Tidak ada hasil');
-  const o={q,hasil:fin.text.slice(0,3000)};try{Object.defineProperty(o,'_src',{value:(Array.isArray(fin.sources)?fin.sources:[]).map(x=>x&&x.url).filter(u=>typeof u==='string')})}catch(e){}return o;
+  const o={q,hasil:fin.text.slice(0,4500)};try{Object.defineProperty(o,'_src',{value:(Array.isArray(fin.sources)?fin.sources:[]).map(x=>x&&x.url).filter(u=>typeof u==='string')})}catch(e){}return o;
 };
 /* Cadangan pencarian web: Parallel (key di Pengaturan). Dipakai hanya jika pencarian utama gagal/kosong. */
 {const _s=XT.search;
@@ -1822,11 +1824,13 @@ async function callChat(input,init,body){
 }
 /* ===== INFO TERBARU: deteksi permintaan "terbaru" -> aturan cari wajib + mode pencarian otomatis ===== */
 const XSEGAR={
-  RE:/(terbaru|terkini|termutakhir|mutakhir|paling\s+baru|terupdate|up\s?to\s?date|\bupdate(an)?\b|\bberita\b|kabar\s+(terbaru|terkini)|hari\s+ini|saat\s+ini|baru\s+saja|barusan|kemarin|minggu\s+ini|bulan\s+ini|tahun\s+ini|trending|\bviral\b|\blatest\b|\bnewest\b|\bbreaking\b|\bnews\b|\bcurrent(ly)?\b|\btoday\b|this\s+(week|month|year)|\brilis\b|\bdirilis\b|\breleased?\b|klasemen|\bskor\b|hasil\s+pertandingan|harga\s+(saham|emas|bitcoin|btc|kripto|crypto|minyak|bbm|dolar|bensin)|(siapa|apa|berapa|bagaimana|gimana)[^.?!\n]{0,60}\bsekarang\b)/i,
+  RE:/(terbaru|terkini|termutakhir|mutakhir|paling\s+baru|terupdate|up\s?to\s?date|\bberita\b|\bbreaking\b|\bnews\b|\blatest\b|\bnewest\b|\btrending\b|\bviral\b|\brilis\b|\bdirilis\b|klasemen|hasil\s+pertandingan|\bskor\b[^.?!\n]{0,40}\b(vs|lawan|melawan|liga|bola|pertandingan|semalam|final)\b|\bkurs\b|harga\s+(saham|emas|bitcoin|btc|kripto|crypto|minyak|bbm|dolar|bensin)|jadwal\s+(bola|pertandingan|liga|bioskop|konser|rilis|peluncuran|f1|motogp|timnas)|\bcurrent\s+(price|version|ceo|president|status|champion)\b)/i,
+  W:/(hari\s+ini|malam\s+ini|sekarang|saat\s+ini|minggu\s+ini|bulan\s+ini|tahun\s+ini|kemarin|semalam|tadi\s+malam|barusan|baru\s+saja|\btoday\b|\btonight\b|this\s+(week|month|year)|right\s+now|\bcurrently\b)/i,
+  I:/(\bharga\b|\bkurs\b|\bklasemen\b|\bskor\b|\brilis\b|\bdirilis\b|peluncuran|diluncurkan|\blaunch\b|\bversi\b|\bceo\b|presiden|menteri|gubernur|\bjuara\b|pemenang|pelatih|saham|dolar|\bemas\b|bitcoin|\bbtc\b|kripto|crypto|\bbbm\b|bensin|tarif|gempa|banjir|\bprice\b|\bscore\b|\bschedule\b|\brelease\b|\bversion\b|who\s+is|\bwinner\b|jadwal\s+(bola|pertandingan|liga|bioskop|konser))/i,
   lastUser(b){const ms=Array.isArray(b&&b.messages)?b.messages:[];for(let i=ms.length-1;i>=0;i--){const m=ms[i];if(m&&m.role==='user'){const c=m.content;return typeof c==='string'?c:Array.isArray(c)?c.map(x=>(x&&x.text)||'').join(' '):''}}return''},
-  need(b){try{if(!b||b.image_gen||b.image)return false;const u=this.lastUser(b);if(!u||u.length>400)return false;if(u.indexOf('[HASIL ALAT')===0)return false;return this.RE.test(u)}catch(e){return false}},
+  need(b){try{if(!b||b.image_gen||b.image)return false;const u=this.lastUser(b);if(!u||u.length>400)return false;if(u.indexOf('[HASIL ALAT')===0)return false;return this.RE.test(u)||(this.W.test(u)&&this.I.test(u))}catch(e){return false}},
   sys(){let tgl='',bt='';try{const tz=Intl.DateTimeFormat().resolvedOptions().timeZone;tgl=new Intl.DateTimeFormat('id-ID',{dateStyle:'full',timeZone:tz}).format(new Date());bt=new Intl.DateTimeFormat('id-ID',{month:'long',year:'numeric',timeZone:tz}).format(new Date())}catch(e){tgl=new Date().toDateString();bt=String(new Date().getFullYear())}
-    return `\n\n[ATURAN INFO TERBARU]\nHari ini ${tgl}. Pengetahuan bawaanmu sudah usang untuk hal-hal terbaru.\n- Pengguna menanyakan hal terbaru: WAJIB pakai alat search dulu. Jangan menjawab dari ingatan.\n- Cari minimal 2 kali dengan kata kunci berbeda, dan sertakan bulan dan tahun sekarang di kata kunci (contoh: "iPhone terbaru ${bt}").\n- Buka halaman sumber terbaik dengan read, jangan hanya andalkan cuplikan. Utamakan situs resmi dan berita bertanggal paling baru. Untuk berita pakai juga alat news.\n- Cek tanggal tiap sumber. Kalau sumber terbarunya sudah lama (lebih dari 1-2 bulan untuk topik yang cepat berubah), katakan terus terang.\n- Kalau hasil pencarian bertentangan dengan ingatanmu, percayai hasil pencarian.\n- Tulis tanggal sumber di jawaban. Kalau tidak yakin itu yang paling baru, bilang "ini yang terbaru yang saya temukan".\n- Daftar ditulis dengan poin "-" yang konsisten; jangan memakai tanda * untuk huruf miring.`}
+    return `\n\n[ATURAN INFO TERBARU]\nHari ini ${tgl}. Pengetahuan bawaanmu sudah usang untuk hal-hal terbaru.\nCARA KERJA\n1. WAJIB search dulu, jangan menjawab dari ingatan. Cari minimal 2-3 kali dengan kata kunci berbeda dan sertakan bulan dan tahun sekarang (contoh: "iPhone terbaru ${bt}"). Untuk berita pakai juga alat news.\n2. Buka dengan read minimal 2 halaman sumber terbaik; jangan hanya andalkan cuplikan. Utamakan situs resmi, dokumentasi resmi, dan kantor berita dengan tanggal terbit paling baru.\n3. Ambil data langsung dari isi halaman: nama, angka, tanggal, versi, harga. Salin persis, jangan dibulatkan atau diubah.\nATURAN ANTI-KARANGAN\n- Hanya tulis hal yang tertulis jelas di hasil search atau read. Jangan menambah nama, angka, tanggal, atau sebab dari ingatan.\n- Pertahankan tingkat kepastian sumber. Kata "dikabarkan", "diduga", atau "petisi mendesak" tidak boleh diubah menjadi fakta atau tindakan pihak itu.\n- Kalau dua sumber berbeda, sebut keduanya dan katakan ada perbedaan.\n- Kalau tidak menemukan data terbaru, katakan "saya tidak menemukan data terbaru tentang ini". Jangan menebak.\nFORMAT JAWABAN\n- Mulai dengan satu kalimat "Per ${tgl}:" lalu daftar butir.\n- Setiap butir ditutup dengan (nama sumber, tanggal terbit), contoh: (Antara, 16 November 2026). Butir yang tidak punya sumber di hasil pencarian jangan ditulis.\n- Kalau sumber terbaru yang ada sudah lama (lebih dari 1-2 bulan untuk topik yang cepat berubah), katakan terus terang.\n- Akhiri dengan baris "Belum pasti atau tidak ditemukan: ..." bila ada.\n- Daftar memakai poin "-" yang konsisten. Jangan memakai tanda * untuk huruf miring atau bullet.`}
 };
 window.fetch=async(input,init={})=>{
   const url=typeof input==='string'?input:(input&&input.url)||'';
@@ -4742,7 +4746,7 @@ XT.code=async a=>{
 <script>
 (()=>{
 if(window._xbotQuota)return;window._xbotQuota=1;
-const WEB=['search','read','news'], DAY_MAX=3;
+const WEB=['search','read','news'], DAY_MAX=30;
 const dayKey=()=>new Date().toLocaleDateString('en-CA',{timeZone:'Asia/Jakarta'});
 function webGet(){try{const o=JSON.parse(localStorage.getItem('xbot_web')||'{}');return o.d===dayKey()?o:{d:dayKey(),n:0}}catch(e){return{d:dayKey(),n:0}}}
 function webSet(o){try{localStorage.setItem('xbot_web',JSON.stringify(o))}catch(e){}}
