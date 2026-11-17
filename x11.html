@@ -1820,6 +1820,14 @@ async function callChat(input,init,body){
     if(last){const hint=n>1?' (sudah mencoba '+n+' key/model cadangan; cek titik status API key di Pengaturan)':'';if(!r.ok)throw new Error(err+hint);fin.error=err+hint;return fin}
   }
 }
+/* ===== INFO TERBARU: deteksi permintaan "terbaru" -> aturan cari wajib + mode pencarian otomatis ===== */
+const XSEGAR={
+  RE:/(terbaru|terkini|termutakhir|mutakhir|paling\s+baru|terupdate|up\s?to\s?date|\bupdate(an)?\b|\bberita\b|kabar\s+(terbaru|terkini)|hari\s+ini|saat\s+ini|baru\s+saja|barusan|kemarin|minggu\s+ini|bulan\s+ini|tahun\s+ini|trending|\bviral\b|\blatest\b|\bnewest\b|\bbreaking\b|\bnews\b|\bcurrent(ly)?\b|\btoday\b|this\s+(week|month|year)|\brilis\b|\bdirilis\b|\breleased?\b|klasemen|\bskor\b|hasil\s+pertandingan|harga\s+(saham|emas|bitcoin|btc|kripto|crypto|minyak|bbm|dolar|bensin)|(siapa|apa|berapa|bagaimana|gimana)[^.?!\n]{0,60}\bsekarang\b)/i,
+  lastUser(b){const ms=Array.isArray(b&&b.messages)?b.messages:[];for(let i=ms.length-1;i>=0;i--){const m=ms[i];if(m&&m.role==='user'){const c=m.content;return typeof c==='string'?c:Array.isArray(c)?c.map(x=>(x&&x.text)||'').join(' '):''}}return''},
+  need(b){try{if(!b||b.image_gen||b.image)return false;const u=this.lastUser(b);if(!u||u.length>400)return false;if(u.indexOf('[HASIL ALAT')===0)return false;return this.RE.test(u)}catch(e){return false}},
+  sys(){let tgl='',bt='';try{const tz=Intl.DateTimeFormat().resolvedOptions().timeZone;tgl=new Intl.DateTimeFormat('id-ID',{dateStyle:'full',timeZone:tz}).format(new Date());bt=new Intl.DateTimeFormat('id-ID',{month:'long',year:'numeric',timeZone:tz}).format(new Date())}catch(e){tgl=new Date().toDateString();bt=String(new Date().getFullYear())}
+    return `\n\n[ATURAN INFO TERBARU]\nHari ini ${tgl}. Pengetahuan bawaanmu sudah usang untuk hal-hal terbaru.\n- Pengguna menanyakan hal terbaru: WAJIB pakai alat search dulu. Jangan menjawab dari ingatan.\n- Cari minimal 2 kali dengan kata kunci berbeda, dan sertakan bulan dan tahun sekarang di kata kunci (contoh: "iPhone terbaru ${bt}").\n- Buka halaman sumber terbaik dengan read, jangan hanya andalkan cuplikan. Utamakan situs resmi dan berita bertanggal paling baru. Untuk berita pakai juga alat news.\n- Cek tanggal tiap sumber. Kalau sumber terbarunya sudah lama (lebih dari 1-2 bulan untuk topik yang cepat berubah), katakan terus terang.\n- Kalau hasil pencarian bertentangan dengan ingatanmu, percayai hasil pencarian.\n- Tulis tanggal sumber di jawaban. Kalau tidak yakin itu yang paling baru, bilang "ini yang terbaru yang saya temukan".\n- Daftar ditulis dengan poin "-" yang konsisten; jangan memakai tanda * untuk huruf miring.`}
+};
 window.fetch=async(input,init={})=>{
   const url=typeof input==='string'?input:(input&&input.url)||'';
   if(url!==CHAT||!init.body) return origFetch(input,init);
@@ -1833,6 +1841,7 @@ const ANTI_HALU=`
 - Bedakan dengan jelas antara fakta yang terverifikasi dan dugaan pribadi.`;
   const MAINC=!body.image_gen&&String(body.system||'').includes('[Info perangkat pengguna]');
   body.system=(body.system||'')+TOOL_SYS+(MAINC?TOOL_SYS2:'')+ANTI_HALU;
+  if(MAINC&&XSEGAR.need(body)){body.system+=XSEGAR.sys();body.mode='on'}
   body.system+=(typeof window.galeriSysFor==='function'?window.galeriSysFor(body):'');
   let fin=null;
   const MAXSTEP=25,SEEN=new Map();
