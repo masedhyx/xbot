@@ -352,7 +352,7 @@ async function send(){
  if(window.__eyeSweeping||window.__sendPre)return;/* cegah kirim ganda saat kamera masih menyala */
  if(busy){stp=true;ctrl.abort();return}stp=false;
  const t=$('#tx').value.trim();if(!t&&!img&&!docTxt&&!att)return;const lookCmd=/\b(?:lihat|melihat\s+ke|perlihatkan\s+apa\s+yang\s+ada\s+di)\s+(depan|belakang)(?:mu)?\b/i.exec(t);if(lookCmd){const lf=lookCmd[1].toLowerCase()==='depan'?'user':'environment';window.__sendPre=true;try{if(!(eyeOn&&eyeFace===lf))await Promise.race([eyeStart(lf,true),new Promise(r=>setTimeout(r,12000))]);if(window.eyeWarm)await window.eyeWarm()}finally{window.__sendPre=false}}
- const sweepCmd=!lookCmd&&/\b(?:melihat|lihat)\s+(?:sekeliling|sekitar)\b/i.test(t);let sweepUsed=false;if(sweepCmd){window.__sendPre=true;try{if(!eyeOn)await Promise.race([eyeStart('environment',true),new Promise(r=>setTimeout(r,12000))]);if(window.eyeWarm)await window.eyeWarm()}finally{window.__sendPre=false}}
+ const sweepM=!lookCmd&&/\b(?:melihat|lihat)\s+(?:sekeliling|sekitar)(?:\s+(depan|belakang)(?:mu)?)?\b/i.exec(t);const sweepCmd=!!sweepM;let sweepUsed=false;if(sweepCmd){const sf=sweepM[1]?(sweepM[1].toLowerCase()==='depan'?'user':'environment'):null;window.__sendPre=true;try{if(sf?!(eyeOn&&eyeFace===sf):!eyeOn)await Promise.race([eyeStart(sf||'environment',true),new Promise(r=>setTimeout(r,12000))]);if(window.eyeWarm)await window.eyeWarm()}finally{window.__sendPre=false}}
  if(/(pake|pakai|pakek|dengan|lewat|via)\s+(suara|voice|vn)|(balas|bales|jawab)\w*\s+(suara|voice)|suara\s+dong|bicara\s+dong|ngomong\s+dong/i.test(t))VR=1;
  if(/(pake|pakai|pakek|balas|jawab)\s+(teks|tulisan|chat)\b|(matikan|matiin|stop|off)\s+(mode\s+)?suara|jangan\s+(pake|pakai)\s+suara/i.test(t))VR=0;
  if(VR&&window.speechSynthesis){try{const u=new SpeechSynthesisUtterance(' ');u.volume=0;speechSynthesis.speak(u)}catch(e){}}
@@ -7570,18 +7570,19 @@ document.addEventListener('touchend',e=>{
 (()=>{
 'use strict';
 try{
-const AUTO_EYE_MS=120000,POLL_MS=100,POLL_MAX=300;
+const AUTO_EYE_MS=60000,POLL_MS=100,POLL_MAX=300;
 const RX=/\b(?:lihat|melihat\s+ke|perlihatkan\s+apa\s+yang\s+ada\s+di)\s+(depan|belakang)(?:mu)?\b/i;
-const RXS=/\b(?:melihat|lihat)\s+(?:sekeliling|sekitar)\b/i;
+const RXS=/\b(?:melihat|lihat)\s+(?:sekeliling|sekitar)(?:\s+(depan|belakang)(?:mu)?)?\b/i;
 let offT=null,poll=null,owned=null;
 const stopT=()=>{clearInterval(poll);poll=null;clearTimeout(offT);offT=null};
 /* Dipanggil dari teks yang akan dikirim. Menunggu kamera benar-benar aktif (dinyalakan oleh kode lama), lalu mematikannya setelah 2 menit. Perintah berulang memperpanjang 2 menit lagi. */
 const arm=text=>{
  const txt=String(text||'');
  const m=RX.exec(txt);
+ const ms=m?null:RXS.exec(txt);
  let face;
  if(m)face=m[1].toLowerCase()==='depan'?'user':'environment';
- else if(RXS.test(txt))face=(eyeOn&&eyeFace)?eyeFace:'environment';
+ else if(ms)face=ms[1]?(ms[1].toLowerCase()==='depan'?'user':'environment'):((eyeOn&&eyeFace)?eyeFace:'environment');
  else return;
  /* Kamera sudah menyala dari menu (+) dan bukan hasil perintah sebelumnya: jangan dijadwalkan mati otomatis */
  if(eyeOn&&eyeFace===face&&eyeStream&&eyeStream!==owned){stopT();return}
