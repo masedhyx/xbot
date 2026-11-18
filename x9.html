@@ -51,8 +51,6 @@ svg{display:block}
 .think-body{border-left:1px solid #343238;margin:0 0 18px 14px;padding:0 0 0 32px;color:#858287;font-size:16.5px;font-weight:400;line-height:1.55;position:relative;min-height:42px}
 .think-body.live{max-height:178px;overflow:hidden;-webkit-mask-image:linear-gradient(to bottom,transparent 0,#000 12%,#000 78%,transparent 100%);mask-image:linear-gradient(to bottom,transparent 0,#000 12%,#000 78%,transparent 100%)}
 .think-body.collapsed{display:none}
-.think-h,.think-body{transition:opacity .24s ease}
-.think-h.hide-after,.think-body.hide-after{opacity:0;pointer-events:none}
 .think-body p{margin:0 0 10px}
 .think-body .inner{white-space:pre-wrap;transition:opacity .2s ease}
 .think-body .inner.swap{opacity:.35}
@@ -332,7 +330,14 @@ function persist(){store.set('convos',convos.slice(0,60))}
 function showChat(){app.classList.add('has-chat')}
 function buildTurn(msg){
   const a=document.createElement('div'); a.className='a';
-  // Riwayat hanya menampilkan jawaban akhir; tahap berpikir tidak disimpan di tampilan.
+  if(msg.think!=null){
+    const duration=Math.max(1,Number(msg.secs)||1);
+    a.insertAdjacentHTML('beforeend',
+      `<div class="think-h done"><span>Berpikir selama ${duration} detik</span>${CHEV}</div><div class="think-body collapsed"><div class="inner"></div></div>`);
+    a.querySelector('.inner').textContent=msg.think;
+    const h=a.querySelector('.think-h'), b=a.querySelector('.think-body');
+    h.onclick=()=>b.classList.toggle('collapsed');
+  }
   const md=document.createElement('div'); md.className='md'; md.innerHTML=render(msg.text||'');
   a.appendChild(md); return a;
 }
@@ -775,10 +780,6 @@ async function send(){
       th.innerHTML=`<span>Berpikir selama ${secs} detik</span>${CHEV}`; th.classList.add('done');
       tb.classList.remove('live'); tb.classList.add('collapsed');
     },
-    hideThink(){
-      th.classList.add('hide-after'); tb.classList.add('hide-after');
-      setTimeout(()=>{th.style.display='none';tb.style.display='none'},260);
-    },
     text(t){ansTxt+=t;msg.text=ansTxt;md.innerHTML=render(ansTxt,true);scrollBottom()},
     got(){return ansTxt.length>0},
     any(){return ansTxt.length>0||thinkTxt.length>0},
@@ -803,8 +804,7 @@ async function send(){
     if(!sig.stop){ansTxt+=(ansTxt?'\n\n':'')+'Terjadi kesalahan: '+e.message;msg.text=ansTxt}
   }
   ui.endThink();
-  ui.hideThink();
-  msg.think=null;
+  msg.think=thinkTxt||(useThink?'':null);
   md.innerHTML=render(ansTxt||'',false);
   busy=false;abort=null;syncState();persist();renderHist();scrollBottom();
 }
