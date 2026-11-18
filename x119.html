@@ -364,7 +364,7 @@ async function send(){
  const b=cfg.bots[cur],st=add(`<div class="stt">${bot(COL[cur])}<span></span></div>`),eb=mk(st.querySelector('svg'),true,0,undefined,true);
  const stage=s=>{eb.set(s);st.querySelector('span').textContent=(VR&&s!=='look'?'sedang berbicara':(sweepUsed&&s==='look'?'sedang melihat sekitar':LBL[s]))+'...'};stage(im?'look':'think');if(camIm)st.querySelector('span').textContent=sweepUsed?'sedang melihat sekitar...':'sedang melihat...';
  let fin;
- if(gpsOn){const fresh=gps&&Date.now()-gps.timestamp<60000,u=gpsUpdate().catch(()=>{});if(!fresh)await Promise.race([u,sleep(3000)])}
+ if(gpsOn){const fresh=gps&&Date.now()-gps.timestamp<60000,u=gpsUpdate().catch(()=>{});if(!fresh&&!gps)await Promise.race([u,sleep(3000)])}
  try{
   const r=await fetch(cfg.url.replace(/\/$/,'')+'/chat',{method:'POST',headers:{'Content-Type':'application/json'},signal:ctrl.signal,
    body:JSON.stringify({messages:hist.slice(-12),image:im,image_gen:gen,system:b.prompt+sysx()+gpsTxt()+eyeTxt()+(sweepUsed&&window.SWEEP_HINT?window.SWEEP_HINT:'')+(window.PX?PX.sys(cur,1):'')+(VR||window.XCALL?VRHINT:'')+(window.XCALL?CALLHINT:''),now:new Date().toISOString(),tz:Intl.DateTimeFormat().resolvedOptions().timeZone,model:cfg.model,imgModel:cfg.img,mode:webOn?'on':cfg.mode,keys:cfg.keys})});
@@ -374,10 +374,10 @@ async function send(){
   if(buf.trim()){const j=JSON.parse(buf);if(!j.s)fin=j}
  }catch(e){fin=e.name=='AbortError'?{text:'(dihentikan)'}:{error:'Tidak bisa terhubung ke server: '+e.message}}
  if(fin&&!fin.error){stage('write');
-  const box=add(`<div class="bm"><div class="bt"></div></div>`);const bt=box.querySelector('.bt'),mp=(q=>window.MP?MP.parse(q):{text:q,items:[],tags:''})(window.PX?PX.eat(cur,fin.text||''):(fin.text||'')),tx=mp.text,step=Math.max(2,Math.ceil(tx.length/160));
+  const box=add(`<div class="bm"><div class="bt"></div></div>`);const bt=box.querySelector('.bt'),mp=(q=>window.MP?MP.parse(q):{text:q,items:[],tags:''})(window.PX?PX.eat(cur,fin.text||''):(fin.text||'')),tx=mp.text,step=Math.max(2,Math.ceil(tx.length/28));
   if(fin.image)bt.innerHTML=`<img src="${fin.image}">`;
   const tt=document.createElement('div');bt.appendChild(tt);if(VR&&window.speechSynthesis)bt.style.display='none';
-  const CH=[],FD=520,fade=()=>{const now=performance.now();while(CH.length&&now-CH[0].t>FD)CH.shift();if(!CH.length)return;
+  const CH=[],FD=220,fade=()=>{const now=performance.now();while(CH.length&&now-CH[0].t>FD)CH.shift();if(!CH.length)return;
    const w=document.createTreeWalker(tt,NodeFilter.SHOW_TEXT),L=[];let n;while(n=w.nextNode())L.push(n);let off=0;
    for(const nd of L){const len=nd.nodeValue.length,end=off+len;
     if(!(nd.parentElement&&nd.parentElement.closest('pre,table'))){let cur=nd,used=0;
@@ -1530,7 +1530,7 @@ window.__BS_API={
 @media (prefers-reduced-motion:reduce){.lm.in{animation:none}}
 </style>
 <style>/* bot status chat = 20px */.stt svg{width:20px!important;height:20px!important;flex:none}</style>
-<style>@keyframes fwin{from{opacity:0}to{opacity:1}}.fw{animation:fwin .52s ease-out both}</style>
+<style>@keyframes fwin{from{opacity:0}to{opacity:1}}.fw{animation:fwin .22s ease-out both}</style>
 <style>/* Ruang Bot: judul tengah, panah besar, sumber = ikon, status di baris nama */
 #rs .rh{position:relative}
 #rs .rh>b{position:absolute;left:50%;transform:translateX(-50%);max-width:50%;text-align:center;pointer-events:none}
@@ -1822,7 +1822,7 @@ async function callChat(input,init,body){
 }
 /* ===== INFO TERBARU: deteksi permintaan "terbaru" -> aturan cari wajib + mode pencarian otomatis ===== */
 const XSEGAR={
-  RE:/(terbaru|terkini|termutakhir|mutakhir|paling\s+baru|terupdate|up\s?to\s?date|\bupdate(an)?\b|\bberita\b|kabar\s+(terbaru|terkini)|hari\s+ini|saat\s+ini|baru\s+saja|barusan|kemarin|minggu\s+ini|bulan\s+ini|tahun\s+ini|trending|\bviral\b|\blatest\b|\bnewest\b|\bbreaking\b|\bnews\b|\bcurrent(ly)?\b|\btoday\b|this\s+(week|month|year)|\brilis\b|\bdirilis\b|\breleased?\b|klasemen|\bskor\b|hasil\s+pertandingan|harga\s+(saham|emas|bitcoin|btc|kripto|crypto|minyak|bbm|dolar|bensin)|(siapa|apa|berapa|bagaimana|gimana)[^.?!\n]{0,60}\bsekarang\b)/i,
+  RE:/(terbaru|terkini|termutakhir|mutakhir|paling\s+baru|terupdate|up\s?to\s?date|\bberita\b|kabar\s+(terbaru|terkini)|baru\s+saja|barusan|kemarin|minggu\s+ini|bulan\s+ini|tahun\s+ini|trending|\bviral\b|\blatest\b|\bnewest\b|\bbreaking\b|\bnews\b|\bcurrent(ly)?\b|this\s+(week|month|year)|\brilis\b|\bdirilis\b|\breleased?\b|klasemen|\bskor\b|hasil\s+pertandingan|harga\s+(saham|emas|bitcoin|btc|kripto|crypto|minyak|bbm|dolar|bensin)|(siapa|apa|berapa|bagaimana|gimana)[^.?!\n]{0,60}\bsekarang\b)/i,
   lastUser(b){const ms=Array.isArray(b&&b.messages)?b.messages:[];for(let i=ms.length-1;i>=0;i--){const m=ms[i];if(m&&m.role==='user'){const c=m.content;return typeof c==='string'?c:Array.isArray(c)?c.map(x=>(x&&x.text)||'').join(' '):''}}return''},
   need(b){try{if(!b||b.image_gen||b.image)return false;const u=this.lastUser(b);if(!u||u.length>400)return false;if(u.indexOf('[HASIL ALAT')===0)return false;return this.RE.test(u)}catch(e){return false}},
   sys(){let tgl='',bt='';try{const tz=Intl.DateTimeFormat().resolvedOptions().timeZone;tgl=new Intl.DateTimeFormat('id-ID',{dateStyle:'full',timeZone:tz}).format(new Date());bt=new Intl.DateTimeFormat('id-ID',{month:'long',year:'numeric',timeZone:tz}).format(new Date())}catch(e){tgl=new Date().toDateString();bt=String(new Date().getFullYear())}
@@ -1836,7 +1836,7 @@ const ANTI_HALU=`
 
 [ATURAN KEJUJURAN]
 - Jangan mengarang nama model, angka, tanggal, nama orang, atau kutipan. Jika tidak yakin, katakan tidak yakin.
-- Untuk berita, harga, skor, atau kejadian terbaru: hanya sebutkan fakta yang ada di hasil alat atau hasil pencarian. Sebutkan sumber dan tanggalnya.
+- Untuk berita, harga, skor, atau kejadian terbaru: hanya tulis fakta dari hasil alat, dan tiap poin WAJIB memuat nama sumber dan tanggal asli berita (bukan tanggal hari ini). Poin tanpa sumber jangan ditulis. Jangan mencampur berita kota/daerah lain atau berita lama sebagai berita baru. Jika yang ditemukan sedikit, tulis sedikit saja; jangan menambah poin dari ingatan.
 - Jika hasil pencarian kosong atau tidak relevan, bilang "saya tidak menemukan informasi yang jelas" dan jangan menebak.
 - Bedakan dengan jelas antara fakta yang terverifikasi dan dugaan pribadi.`;
   const MAINC=!body.image_gen&&String(body.system||'').includes('[Info perangkat pengguna]');
@@ -1844,7 +1844,7 @@ const ANTI_HALU=`
   if(MAINC&&XSEGAR.need(body)){body.system+=XSEGAR.sys();body.mode='on'}
   body.system+=(typeof window.galeriSysFor==='function'?window.galeriSysFor(body):'');
   let fin=null;
-  const MAXSTEP=25,SEEN=new Map();
+  const MAXSTEP=15,SEEN=new Map();
   try{
     for(let step=0;step<MAXSTEP;step++){
       fin=await callChat(input,init,body);
