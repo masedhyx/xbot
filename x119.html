@@ -1815,6 +1815,42 @@ const XSEGAR={
   sys(){let tgl='',bt='';try{const tz=Intl.DateTimeFormat().resolvedOptions().timeZone;tgl=new Intl.DateTimeFormat('id-ID',{dateStyle:'full',timeZone:tz}).format(new Date());bt=new Intl.DateTimeFormat('id-ID',{month:'long',year:'numeric',timeZone:tz}).format(new Date())}catch(e){tgl=new Date().toDateString();bt=String(new Date().getFullYear())}
     return `\n\n[ATURAN INFO TERBARU]\nHari ini ${tgl}. Pengetahuan bawaanmu sudah usang untuk hal-hal terbaru.\n- Pengguna menanyakan hal terbaru: WAJIB pakai alat search dulu. Jangan menjawab dari ingatan.\n- Cari SATU kali dengan kata kunci lengkap, sertakan bulan dan tahun sekarang (contoh: "iPhone terbaru ${bt}"). Cari ulang hanya bila hasil pertama kosong atau tidak relevan.\n- Utamakan situs resmi dan berita bertanggal paling baru; buka satu sumber dengan read hanya bila cuplikan belum cukup.\n- Cek tanggal tiap sumber. Kalau sumber terbarunya sudah lama (lebih dari 1-2 bulan untuk topik yang cepat berubah), katakan terus terang.\n- Kalau hasil pencarian bertentangan dengan ingatanmu, percayai hasil pencarian.\n- Tulis tanggal sumber di jawaban. Kalau tidak yakin itu yang paling baru, bilang "ini yang terbaru yang saya temukan".\n- Daftar ditulis dengan poin "-" yang konsisten; jangan memakai tanda * untuk huruf miring.`}
 };
+/* ===== PATCH v3 (di dalam scope yang sama dengan XSEGAR) ===== */
+(function(){
+  const NOWEB=/\b(cuaca|hujan|suhu|prakiraan|cerah|mendung)\b|\bjam\s+(berapa|sekarang|tepat)\b|\bpukul\s+berapa\b|\btahun\s+(ini|berapa|sekarang)\b|\btanggal\s+(hari\s+ini|berapa|sekarang)\b|\bhari\s+apa\s+(ini|sekarang)\b/i;
+
+  XSEGAR.RE=/(terbaru|terkini|termutakhir|mutakhir|paling\s+baru|terupdate|up\s?to\s?date|\bberita\b|kabar\s+(terbaru|terkini)|baru\s+saja|barusan|minggu\s+ini|bulan\s+ini|hari\s+ini|trending|\bviral\b|\blatest\b|\bnewest\b|\bbreaking\b|\bnews\b|\bcurrent(ly)?\b|this\s+(week|month|year)|\brilis\b|\bdirilis\b|\breleased?\b|klasemen|\bskor\b|hasil\s+pertandingan|harga\s+(saham|emas|bitcoin|btc|kripto|crypto|minyak|bbm|dolar|bensin)|\bmodel\b|\bversi\b|\bdaftar\b|sebutkan\s+semua|\b(siapa|apa|berapa|bagaimana|gimana)\b[^.?!\n]{0,60}\bsekarang\b)/i;
+
+  // Cuaca, jam, tanggal, tahun: tidak memaksa search (cuaca lewat alat weather, jam dari perangkat)
+  const origNeed=XSEGAR.need.bind(XSEGAR);
+  XSEGAR.need=function(b){
+    try{
+      if(!origNeed(b)) return false;
+      return !NOWEB.test(XSEGAR.lastUser(b));
+    }catch(e){ return false; }
+  };
+
+  // Aturan ringkas: tool hanya bila perlu
+  XSEGAR.sys=function(){
+    let tgl='';
+    try{ tgl=new Intl.DateTimeFormat('id-ID',{dateStyle:'full',timeZone:Intl.DateTimeFormat().resolvedOptions().timeZone}).format(new Date()) }catch(e){ tgl=new Date().toDateString() }
+    return `
+
+[ATURAN INFO TERBARU]
+Hari ini ${tgl}.
+- Jawab langsung tanpa alat untuk konsep, sejarah, coding, matematika, dan penjelasan umum.
+- Pakai search HANYA bila jawaban bergantung pada info terbaru (berita, harga, skor, rilis, versi, daftar model AI). Maksimal 1 kali; ulang hanya jika hasil kosong.
+- Pilih hasil paling baru dari sumber resmi atau media kredibel, cek tanggalnya. Hindari forum, blog tanpa tanggal, dan agregator.
+- Setiap fakta sebut sumber dan tanggal publikasinya. Tanpa itu, jangan tulis faktanya.
+- Jika tanggal tidak jelas, tulis: "Ini yang terbaru yang saya temukan, tanggalnya belum pasti."
+- Jika tidak ada info jelas, tulis: "Saya tidak menemukan informasi yang jelas."
+- Jangan membuat URL sendiri. Jawab singkat: inti dulu, lalu sumber.`;
+  };
+
+  // Panel bot latar belakang: mati saat panel tertutup, hidup saat panel dibuka (body.o)
+  window.winOn=function(){ return false; };
+})();
+/* ===== AKHIR PATCH v3 ===== */
 window.fetch=async(input,init={})=>{
   const url=typeof input==='string'?input:(input&&input.url)||'';
   if(url!==CHAT||!init.body) return origFetch(input,init);
