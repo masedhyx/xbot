@@ -331,9 +331,8 @@ function showChat(){app.classList.add('has-chat')}
 function buildTurn(msg){
   const a=document.createElement('div'); a.className='a';
   if(msg.think!=null){
-    const duration=Math.max(1,Number(msg.secs)||1);
     a.insertAdjacentHTML('beforeend',
-      `<div class="think-h done"><span>Berpikir selama ${duration} detik</span>${CHEV}</div><div class="think-body collapsed"><div class="inner"></div></div>`);
+      `<div class="think-h done"><span>Memikirkan</span>${CHEV}</div><div class="think-body collapsed"><div class="inner"></div></div>`);
     a.querySelector('.inner').textContent=msg.think;
     const h=a.querySelector('.think-h'), b=a.querySelector('.think-body');
     h.onclick=()=>b.classList.toggle('collapsed');
