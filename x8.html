@@ -1,0 +1,776 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#020200">
+<title>Obrolan baru</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%234d6bfe'/%3E%3Cpath d='M16 7l2.2 6.8H25l-5.5 4 2.1 6.7L16 20.5 10.4 24.5l2.1-6.7L7 13.8h6.8z' fill='white'/%3E%3C/svg%3E">
+<style>
+:root{
+  --bg:#020200; --panel:#1e1b1e; --line:#2f2c2f; --bubble:#2b282b;
+  --text:#f2f2f3; --muted:#8c8a8d; --blue:#4d6bfe; --chip:#1b2340;
+  --code:#1b191c;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{height:100%;margin:0;background:var(--bg);color:var(--text);
+  font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+  -webkit-font-smoothing:antialiased;overscroll-behavior:none}
+button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:pointer}
+svg{display:block}
+#app{position:relative;height:100dvh;max-width:520px;margin:0 auto;overflow:hidden;display:flex;flex-direction:column}
+
+/* top bar */
+.top{position:absolute;z-index:20;top:0;left:0;right:0;padding:max(14px,env(safe-area-inset-top)) 16px 10px;
+  display:flex;align-items:center;justify-content:space-between;pointer-events:none;
+  background:linear-gradient(var(--bg) 55%,rgba(2,2,0,0))}
+.top>*{pointer-events:auto}
+.pill{height:42px;border-radius:21px;background:#242124;display:flex;align-items:center;justify-content:center}
+.pill.one{width:42px}
+.pill.two{width:86px;justify-content:space-between;padding:0 11px}
+.pill svg{width:22px;height:22px}
+.title{position:absolute;left:74px;font-size:17px;font-weight:600;opacity:0;transition:opacity .2s;white-space:nowrap;max-width:46%;overflow:hidden;text-overflow:ellipsis}
+.has-chat .title{opacity:1}
+
+/* empty state */
+.empty{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;padding-bottom:40px}
+.empty h1{margin:0;font-size:19px;font-weight:600}
+.has-chat .empty{display:none}
+.logo{width:110px;height:110px;object-fit:contain}
+
+/* chat */
+#chat{flex:1;overflow-y:auto;padding:74px 16px 190px;display:none;scrollbar-width:none}
+#chat::-webkit-scrollbar{display:none}
+.has-chat #chat{display:block}
+.u{display:flex;justify-content:flex-end;margin:6px 0 22px}
+.u div{background:var(--bubble);padding:11px 16px;border-radius:20px;max-width:82%;font-size:17px;line-height:1.35;white-space:pre-wrap;word-break:break-word}
+.a{padding:0 8px;font-size:17px;line-height:1.55}
+.think-h{display:flex;align-items:center;gap:6px;color:var(--muted);font-size:17px;margin:0 0 10px;cursor:pointer;user-select:none}
+.think-h svg{width:14px;height:14px}
+.think-h.done svg{transform:rotate(0)}
+.think-body{border-left:2px solid #34313a;margin:0 0 14px 6px;padding-left:16px;color:var(--muted);font-size:16.5px;line-height:1.5;position:relative}
+.think-body.live{max-height:150px;overflow:hidden;
+  -webkit-mask-image:linear-gradient(transparent 0,#000 28%,#000 78%,transparent 100%);mask-image:linear-gradient(transparent 0,#000 28%,#000 78%,transparent 100%)}
+.think-body.collapsed{display:none}
+.think-body p{margin:0 0 10px}
+.think-body .inner{white-space:pre-wrap}
+.md p{margin:0 0 14px}
+.md h1,.md h2,.md h3{margin:18px 0 10px;line-height:1.3}
+.md h1{font-size:22px}.md h2{font-size:20px}.md h3{font-size:18px}
+.md ul,.md ol{margin:0 0 14px;padding-left:24px}
+.md li{margin:4px 0}
+.md code.i{background:#2a272b;padding:2px 6px;border-radius:6px;font-family:ui-monospace,"SF Mono",Menlo,monospace;font-size:.88em}
+.md strong{font-weight:700}
+.cursor{display:inline-block;width:9px;height:9px;border-radius:50%;background:var(--text);margin-left:3px;vertical-align:middle;animation:bl 1s infinite}
+@keyframes bl{50%{opacity:.25}}
+
+.cb{background:var(--code);border:1px solid #262327;border-radius:14px;margin:4px 0 16px;overflow:hidden}
+.cb-h{display:flex;justify-content:space-between;align-items:center;padding:13px 14px 11px;font-size:14px;color:#c9c7ca;font-family:ui-monospace,"SF Mono",Menlo,monospace}
+.cb-h button{display:flex;align-items:center;gap:5px;color:var(--muted);font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text",sans-serif;font-size:14px}
+.cb-h button svg{width:15px;height:15px}
+.cb pre{margin:0;padding:12px 14px 16px;border-top:1px solid #2a272b;overflow-x:hidden;white-space:pre-wrap;word-break:break-word;
+  font-family:ui-monospace,"SF Mono",Menlo,monospace;font-size:13.5px;line-height:1.5;color:#e6e4e8;tab-size:2}
+.tk-t{color:#6aa6ff}.tk-a{color:#e4a0ff}.tk-s{color:#a8d18a}.tk-c{color:#7d7a80}.tk-k{color:#6aa6ff}.tk-n{color:#e8b86d}
+
+/* scroll button */
+#down{position:absolute;z-index:15;right:16px;bottom:128px;width:44px;height:44px;border-radius:50%;
+  background:var(--bg);border:2px solid var(--blue);display:none;align-items:center;justify-content:center}
+#down.show{display:flex}
+#down svg{width:20px;height:20px;color:var(--blue)}
+
+/* composer */
+.composer{position:absolute;z-index:20;left:0;right:0;bottom:0;padding:0 14px max(14px,env(safe-area-inset-bottom));
+  background:linear-gradient(rgba(2,2,0,0),var(--bg) 22%)}
+.box{background:var(--panel);border:1px solid var(--line);border-radius:26px;padding:14px 16px 12px}
+#inp{width:100%;background:none;border:0;outline:0;resize:none;color:var(--text);font:inherit;font-size:17px;line-height:1.35;
+  height:26px;max-height:140px;display:block;padding:0}
+#inp::placeholder{color:#7b787c}
+.row{display:flex;align-items:center;justify-content:space-between;margin-top:14px}
+.chips{display:flex;gap:10px}
+.chip{height:34px;padding:0 13px;border-radius:17px;background:var(--chip);color:#5b7bff;border:1px solid #27345f;display:flex;align-items:center;gap:7px;font-size:15.5px;font-weight:600}
+.chip svg{width:19px;height:19px}
+.chip.off{background:transparent;border-color:#33303a;color:#9a98a0}
+.chip.on{background:#26346b;border-color:#4d6bfe;color:#8aa2ff}
+.acts{display:flex;gap:10px;align-items:center}
+.ic{width:36px;height:36px;display:flex;align-items:center;justify-content:center}
+.ic svg{width:27px;height:27px}
+#send{width:34px;height:34px;border-radius:50%;background:var(--blue);display:none;align-items:center;justify-content:center;margin-right:1px}
+#send svg{width:19px;height:19px;color:#fff}
+.typing #send{display:flex}.typing #voice{display:none}
+.busy #send{display:flex}.busy #voice{display:flex}
+.busy #voice{display:flex}
+
+/* drawer */
+#scrim{position:absolute;inset:0;background:rgba(0,0,0,.55);z-index:40;opacity:0;pointer-events:none;transition:opacity .25s}
+#drawer{position:absolute;z-index:41;top:0;bottom:0;left:0;width:82%;max-width:340px;background:#1a171a;transform:translateX(-102%);transition:transform .28s ease;
+  padding:max(18px,env(safe-area-inset-top)) 16px 18px;display:flex;flex-direction:column}
+.drawer-open #scrim{opacity:1;pointer-events:auto}
+.drawer-open #drawer{transform:none}
+#drawer h3{margin:8px 6px 14px;font-size:15px;color:var(--muted);font-weight:500}
+#hist{flex:1;overflow:auto}
+.hi{display:flex;align-items:center;justify-content:space-between;padding:12px 10px;border-radius:12px;font-size:16px;gap:8px}
+.hi.cur{background:#262327}
+.hi span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1}
+.hi b{color:var(--muted);font-weight:400;font-size:20px;padding:0 6px}
+.dbtn{margin-top:10px;height:46px;border-radius:14px;background:#262327;font-size:16px;display:flex;align-items:center;justify-content:center;gap:8px}
+
+/* settings modal */
+#modal{position:absolute;inset:0;z-index:60;background:rgba(0,0,0,.6);display:none;align-items:flex-end}
+#modal.show{display:flex}
+.sheet{width:100%;max-height:90dvh;overflow-y:auto;overscroll-behavior:contain;background:#1e1b1e;border-radius:24px 24px 0 0;padding:22px 20px max(22px,env(safe-area-inset-bottom))}
+.sheet h2{margin:0 0 6px;font-size:19px}
+.sheet p{margin:0 0 16px;font-size:14px;color:var(--muted);line-height:1.45}
+.sheet label{display:block;font-size:13px;color:var(--muted);margin:12px 0 6px}
+.sheet input{width:100%;height:44px;border-radius:12px;border:1px solid var(--line);background:#161316;color:var(--text);padding:0 12px;font-size:15px;outline:0}
+.sheet input:focus{border-color:var(--blue)}
+.sheet .btns{display:flex;gap:10px;margin-top:14px;padding-top:14px;position:sticky;bottom:0;background:#1e1b1e}
+.sheet .btns button{flex:1;height:46px;border-radius:14px;background:#2a272b;font-size:16px}
+.sheet .btns .pri{background:var(--blue);font-weight:600}
+.toast{position:absolute;z-index:80;left:50%;top:78px;transform:translateX(-50%);background:#333035;padding:10px 16px;border-radius:12px;font-size:14px;opacity:0;pointer-events:none;transition:opacity .2s}
+.toast.show{opacity:1}
+.toast{width:max-content;max-width:88%;text-align:center}
+.sec{margin:22px 0 0;font-size:12.5px;font-weight:600;color:#c9c7ca;letter-spacing:.04em;text-transform:uppercase}
+.kl{display:flex;align-items:center;justify-content:space-between;margin-top:14px}
+.sheet .kl label{margin:0}
+.kl+input{margin-top:4px}
+.dotb{width:32px;height:32px;display:flex;align-items:center;justify-content:center;margin:-6px -8px -6px 0}
+.dot{width:13px;height:13px;border-radius:50%;background:#6b686d;display:block;flex:none}
+.dot.ok{background:#2ecc71;box-shadow:0 0 8px #2ecc7188}
+.dot.bad{background:#ff4d4f;box-shadow:0 0 8px #ff4d4f88}
+.dot.load{background:#e8b84d;animation:bl .8s infinite}
+.mlist{margin-top:8px}
+.mrow{display:flex;align-items:center;gap:10px;padding:9px 0 9px 2px;border-top:1px solid var(--line);font-size:15px;cursor:pointer}
+.mrow .ml{flex:1}
+.mrow .ck{width:18px;height:18px;opacity:0;flex:none}
+.mrow .ck svg{width:18px;height:18px}
+.mrow.sel .ck{opacity:1}
+.legend{display:flex;flex-wrap:wrap;gap:4px 14px;font-size:12.5px;color:var(--muted);margin:0}
+.legend span{display:flex;align-items:center;gap:6px}
+.legend .dot{width:9px;height:9px;box-shadow:none}
+.md a{color:#7f95ff;text-decoration:none;word-break:break-all}
+.srch{color:var(--muted)}
+</style>
+</head>
+<body>
+<div id="app">
+
+  <div class="top">
+    <button class="pill one" id="menu" aria-label="Menu">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M5 8h14M5 16h8"/></svg>
+    </button>
+    <div class="title" id="ttl">Obrolan baru</div>
+    <div class="pill two">
+      <button id="mute" aria-label="Suara">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9.5v5h3.5L12 18.5v-13L7.5 9.5z"/><path id="mx" d="M16 9.5l5 5M21 9.5l-5 5"/></svg>
+      </button>
+      <button id="new" aria-label="Obrolan baru">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M12 3.2a8.8 8.8 0 1 0 8.8 8.8" /><path d="M12 8.3v7.4M8.3 12h7.4"/><path d="M19 3.5v4M17 5.5h4"/></svg>
+      </button>
+    </div>
+  </div>
+
+  <div class="empty">
+    <img class="logo" alt="Logo" src="data:image/jpeg;base64,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">
+    <h1>Mau mulai dari mana?</h1>
+  </div>
+
+  <div id="chat"></div>
+
+  <button id="down" aria-label="Ke bawah"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9.5l6 6 6-6"/></svg></button>
+
+  <div class="composer" id="comp">
+    <div class="box">
+      <textarea id="inp" rows="1" placeholder="Ketik pesan atau tahan untuk bicara" enterkeyhint="send"></textarea>
+      <div class="row">
+        <div class="chips">
+          <button class="chip on" id="cThink">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><circle cx="12" cy="12" r="1.6" fill="currentColor"/><ellipse cx="12" cy="12" rx="9" ry="3.8"/><ellipse cx="12" cy="12" rx="9" ry="3.8" transform="rotate(60 12 12)"/><ellipse cx="12" cy="12" rx="9" ry="3.8" transform="rotate(120 12 12)"/></svg>Berpikir</button>
+          <button class="chip on" id="cSearch">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><ellipse cx="12" cy="12" rx="3.8" ry="9"/><path d="M3 12h18"/></svg>Cari</button>
+        </div>
+        <div class="acts">
+          <button class="ic" id="plus" aria-label="Tambah"><svg viewBox="0 0 28 28" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="14" cy="14" r="11"/><path d="M14 9v10M9 14h10"/></svg></button>
+          <button class="ic" id="voice" aria-label="Suara"><svg viewBox="0 0 28 28" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="14" cy="14" r="11"/><circle cx="12" cy="14" r="1.3" fill="currentColor" stroke="none"/><path d="M15.6 11.4a4 4 0 0 1 0 5.2M18.2 9.4a7 7 0 0 1 0 9.2"/></svg></button>
+          <button id="send" aria-label="Kirim"></button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="scrim"></div>
+  <aside id="drawer">
+    <h3>Obrolan</h3>
+    <div id="hist"></div>
+    <button class="dbtn" id="dNew">+ Obrolan baru</button>
+    <button class="dbtn" id="dSet">Pengaturan API</button>
+  </aside>
+
+  <div id="modal"><div class="sheet">
+    <h2>Pengaturan API</h2>
+    <p>Isi API key Gemini dan/atau Groq. Jika satu model atau penyedia error (kuota habis, model tidak cocok), bot otomatis pindah ke model berikutnya. Ketuk titik bulat di samping tiap key untuk mengetes. Kunci hanya disimpan di browser Anda.</p>
+    <div id="setBody"></div>
+    <div class="btns"><button id="sCancel">Batal</button><button class="pri" id="sSave">Simpan</button></div>
+  </div></div>
+  <div class="toast" id="toast"></div>
+</div>
+
+<script>
+(()=>{
+const $=s=>document.querySelector(s), app=$('#app'), chat=$('#chat'), inp=$('#inp');
+const SEND_ICON='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M5.5 11.5L12 5l6.5 6.5"/></svg>';
+const STOP_ICON='<svg viewBox="0 0 24 24" fill="currentColor"><rect x="5.5" y="5.5" width="13" height="13" rx="2.6"/></svg>';
+const CHEV='<svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 5L7 2.5 9.5 5M4.5 9L7 11.5 9.5 9"/></svg>';
+const CHEV_R='<svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 2.5L9.5 7 5 11.5"/></svg>';
+const COPY='<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"><rect x="5.2" y="5.2" width="8.3" height="8.3" rx="1.8"/><path d="M10.8 3.7v-.2A1.8 1.8 0 0 0 9 1.7H4.5a1.8 1.8 0 0 0-1.8 1.8V8A1.8 1.8 0 0 0 4.5 9.8h.2"/></svg>';
+const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+const esc=s=>s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+const store={get(k,d){try{return JSON.parse(localStorage.getItem(k))??d}catch{return d}},set(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch{}}};
+
+let convos=store.get('convos',[]), cur=null, busy=false, abort=null, stick=true;
+let useThink=true, useSearch=true;
+
+/* ---------- helpers ---------- */
+function toast(t,ms){const e=$('#toast');e.textContent=t;e.classList.add('show');clearTimeout(toast.t);toast.t=setTimeout(()=>e.classList.remove('show'),ms||1800)}
+function setSendIcon(){$('#send').innerHTML=busy?STOP_ICON:SEND_ICON}
+function syncState(){
+  app.classList.toggle('busy',busy);
+  app.classList.toggle('typing',!busy&&inp.value.trim().length>0);
+  setSendIcon();
+  inp.placeholder='Ketik pesan atau tahan untuk bicara';
+}
+function grow(){inp.style.height='26px';inp.style.height=Math.min(inp.scrollHeight,140)+'px'}
+function scrollBottom(force){if(force||stick)chat.scrollTop=chat.scrollHeight}
+chat.addEventListener('scroll',()=>{
+  const gap=chat.scrollHeight-chat.scrollTop-chat.clientHeight;
+  stick=gap<60; $('#down').classList.toggle('show',gap>140);
+});
+$('#down').onclick=()=>{stick=true;chat.scrollTo({top:chat.scrollHeight,behavior:'smooth'})};
+
+/* ---------- markdown ---------- */
+function inline(s){
+  s=esc(s);
+  s=s.replace(/`([^`]+)`/g,'<code class="i">$1</code>');
+  s=s.replace(/\*\*([^*]+)\*\*/g,'<strong>$1</strong>');
+  s=s.replace(/\[([^\]]+)\]\((https?:\/\/[^)\s"]+)\)/g,'<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>');
+  return s;
+}
+function hl(code,lang){
+  const isH=/html|xml|svg/.test(lang);
+  const re=isH
+    ?/(&lt;!--[\s\S]*?--&gt;)|(&lt;\/?)([a-zA-Z][\w-]*|!DOCTYPE)|(\s)([\w:-]+)(=)|("[^"\n]*"|'[^'\n]*')|(&gt;)/g
+    :/(\/\/[^\n]*|#[^\n]*)|()()()()()("[^"\n]*"|'[^'\n]*')()|\b(const|let|var|function|return|if|else|for|while|def|class|import|from|new|await|async|true|false|null)\b|\b(\d+)\b/g;
+  const e=esc(code);
+  if(isH){
+    return e.replace(re,(m,c,o,t,sp,an,eq,st)=>{
+      if(c)return '<i class="tk-c">'+c+'</i>';
+      if(o)return o+'<i class="tk-t">'+t+'</i>';
+      if(an)return sp+'<i class="tk-a">'+an+'</i>'+eq;
+      if(st)return '<i class="tk-s">'+st+'</i>';
+      return m;
+    });
+  }
+  return e.replace(re,(m,c,a1,a2,a3,a4,a5,st,a6,kw,num)=>{
+    if(c)return '<i class="tk-c">'+c+'</i>';
+    if(st)return '<i class="tk-s">'+st+'</i>';
+    if(kw)return '<i class="tk-k">'+kw+'</i>';
+    if(num)return '<i class="tk-n">'+num+'</i>';
+    return m;
+  });
+}
+function render(md,streaming){
+  const out=[]; const lines=md.split('\n'); let i=0, para=[], list=null;
+  const flushP=()=>{if(para.length){out.push('<p>'+inline(para.join(' '))+'</p>');para=[]}};
+  const flushL=()=>{if(list){out.push(`<${list.t}>`+list.i.map(x=>'<li>'+inline(x)+'</li>').join('')+`</${list.t}>`);list=null}};
+  while(i<lines.length){
+    const L=lines[i];
+    const f=L.match(/^```(\w*)/);
+    if(f){
+      flushP();flushL();
+      const lang=f[1]||'text'; const buf=[]; i++;
+      let closed=false;
+      while(i<lines.length){ if(/^```/.test(lines[i])){closed=true;break} buf.push(lines[i]);i++ }
+      const code=buf.join('\n');
+      out.push(`<div class="cb"><div class="cb-h"><span>${esc(lang)}</span><button class="cp">${COPY}Salin</button></div><pre data-raw="${encodeURIComponent(code)}">${hl(code,lang)}</pre></div>`);
+      i++; continue;
+    }
+    let m;
+    if((m=L.match(/^(#{1,3})\s+(.*)/))){flushP();flushL();out.push(`<h${m[1].length}>${inline(m[2])}</h${m[1].length}>`)}
+    else if((m=L.match(/^\s*[-*]\s+(.*)/))){flushP();if(!list||list.t!=='ul'){flushL();list={t:'ul',i:[]}}list.i.push(m[1])}
+    else if((m=L.match(/^\s*\d+\.\s+(.*)/))){flushP();if(!list||list.t!=='ol'){flushL();list={t:'ol',i:[]}}list.i.push(m[1])}
+    else if(!L.trim()){flushP();flushL()}
+    else{flushL();para.push(L)}
+    i++;
+  }
+  flushP();flushL();
+  return out.join('')+(streaming?'<span class="cursor"></span>':'');
+}
+chat.addEventListener('click',e=>{
+  const b=e.target.closest('.cp'); if(!b)return;
+  const raw=decodeURIComponent(b.closest('.cb').querySelector('pre').dataset.raw);
+  (navigator.clipboard?navigator.clipboard.writeText(raw):Promise.reject()).catch(()=>{
+    const t=document.createElement('textarea');t.value=raw;document.body.appendChild(t);t.select();try{document.execCommand('copy')}catch{}t.remove();
+  });
+  const old=b.innerHTML; b.innerHTML=COPY+'Tersalin'; setTimeout(()=>b.innerHTML=old,1400);
+});
+
+/* ---------- conversation view ---------- */
+function persist(){store.set('convos',convos.slice(0,60))}
+function showChat(){app.classList.add('has-chat')}
+function buildTurn(msg){
+  const a=document.createElement('div'); a.className='a';
+  if(msg.think!=null){
+    a.insertAdjacentHTML('beforeend',
+      `<div class="think-h done">Berpikir selama ${msg.secs||1} detik ${CHEV_R}</div><div class="think-body collapsed"><div class="inner"></div></div>`);
+    a.querySelector('.inner').textContent=msg.think;
+    const h=a.querySelector('.think-h'), b=a.querySelector('.think-body');
+    h.onclick=()=>b.classList.toggle('collapsed');
+  }
+  const md=document.createElement('div'); md.className='md'; md.innerHTML=render(msg.text||'');
+  a.appendChild(md); return a;
+}
+function openConvo(c){
+  cur=c; chat.innerHTML='';
+  $('#ttl').textContent=c.title||'Obrolan baru';
+  if(c.msgs.length){showChat()}else app.classList.remove('has-chat');
+  for(const m of c.msgs){
+    if(m.role==='user'){chat.insertAdjacentHTML('beforeend','<div class="u"><div></div></div>');chat.lastChild.firstChild.textContent=m.text}
+    else chat.appendChild(buildTurn(m));
+  }
+  stick=true; requestAnimationFrame(()=>scrollBottom(true));
+  closeDrawer(); renderHist();
+}
+function newChat(){
+  if(busy&&abort)abort();
+  cur={id:Date.now(),title:'Obrolan baru',msgs:[]};
+  chat.innerHTML=''; app.classList.remove('has-chat'); $('#ttl').textContent='Obrolan baru';
+  inp.value='';grow();syncState();closeDrawer();
+}
+function renderHist(){
+  const h=$('#hist'); h.innerHTML='';
+  if(!convos.length){h.innerHTML='<div style="color:var(--muted);padding:10px;font-size:15px">Belum ada obrolan.</div>';return}
+  for(const c of convos){
+    const d=document.createElement('div'); d.className='hi'+(cur&&cur.id===c.id?' cur':'');
+    d.innerHTML='<span></span><b title="Hapus">×</b>'; d.firstChild.textContent=c.title;
+    d.firstChild.onclick=()=>openConvo(c);
+    d.lastChild.onclick=()=>{convos=convos.filter(x=>x!==c);persist();if(cur===c)newChat();renderHist()};
+    h.appendChild(d);
+  }
+}
+
+/* ---------- demo brain (offline mode) ---------- */
+const NL='\n';
+const DEMO_HTML=String.raw`<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="Nusantara Digital — Studio kreatif digital yang membantu bisnis tumbuh di era digital.">
+<meta name="author" content="Nusantara Digital">
+<title>Nusantara Digital — Studio Kreatif &amp; Teknologi</title>
+<style>
+  :root{--bg:#ffffff;--fg:#14161a;--accent:#2f5bff;--card:#f4f6fb}
+  body.dark{--bg:#0e1014;--fg:#eceff4;--card:#171a21}
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{scroll-behavior:smooth}
+  body{font-family:system-ui,sans-serif;background:var(--bg);color:var(--fg);line-height:1.6}
+  nav{position:sticky;top:0;display:flex;justify-content:space-between;align-items:center;padding:14px 24px;background:var(--bg);border-bottom:1px solid #8883}
+  .hero{padding:96px 24px;text-align:center}
+  .hero h1{font-size:clamp(2rem,6vw,3.6rem)}
+  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px;padding:24px}
+  .card{background:var(--card);padding:24px;border-radius:16px}
+  details{padding:14px 24px;border-bottom:1px solid #8883}
+  #top{position:fixed;right:20px;bottom:20px;display:none}
+</style>
+</head>
+<body>
+<div id="loader">Memuat...</div>
+<nav>
+  <strong>Nusantara Digital</strong>
+  <button id="mode">Mode gelap</button>
+</nav>
+<header class="hero">
+  <h1>Kami membangun produk digital yang tumbuh bersama bisnis Anda</h1>
+  <p>Desain, pengembangan web, dan strategi digital dari Jakarta.</p>
+</header>
+<section class="grid">
+  <div class="card"><h3>Desain UI/UX</h3><p>Antarmuka yang jelas dan mudah dipakai.</p></div>
+  <div class="card"><h3>Aplikasi Web</h3><p>Cepat, aman, dan siap berkembang.</p></div>
+  <div class="card"><h3>Pemasaran Digital</h3><p>Jangkau pelanggan yang tepat.</p></div>
+</section>
+<section>
+  <details><summary>Berapa lama proses pengerjaan?</summary><p>Rata-rata 4–8 minggu.</p></details>
+  <details><summary>Apakah ada layanan perawatan?</summary><p>Ya, tersedia paket bulanan.</p></details>
+</section>
+<footer class="hero"><p>© 2026 Nusantara Digital</p></footer>
+<button id="top">↑</button>
+<script>
+  document.getElementById('mode').onclick=()=>document.body.classList.toggle('dark');
+  window.addEventListener('load',()=>document.getElementById('loader').remove());
+  const t=document.getElementById('top');
+  window.onscroll=()=>t.style.display=scrollY>400?'block':'none';
+  t.onclick=()=>scrollTo({top:0});
+<\/script>
+</body>
+</html>`.replace(/<\\\/script>/g,'<\/script>');
+
+function demoPlan(q){
+  const lq=q.toLowerCase();
+  if(/html|web|situs|halaman|landing/.test(lq)){
+    const long=/panjang|long|lengkap/.test(lq);
+    return {
+      think:`User asks in Indonesian: "${q}". They want a ${long?'very long, substantial':'complete'} HTML document. I should create a single-page website with many sections, CSS, and JS.\n\nI'll write it all out. Keep it self-contained, no external dependencies (use inline SVG or emoji). Make it long — many sections.\n\nLet me plan sections:\n1. Preloader\n2. Sticky navigation with dark mode toggle\n3. Hero\n4. Animated counters\n5. Services grid\n6. Tabbed content\n7. Accordion FAQ\n8. Pricing cards\n9. Testimonial slider\n10. Contact form with validation\n11. Footer\n12. Back to top button\n13. JS at bottom\n\nWrite clean code with CSS variables, dark mode support, and responsive layout.`,
+      text:`Here's a complete, very long HTML page—a responsive single-page site for a fictional digital studio. It includes a preloader, sticky navigation with dark mode, animated counters, tabbed content, an accordion FAQ, pricing cards, a testimonial slider, a contact form with validation, and a back-to-top button. Everything runs with plain HTML, CSS, and JavaScript.\n\n\`\`\`html\n${DEMO_HTML}\n\`\`\``
+    };
+  }
+  return {
+    think:`User asks in Indonesian: "${q}". Let me think about what they want and how to answer clearly.\n\nI should give a direct, well-organized answer. Keep it helpful and concise.`,
+    text:`Mode demo aktif, jadi saya belum terhubung ke model sungguhan. Buka menu lalu pilih **Pengaturan API** dan isi API key Gemini atau Groq agar bot bisa menjawab pertanyaan apa pun.\n\nSebagai contoh, coba kirim: \`buatkan html sangat panjang\`.`
+  };
+}
+
+/* ---------- streaming UI ---------- */
+async function streamDemo(q,ui,sig){
+  const p=demoPlan(q);
+  if(useThink){
+    for(let i=0;i<p.think.length;){
+      if(sig.stop)return;
+      const n=2+Math.floor(Math.random()*5); ui.think(p.think.slice(i,i+n)); i+=n; await sleep(16);
+    }
+  }
+  ui.endThink(); await sleep(120);
+  for(let i=0;i<p.text.length;){
+    if(sig.stop)return;
+    const n=p.text.startsWith('Mode')?3:5+Math.floor(Math.random()*10); ui.text(p.text.slice(i,i+n)); i+=n; await sleep(14);
+  }
+}
+/* ---------- providers, models & status ---------- */
+// ID model bisa diubah di sini kalau nama di akun Anda berbeda.
+const PROVIDERS={
+  gemini:{name:'Gemini',url:'https://generativelanguage.googleapis.com/v1beta/openai',ph:'AIza...',models:[
+    ['gemini-3.8-flash','gemini-3.8-flash'],
+    ['gemini-3.6-flash','gemini-3.6-flash'],
+    ['gemini-3.5-flash-lite','gemini-3.5-flash-lite'],
+    ['gemini-3.1-flash-lite','gemini-3.1-flash-lite'],
+    ['gemini-2.5-flash','gemini-2.5-flash'],
+    ['gemini-2.5-flash-lite','gemini-2.5-flash-lite']]},
+  groq:{name:'Groq',url:'https://api.groq.com/openai/v1',ph:'gsk_...',models:[
+    ['openai/gpt-oss-120b','GPT-OSS 120B — paling kuat'],
+    ['openai/gpt-oss-20b','GPT-OSS 20B — lebih ringan & cepat'],
+    ['qwen/qwen3.8-27b','Qwen 3.8 27B — penalaran & umum']]}
+};
+const DEFAULT_MODEL='groq|qwen/qwen3.8-27b';
+const CK='<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 10.5l4 4 8-9"/></svg>';
+
+/* status titik: id -> {s:'ok'|'bad'|'load', msg}
+   id: p|provider (kunci)  m|provider|model  s|pencarian */
+const stat={};
+function setStat(id,s,msg){
+  stat[id]={s,msg:msg||''};
+  document.querySelectorAll('.dotb[data-t="'+id+'"] .dot').forEach(d=>{d.className='dot '+s;d.parentNode.title=msg||''});
+}
+function dot(id){const s=stat[id];return `<button class="dotb" data-t="${esc(id)}" title="${esc(s?s.msg:'Ketuk untuk tes')}" aria-label="Tes"><i class="dot ${s?s.s:''}"></i></button>`}
+
+function why(code,txt){
+  const t=(txt||'').toLowerCase();
+  if(code===429||/quota|rate.?limit|exhausted|too many/.test(t))return {kind:'quota',msg:'Kuota habis / terkena limit'};
+  if(code===401||code===403||/api key|api_key|unauthor|invalid.*key|permission/.test(t))return {kind:'key',msg:'API key salah / tidak punya akses'};
+  if(code===404||code===400||/model/.test(t))return {kind:'model',msg:'Model tidak cocok / tidak tersedia'};
+  return {kind:'other',msg:code?'Error HTTP '+code:'Gagal terhubung'+(txt?': '+String(txt).slice(0,80):'')};
+}
+function apiErr(code,body){const w=why(code,body);const e=new Error(w.msg+(code?' (HTTP '+code+')':''));e.kind=w.kind;e.code=code;return e}
+
+function loadCfg(){const c=store.get('cfg2',null)||{};return {gemini:c.gemini||'',groq:c.groq||'',model:c.model||DEFAULT_MODEL,search:c.search||{}}}
+const label=t=>PROVIDERS[t.p].name+' · '+t.m.split('/').pop();
+
+/* urutan fallback: model terpilih → model lain di penyedia sama → penyedia lain.
+   Model yang sudah ketahuan merah (dari tes/error) dipindah ke paling akhir. */
+function buildChain(cfg){
+  const [sp,sm]=(cfg.model||'').split('|'), chain=[];
+  const push=(p,m)=>{if(cfg[p]&&!chain.some(x=>x.p===p&&x.m===m))chain.push({p,m})};
+  if(PROVIDERS[sp]){push(sp,sm);PROVIDERS[sp].models.forEach(m=>push(sp,m[0]))}
+  Object.keys(PROVIDERS).forEach(p=>PROVIDERS[p].models.forEach(m=>push(p,m[0])));
+  const bad=x=>(stat['m|'+x.p+'|'+x.m]||{}).s==='bad';
+  return [...chain.filter(x=>!bad(x)),...chain.filter(bad)];
+}
+
+async function ping(p,model,key){
+  const ctl=new AbortController(), tm=setTimeout(()=>ctl.abort(),20000);
+  try{
+    const r=await fetch(PROVIDERS[p].url+'/chat/completions',{method:'POST',signal:ctl.signal,
+      headers:{'Content-Type':'application/json',Authorization:'Bearer '+key},
+      body:JSON.stringify({model,messages:[{role:'user',content:'Balas: ok'}],max_tokens:16})});
+    if(!r.ok)throw apiErr(r.status,(await r.text()).slice(0,300));
+  }catch(e){
+    if(e.kind)throw e;
+    throw apiErr(0,e.name==='AbortError'?'timeout':e.message);
+  }finally{clearTimeout(tm)}
+}
+
+/* ---------- pencarian web ---------- */
+async function jpost(url,headers,body,sig){
+  const ctl=new AbortController(), tm=setTimeout(()=>ctl.abort(),20000);
+  if(sig)sig.ctl=ctl;
+  try{
+    const r=await fetch(url,{method:'POST',signal:ctl.signal,headers:{'Content-Type':'application/json',...headers},body:JSON.stringify(body)});
+    if(!r.ok)throw apiErr(r.status,(await r.text()).slice(0,300));
+    return await r.json();
+  }catch(e){
+    if(e.kind)throw e;
+    if(sig&&sig.stop)throw e;
+    throw apiErr(0,e.name==='AbortError'?'timeout':e.message);
+  }finally{clearTimeout(tm)}
+}
+const SEARCH={
+  serper:{name:'Serper',ph:'API key Serper',run:async(k,q,sig)=>{
+    const j=await jpost('https://google.serper.dev/search',{'X-API-KEY':k},{q,num:5,hl:'id'},sig);
+    return (j.organic||[]).map(x=>({title:x.title,url:x.link,text:x.snippet||''}))}},
+  parallel:{name:'Parallel',ph:'API key Parallel',run:async(k,q,sig)=>{
+    const j=await jpost('https://api.parallel.ai/v1/search',{'x-api-key':k},{objective:q,search_queries:[q],mode:'fast',max_chars_total:4000,advanced_settings:{max_results:5}},sig);
+    return (j.results||[]).map(x=>({title:x.title||x.url,url:x.url,text:(x.excerpts||[]).join(' ')}))}},
+  tavily:{name:'Tavily',ph:'tvly-...',run:async(k,q,sig)=>{
+    const j=await jpost('https://api.tavily.com/search',{Authorization:'Bearer '+k},{query:q,max_results:5},sig);
+    return (j.results||[]).map(x=>({title:x.title,url:x.url,text:x.content||''}))}},
+  exa:{name:'Exa',ph:'API key Exa',run:async(k,q,sig)=>{
+    const j=await jpost('https://api.exa.ai/search',{'x-api-key':k},{query:q,numResults:5,contents:{text:{maxCharacters:700}}},sig);
+    return (j.results||[]).map(x=>({title:x.title||x.url,url:x.url,text:x.text||''}))}}
+};
+const hasSearch=cfg=>Object.keys(SEARCH).some(k=>cfg.search[k]);
+// coba berurutan: serper → parallel → tavily → exa; yang error dilewati
+async function doSearch(q,cfg,sig){
+  for(const k of Object.keys(SEARCH)){
+    if(sig.stop)return null; if(!cfg.search[k])continue;
+    try{
+      const res=(await SEARCH[k].run(cfg.search[k],q,sig)).filter(x=>x.url);
+      setStat('s|'+k,'ok','Berfungsi');
+      if(res.length)return {name:SEARCH[k].name,res};
+    }catch(e){ if(sig.stop)return null; setStat('s|'+k,'bad',e.message) }
+  }
+  return null;
+}
+function searchContext(r){
+  const today=new Date().toLocaleDateString('id-ID',{dateStyle:'full'});
+  return `Hari ini ${today}. Berikut hasil pencarian web terbaru untuk pertanyaan pengguna (sumber: ${r.name}). Gunakan bila relevan, sebutkan rujukan seperti [1], [2], dan jangan mengarang sumber.\n\n`+
+    r.res.map((x,i)=>`[${i+1}] ${x.title}\n${x.url}\n${String(x.text).slice(0,700)}`).join('\n\n');
+}
+
+/* ---------- streaming ke model ---------- */
+const partial=(s,tag)=>{for(let k=Math.min(tag.length-1,s.length);k>0;k--)if(tag.startsWith(s.slice(-k)))return k;return 0};
+async function streamAPI(c,ui,sig,t,cfg,ctx){
+  const msgs=c.msgs.filter(m=>m.text).map(m=>({role:m.role==='user'?'user':'assistant',content:m.text}));
+  if(ctx)msgs.unshift({role:'system',content:ctx});
+  const ctl=new AbortController(); sig.ctl=ctl;
+  let r;
+  try{
+    r=await fetch(PROVIDERS[t.p].url+'/chat/completions',{
+      method:'POST',signal:ctl.signal,
+      headers:{'Content-Type':'application/json',Authorization:'Bearer '+cfg[t.p]},
+      body:JSON.stringify({model:t.m,messages:msgs,stream:true})
+    });
+  }catch(e){ if(sig.stop)throw e; throw apiErr(0,e.message) }
+  if(!r.ok)throw apiErr(r.status,(await r.text()).slice(0,300));
+
+  let thinking=true, inThink=false, pend='';
+  const out=s=>{ if(!s)return; if(!ui.got()&&!s.trim())return; if(thinking){ui.endThink();thinking=false} ui.text(s) };
+  const tout=s=>{ if(s&&useThink&&!ui.got())ui.think(s) };
+  // model seperti Qwen kadang menaruh penalaran di dalam <think>…</think>
+  const feed=s=>{
+    pend+=s;
+    for(;;){
+      if(!inThink){
+        const i=pend.indexOf('<think>');
+        if(i>=0){out(pend.slice(0,i));pend=pend.slice(i+7);inThink=true;continue}
+        const k=partial(pend,'<think>');out(pend.slice(0,pend.length-k));pend=pend.slice(pend.length-k);break;
+      }else{
+        const i=pend.indexOf('</think>');
+        if(i>=0){tout(pend.slice(0,i));pend=pend.slice(i+8);inThink=false;continue}
+        const k=partial(pend,'</think>');tout(pend.slice(0,pend.length-k));pend=pend.slice(pend.length-k);break;
+      }
+    }
+  };
+  const rd=r.body.getReader(), dec=new TextDecoder(); let buf='';
+  try{
+    while(true){
+      const {done,value}=await rd.read(); if(done)break;
+      buf+=dec.decode(value,{stream:true});
+      let idx;
+      while((idx=buf.indexOf('\n'))>=0){
+        const line=buf.slice(0,idx).trim(); buf=buf.slice(idx+1);
+        if(!line.startsWith('data:'))continue;
+        const d=line.slice(5).trim(); if(d==='[DONE]')continue;
+        let o; try{o=JSON.parse(d)}catch{continue}
+        if(o.error)throw apiErr(Number(o.error.code)||0,JSON.stringify(o.error).slice(0,300));
+        const j=(o.choices&&o.choices[0]&&o.choices[0].delta)||{};
+        const rs=j.reasoning_content||j.reasoning;
+        if(rs)tout(rs);
+        if(j.content)feed(j.content);
+      }
+    }
+  }catch(e){
+    if(sig.stop||e.kind)throw e;
+    throw apiErr(0,e.message);
+  }
+  if(inThink){tout(pend)}else{out(pend)}
+  if(!ui.any())throw apiErr(0,'respons kosong');
+}
+
+// fallback otomatis: kalau satu model/penyedia error, pindah ke berikutnya
+async function runChain(c,ui,sig,chain,cfg,ctx){
+  const dead=new Set(); let last=null;
+  for(let i=0;i<chain.length;i++){
+    const t=chain[i]; if(dead.has(t.p))continue; if(sig.stop)return;
+    try{
+      await streamAPI(c,ui,sig,t,cfg,ctx);
+      if(sig.stop)return;
+      setStat('m|'+t.p+'|'+t.m,'ok','Berfungsi');
+      return;
+    }catch(e){
+      if(sig.stop)return;
+      if(ui.got())throw e;               // jawaban sudah separuh jalan: jangan diulang
+      last=e; setStat('m|'+t.p+'|'+t.m,'bad',e.message);
+      if(e.kind==='key'){dead.add(t.p);setStat('p|'+t.p,'bad',e.message)}
+      ui.reset();
+      const nx=chain.slice(i+1).find(x=>!dead.has(x.p));
+      if(nx)toast(label(t)+' gagal ('+e.message+'). Pindah ke '+label(nx),3200);
+    }
+  }
+  throw new Error('Semua model gagal. Terakhir: '+(last?last.message:'-'));
+}
+
+/* ---------- pengaturan & tes titik ---------- */
+let draft={model:DEFAULT_MODEL};
+function openSettings(){
+  const c=loadCfg(); draft={model:c.model};
+  let h='<div class="legend"><span><i class="dot ok"></i>aktif</span><span><i class="dot bad"></i>kuota habis / model tidak cocok</span><span><i class="dot"></i>belum dites</span></div>';
+  h+='<div class="sec">Model AI</div>';
+  for(const p in PROVIDERS){
+    const P=PROVIDERS[p];
+    h+=`<div class="kl"><label for="k_${p}">${P.name} API key</label>${dot('p|'+p)}</div><input id="k_${p}" type="password" placeholder="${esc(P.ph)}" autocomplete="off">`;
+    h+='<div class="mlist">'+P.models.map(m=>`<div class="mrow" data-m="${esc(p+'|'+m[0])}"><span class="ck">${CK}</span><span class="ml">${esc(m[1])}</span>${dot('m|'+p+'|'+m[0])}</div>`).join('')+'</div>';
+  }
+  h+='<div class="sec">Pencarian web</div>';
+  for(const k in SEARCH){
+    h+=`<div class="kl"><label for="k_${k}">${SEARCH[k].name} API key</label>${dot('s|'+k)}</div><input id="k_${k}" type="password" placeholder="${esc(SEARCH[k].ph)}" autocomplete="off">`;
+  }
+  $('#setBody').innerHTML=h;
+  for(const p in PROVIDERS)$('#k_'+p).value=c[p];
+  for(const k in SEARCH)$('#k_'+k).value=c.search[k]||'';
+  paintModels();
+  closeDrawer(); $('#modal').classList.add('show'); $('.sheet').scrollTop=0;
+}
+function paintModels(){document.querySelectorAll('#setBody .mrow').forEach(r=>r.classList.toggle('sel',r.dataset.m===draft.model))}
+async function testTarget(id){
+  const [kind,a,b]=id.split('|');
+  const key=$('#k_'+a).value.trim();
+  if(!key){setStat(id,'bad','Isi API key dulu');toast('Isi API key dulu');return}
+  if(kind==='p'){
+    const models=PROVIDERS[a].models.map(m=>m[0]);
+    setStat(id,'load','Menguji…'); models.forEach(m=>setStat('m|'+a+'|'+m,'load','Menguji…'));
+    let ok=0, first='';
+    await Promise.all(models.map(async m=>{
+      try{await ping(a,m,key);ok++;setStat('m|'+a+'|'+m,'ok','Berfungsi')}
+      catch(e){if(!first)first=e.message;setStat('m|'+a+'|'+m,'bad',e.message)}
+    }));
+    setStat(id,ok?'ok':'bad',ok?ok+' dari '+models.length+' model aktif':first);
+    toast(PROVIDERS[a].name+': '+(ok?ok+'/'+models.length+' model aktif':first),2600);
+  }else if(kind==='m'){
+    setStat(id,'load','Menguji…');
+    try{await ping(a,b,key);setStat(id,'ok','Berfungsi');toast(b.split('/').pop()+': aktif')}
+    catch(e){setStat(id,'bad',e.message);toast(b.split('/').pop()+': '+e.message,2600)}
+  }else{
+    setStat(id,'load','Menguji…');
+    try{const r=await SEARCH[a].run(key,'berita hari ini',null);setStat(id,'ok','Berfungsi');toast(SEARCH[a].name+': aktif ('+r.length+' hasil)')}
+    catch(e){setStat(id,'bad',e.message);toast(SEARCH[a].name+': '+e.message,2600)}
+  }
+}
+
+async function send(){
+  const q=inp.value.trim(); if(!q)return;
+  if(busy){return}
+  if(!cur)newChat();
+  inp.value='';grow();
+  const first=cur.msgs.length===0;
+  cur.msgs.push({role:'user',text:q});
+  if(first){cur.title=q.slice(0,40);convos.unshift(cur);$('#ttl').textContent=cur.title}
+  showChat();
+  chat.insertAdjacentHTML('beforeend','<div class="u"><div></div></div>'); chat.lastChild.firstChild.textContent=q;
+
+  // assistant shell
+  const a=document.createElement('div'); a.className='a';
+  a.innerHTML=`<div class="think-h" style="display:${useThink?'flex':'none'}"><span>Memikirkan</span>${CHEV}</div><div class="think-body live" style="display:${useThink?'block':'none'}"><div class="inner"></div></div><div class="md"></div>`;
+  chat.appendChild(a);
+  const th=a.querySelector('.think-h'), tb=a.querySelector('.think-body'), ti=tb.querySelector('.inner'), md=a.querySelector('.md');
+  let thinkTxt='', ansTxt='', t0=Date.now(), secs=0, thinkDone=!useThink;
+  const msg={role:'assistant',text:'',think:useThink?'':null,secs:0}; cur.msgs.push(msg);
+  stick=true; scrollBottom(true);
+  busy=true; syncState();
+  const sig={stop:false}; abort=()=>{sig.stop=true;if(sig.ctl)sig.ctl.abort()};
+  th.onclick=()=>{ if(thinkDone) tb.classList.toggle('collapsed') };
+
+  const ui={
+    think(t){thinkTxt+=t;ti.textContent=thinkTxt;tb.scrollTop=tb.scrollHeight;scrollBottom()},
+    endThink(){
+      if(thinkDone)return; thinkDone=true;
+      secs=Math.max(1,Math.round((Date.now()-t0)/1000)); msg.secs=secs; msg.think=thinkTxt;
+      th.innerHTML=`Berpikir selama ${secs} detik ${CHEV_R}`; th.classList.add('done');
+      tb.classList.remove('live'); tb.classList.add('collapsed');
+    },
+    text(t){ansTxt+=t;msg.text=ansTxt;md.innerHTML=render(ansTxt,true);scrollBottom()},
+    got(){return ansTxt.length>0},
+    any(){return ansTxt.length>0||thinkTxt.length>0},
+    reset(){thinkTxt='';ti.textContent=''}
+  };
+
+  const cfg=loadCfg(), chain=buildChain(cfg);
+  try{
+    if(chain.length){
+      let ctx='', found=null;
+      if(useSearch&&hasSearch(cfg)){
+        md.innerHTML='<p class="srch">Mencari di web…</p>';
+        found=await doSearch(q.slice(0,300),cfg,sig);
+        if(found)ctx=searchContext(found); else if(!sig.stop)toast('Pencarian gagal, lanjut tanpa web',2200);
+      }
+      if(!sig.stop){
+        await runChain(cur,ui,sig,chain,cfg,ctx);
+        if(found&&!sig.stop&&ui.got())ui.text('\n\n**Sumber:**\n'+found.res.map((x,i)=>`${i+1}. [${x.title.replace(/[\[\]]/g,'')}](${x.url.replace(/[\s")]/g,'')})`).join('\n'));
+      }
+    }else await streamDemo(q,ui,sig);
+  }catch(e){
+    if(!sig.stop){ansTxt+=(ansTxt?'\n\n':'')+'Terjadi kesalahan: '+e.message;msg.text=ansTxt}
+  }
+  ui.endThink();
+  msg.think=thinkTxt||(useThink?'':null);
+  md.innerHTML=render(ansTxt||'',false);
+  busy=false;abort=null;syncState();persist();renderHist();scrollBottom();
+}
+
+/* ---------- events ---------- */
+inp.addEventListener('input',()=>{grow();syncState()});
+inp.addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey&&!/Mobi|Android|iPhone/.test(navigator.userAgent)){e.preventDefault();send()}});
+$('#send').onclick=()=>{ if(busy){abort&&abort()} else send() };
+$('#cThink').onclick=e=>{useThink=!useThink;e.currentTarget.classList.toggle('on',useThink);e.currentTarget.classList.toggle('off',!useThink)};
+$('#cSearch').onclick=e=>{useSearch=!useSearch;e.currentTarget.classList.toggle('on',useSearch);e.currentTarget.classList.toggle('off',!useSearch)};
+$('#plus').onclick=()=>toast('Lampiran belum tersedia');
+$('#voice').onclick=()=>toast('Input suara belum tersedia');
+let muted=true;
+$('#mute').onclick=()=>{muted=!muted;$('#mx').style.display=muted?'':'none';toast(muted?'Suara dimatikan':'Suara dinyalakan')};
+$('#new').onclick=newChat; $('#dNew').onclick=newChat;
+const openDrawer=()=>{app.classList.add('drawer-open');renderHist()}, closeDrawer=()=>app.classList.remove('drawer-open');
+$('#menu').onclick=openDrawer; $('#scrim').onclick=closeDrawer;
+$('#dSet').onclick=openSettings;
+$('#setBody').addEventListener('click',e=>{
+  const d=e.target.closest('.dotb'); if(d){testTarget(d.dataset.t);return}
+  const m=e.target.closest('.mrow'); if(m){draft.model=m.dataset.m;paintModels()}
+});
+$('#sCancel').onclick=()=>$('#modal').classList.remove('show');
+$('#sSave').onclick=()=>{
+  const c={model:draft.model,search:{}};
+  for(const p in PROVIDERS)c[p]=$('#k_'+p).value.trim();
+  for(const k in SEARCH)c.search[k]=$('#k_'+k).value.trim();
+  store.set('cfg2',c);$('#modal').classList.remove('show');toast('Tersimpan');
+};
+
+newChat(); syncState();
+})();
+</script>
+</body>
+</html>
