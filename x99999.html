@@ -2,7 +2,7 @@
 <html lang="id">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <meta name="theme-color" content="#020200">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -15,7 +15,7 @@
   --code:#1b191c;
 }
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
-html,body{height:100%;margin:0;background:var(--bg);color:var(--text);
+html,body{touch-action:manipulation;-webkit-text-size-adjust:100%;height:100%;margin:0;background:var(--bg);color:var(--text);
   font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
   -webkit-font-smoothing:antialiased;overscroll-behavior:none}
 button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:pointer}
@@ -140,7 +140,7 @@ body{position:fixed;inset:0;width:100%;overflow:hidden}
 @keyframes dspin{to{transform:rotate(360deg)}}
 
 /* composer */
-.composer{position:absolute;z-index:20;left:0;right:0;bottom:0;padding:0 14px max(10px,calc(env(safe-area-inset-bottom) - 22px));
+.composer{position:absolute;z-index:20;left:0;right:0;bottom:0;padding:0 12px max(0px,calc(env(safe-area-inset-bottom) - 34px));
   background:linear-gradient(rgba(2,2,0,0),var(--bg) 22%)}
 .box{background:var(--panel);border:1px solid var(--line);border-radius:26px;padding:14px 16px 12px}
 #inp{width:100%;background:none;border:0;outline:0;resize:none;color:var(--text);font:inherit;font-size:17px;line-height:1.35;
@@ -182,7 +182,7 @@ body{position:fixed;inset:0;width:100%;overflow:hidden}
 .sheet h2{margin:0 0 6px;font-size:19px}
 .sheet p{margin:0 0 16px;font-size:14px;color:var(--muted);line-height:1.45}
 .sheet label{display:block;font-size:13px;color:var(--muted);margin:12px 0 6px}
-.sheet input{width:100%;height:44px;border-radius:12px;border:1px solid var(--line);background:#161316;color:var(--text);padding:0 12px;font-size:15px;outline:0}
+.sheet input{width:100%;height:44px;border-radius:12px;border:1px solid var(--line);background:#161316;color:var(--text);padding:0 12px;font-size:16px;outline:0}
 .sheet input:focus{border-color:var(--blue)}
 .sheet .btns{display:flex;gap:10px;margin-top:14px;padding-top:14px;position:sticky;bottom:0;background:#1e1b1e}
 .sheet .btns button{flex:1;height:46px;border-radius:14px;background:#2a272b;font-size:16px}
@@ -211,7 +211,7 @@ body{position:fixed;inset:0;width:100%;overflow:hidden}
 .md a{color:#7f95ff;text-decoration:none;word-break:break-all}
 .srch{color:var(--muted)}
 /* prompt master */
-.sheet textarea{display:block;width:100%;min-height:130px;max-height:280px;resize:vertical;margin-top:8px;border-radius:12px;border:1px solid var(--line);background:#161316;color:var(--text);padding:10px 12px;font:inherit;font-size:15px;line-height:1.45;outline:0}
+.sheet textarea{display:block;width:100%;min-height:130px;max-height:280px;resize:vertical;margin-top:8px;border-radius:12px;border:1px solid var(--line);background:#161316;color:var(--text);padding:10px 12px;font:inherit;font-size:16px;line-height:1.45;outline:0}
 .sheet textarea:focus{border-color:var(--blue)}
 /* mode model */
 #mmodal{position:absolute;inset:0;z-index:60;background:rgba(0,0,0,.6);display:none;align-items:flex-end}
@@ -938,6 +938,19 @@ function searchContext(r){
     r.res.map((x,i)=>`[${i+1}] ${x.title}\n${x.url}\n${String(x.text).slice(0,700)}`).join('\n\n');
 }
 
+/* hemat kuota: pencarian web hanya untuk pertanyaan yang memang butuh info terkini/fakta luar.
+   Sapaan, terima kasih, hitungan, kode, terjemahan, dan tugas menulis dijawab langsung tanpa cari. */
+function needSearch(q){
+  const t=(q||'').trim().toLowerCase(); if(!t)return false;
+  const fresh=/berita|terbaru|terkini|hari ini|sekarang|saat ini|minggu ini|bulan ini|tahun ini|kemarin|besok|harga|kurs|cuaca|skor|jadwal|klasemen|hasil (pertandingan|pemilu)|rilis|update|latest|news|today|current|price|weather|score|202\d/;
+  if(fresh.test(t))return true;
+  if(t.length<15)return false;
+  if(/^(hai|halo|hi|hello|hei|terima kasih|makasih|thanks|oke|ok|siap|mantap)\b/.test(t)&&t.length<40)return false;
+  if(/```|[{};]\s*$|function\s|\bclass\s|<\/?[a-z]+>/.test(t))return false;
+  if(/^(buat(kan)?|tulis(kan)?|ubah|perbaiki|terjemahkan|translate|rangkum|ringkas|hitung|jelaskan kode|ganti|rapikan|koreksi|tolong (buat|tulis|ubah|perbaiki|terjemah|rangkum|hitung))\b/.test(t))return false;
+  if(/^[\d\s+\-*/().,^%=x]+$/.test(t))return false;
+  return true;
+}
 /* ---------- waktu & tanggal perangkat ---------- */
 function nowCtx(){
   const d=new Date(); let tz='';
@@ -1198,7 +1211,7 @@ async function send(){
   try{
     if(chain.length){
       let ctx='', found=null;
-      if(useSearch){
+      if(useSearch&&needSearch(q)){
         dots.style.display='none'; md.innerHTML='<p class="srch">Mencari di web…</p>';
         found=await doSearch(searchQuery(q),cfg,sig);
         md.innerHTML=''; if(!started)dots.style.display='';
@@ -1295,6 +1308,9 @@ $('#sSave').onclick=()=>{
   store.set('cfg2',c);store.set('master2',$('#k_master').value.trim());$('#modal').classList.remove('show');toast('Tersimpan');
 };
 
+/* kunci zoom: blokir cubit; ketuk-dua-kali ditangani touch-action (iOS mengabaikan maximum-scale) */
+['gesturestart','gesturechange','gestureend'].forEach(e=>document.addEventListener(e,ev=>ev.preventDefault(),{passive:false}));
+document.addEventListener('touchmove',ev=>{if(ev.touches&&ev.touches.length>1)ev.preventDefault()},{passive:false});
 const vv=window.visualViewport;
 let kbPending=false;
 const coarse=matchMedia('(pointer:coarse)').matches;
