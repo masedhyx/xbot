@@ -66,8 +66,8 @@ body{position:fixed;inset:0;width:100%;overflow:hidden}
 .think-body::before{content:"";position:absolute;left:4px;top:18px;bottom:3px;width:1.5px;border-radius:1px;background:#3d3a42}
 .think-body::after{content:"";position:absolute;left:2.5px;top:9.5px;width:5px;height:5px;border-radius:50%;background:#a09da4}
 .think-body .tview{overflow:hidden;scroll-behavior:smooth}
-.think-body.live .tview{max-height:96px}
-.think-body.live .tview.ov{-webkit-mask-image:linear-gradient(transparent 0,#000 26px);mask-image:linear-gradient(transparent 0,#000 26px)}
+.think-body.live .tview{max-height:128px}
+.think-body.live .tview.ov{-webkit-mask-image:linear-gradient(transparent 0,#000 28px);mask-image:linear-gradient(transparent 0,#000 28px)}
 .think-body.collapsed{display:none}
 .think-body .inner{white-space:pre-wrap;word-break:break-word}
 .fi{animation:fi .65s ease-out both}
@@ -320,7 +320,7 @@ if(window.ResizeObserver)new ResizeObserver(()=>{ if(lastGap<4)chat.scrollTop=ch
 /* teks jawaban bertambah -> hitung ulang tombol */
 {let q=0;new MutationObserver(()=>{if(q)return;q=requestAnimationFrame(()=>{q=0;updateDown()})}).observe(chat,{childList:true,subtree:true,characterData:true})}
 
-/* scroll halus dan pelan saat jawaban muncul: awal jawaban naik sampai tepat di bawah header, lalu berhenti (isi di bawahnya diakses lewat tombol panah) */
+/* scroll ultra-halus ala DeepSeek 1:1 — follow konten dengan damping rendah & kontinu, tanpa loncat */
 let follow=false, followEnd=false, fRaf=0;
 function stopFollow(){follow=false;followEnd=false;cancelAnimationFrame(fRaf)}
 function startFollow(a){
@@ -331,14 +331,15 @@ function startFollow(a){
     const comp=$('#comp').offsetHeight, last=chat.lastElementChild;
     const max=Math.max(0,chat.scrollHeight-chat.clientHeight);
     let target;
-    if(followEnd&&last)target=Math.min(max,Math.max(0,last.offsetTop+last.offsetHeight-chat.clientHeight+comp+16));
+    if(followEnd&&last)target=Math.min(max,Math.max(0,last.offsetTop+last.offsetHeight-chat.clientHeight+comp+20));
     else target=Math.max(0,Math.min(max,a.offsetTop-pad));
     const d=target-chat.scrollTop;
-    if(Math.abs(d)>0.6){
-      const st=Math.max(1.2,Math.abs(d)*0.045);
-      chat.scrollTop+=d>0?Math.min(st,d):-Math.min(st,-d);
+    if(Math.abs(d)>0.4){
+      // damping lebih responsif tapi tetap buttery (DeepSeek-like continuous follow)
+      const st=Math.max(0.9, Math.abs(d)*0.085);
+      chat.scrollTop += d>0 ? Math.min(st,d) : -Math.min(st,-d);
     }
-    if(!busy&&Math.abs(d)<2){follow=false;return}
+    if(!busy && Math.abs(d)<1.2){follow=false;return}
     fRaf=requestAnimationFrame(step);
   })();
 }
@@ -346,7 +347,7 @@ function startFollow(a){
 $('#down').onclick=()=>{
   const last=chat.lastElementChild; if(!last)return;
   if(busy){followEnd=true; if(!follow){follow=true;startFollowEnd()}}
-  else chat.scrollTo({top:Math.max(0,last.offsetTop+last.offsetHeight-chat.clientHeight+$('#comp').offsetHeight+16),behavior:'smooth'});
+  else chat.scrollTo({top:Math.max(0,last.offsetTop+last.offsetHeight-chat.clientHeight+$('#comp').offsetHeight+20),behavior:'smooth'});
 };
 function startFollowEnd(){
   cancelAnimationFrame(fRaf); follow=true; followEnd=true;
@@ -354,10 +355,13 @@ function startFollowEnd(){
     if(!follow)return;
     const comp=$('#comp').offsetHeight, last=chat.lastElementChild; if(!last){follow=false;return}
     const max=Math.max(0,chat.scrollHeight-chat.clientHeight);
-    const target=Math.min(max,Math.max(0,last.offsetTop+last.offsetHeight-chat.clientHeight+comp+16));
+    const target=Math.min(max,Math.max(0,last.offsetTop+last.offsetHeight-chat.clientHeight+comp+20));
     const d=target-chat.scrollTop;
-    if(Math.abs(d)>0.6){const st=Math.max(1.5,Math.abs(d)*0.08);chat.scrollTop+=d>0?Math.min(st,d):-Math.min(st,-d)}
-    if(!busy&&Math.abs(d)<2){follow=false;return}
+    if(Math.abs(d)>0.4){
+      const st=Math.max(1.1, Math.abs(d)*0.11);
+      chat.scrollTop += d>0 ? Math.min(st,d) : -Math.min(st,-d);
+    }
+    if(!busy && Math.abs(d)<1.2){follow=false;return}
     fRaf=requestAnimationFrame(step);
   })();
 }
@@ -385,9 +389,10 @@ function fadeTail(root,log){
 }
 function collapseThink(b){
   b.style.height=b.offsetHeight+'px'; b.style.overflow='hidden'; b.getBoundingClientRect();
-  b.style.transition='height .4s cubic-bezier(.4,0,.2,1),opacity .3s ease,margin-bottom .4s cubic-bezier(.4,0,.2,1)';
+  // cubic-bezier lebih soft ala DeepSeek
+  b.style.transition='height .48s cubic-bezier(.22,.9,.3,1),opacity .35s ease,margin-bottom .48s cubic-bezier(.22,.9,.3,1)';
   b.style.height='0px'; b.style.opacity='0'; b.style.marginBottom='0px';
-  setTimeout(()=>{b.classList.add('collapsed');b.removeAttribute('style')},430);
+  setTimeout(()=>{b.classList.add('collapsed');b.removeAttribute('style')},500);
 }
 function keepQ(el){
   const pad=parseFloat(getComputedStyle(chat).paddingTop)||0, top=el.offsetTop, h=el.offsetHeight, vis=chat.scrollTop, H=chat.clientHeight, room=$('#comp').offsetHeight;
@@ -638,13 +643,13 @@ async function streamDemo(q,ui,sig){
   if(useThink){
     for(let i=0;i<p.think.length;){
       if(sig.stop)return;
-      const n=2+Math.floor(Math.random()*5); ui.think(p.think.slice(i,i+n)); i+=n; await sleep(16);
+      const n=2+Math.floor(Math.random()*4); ui.think(p.think.slice(i,i+n)); i+=n; await sleep(22);
     }
   }
-  ui.endThink(); await sleep(120);
+  ui.endThink(); await sleep(180);
   for(let i=0;i<p.text.length;){
     if(sig.stop)return;
-    const n=p.text.startsWith('Mode')?3:5+Math.floor(Math.random()*10); ui.text(p.text.slice(i,i+n)); i+=n; await sleep(14);
+    const n=p.text.startsWith('Mode')?3:4+Math.floor(Math.random()*9); ui.text(p.text.slice(i,i+n)); i+=n; await sleep(16);
   }
 }
 /* ---------- providers, models & status ---------- */
@@ -964,7 +969,15 @@ async function send(){
       begin(); if(!t)return;
       th.classList.add('has-t');
       const sp=document.createElement('span'); sp.className='fi'; sp.textContent=t; ti.appendChild(sp); thinkTxt+=t;
-      tv.classList.toggle('ov',tv.scrollHeight>tv.clientHeight+1); tv.scrollTop=tv.scrollHeight;
+      const needMask=tv.scrollHeight>tv.clientHeight+1;
+      tv.classList.toggle('ov',needMask);
+      // smooth internal scroll (DeepSeek-style continuous follow inside think box)
+      if(needMask){
+        const target=tv.scrollHeight-tv.clientHeight;
+        const cur=tv.scrollTop;
+        if(Math.abs(target-cur)>1) tv.scrollTop=cur+(target-cur)*0.55;
+        else tv.scrollTop=target;
+      }
     },
     endThink(){
       if(thinkDone)return; begin(); thinkDone=true;
@@ -979,7 +992,7 @@ async function send(){
     reset(){thinkTxt='';ti.textContent=''}
   };
 
-  // pacer: keluaran dibuat halus & stabil (seperti DeepSeek), tidak peduli seberapa bursty sumbernya
+  // pacer: keluaran ultra-halus ala DeepSeek 1:1 — thinking lebih “berpikir”, jawaban tetap responsif
   const Q=[]; let pumping=false, rcvT=0, rcvA=0;
   const idle=()=>new Promise(r=>{const c=()=>((!pumping&&!Q.length)||sig.stop)?r():setTimeout(c,40);c()});
   function pump(){
@@ -987,13 +1000,14 @@ async function send(){
     (async()=>{
       while(Q.length&&!sig.stop){
         const it=Q[0];
-        if(it.k==='e'){Q.shift();raw.endThink();await sleep(420);continue}
+        if(it.k==='e'){Q.shift();raw.endThink();await sleep(480);continue}
         let back=0; for(const x of Q){if(x.k===it.k)back+=x.s.length;else break}
-        let cut=Math.min(Math.max(it.k==='t'?3:4,Math.ceil(back/26)),it.s.length);
-        if(cut<it.s.length){const m=it.s.slice(cut,cut+8).search(/[\s,.;:!?)\]]/); if(m>=0)cut+=m+1}
+        // thinking lebih pelan & natural (match video ~40-60 char/s), jawaban sedikit lebih cepat
+        let cut=Math.min(Math.max(it.k==='t'?2:5, Math.ceil(back/(it.k==='t'?32:22))), it.s.length);
+        if(cut<it.s.length){const m=it.s.slice(cut,cut+10).search(/[\s,.;:!?)\]]/); if(m>=0)cut+=m+1}
         const part=it.s.slice(0,cut); it.s=it.s.slice(cut); if(!it.s)Q.shift();
         if(it.k==='t')raw.think(part); else raw.text(part);
-        await sleep(it.k==='t'?46:36);
+        await sleep(it.k==='t'?52:32);
       }
       pumping=false;
     })();
