@@ -96,10 +96,18 @@ body{position:fixed;inset:0;width:100%;overflow:hidden}
 .tk-t{color:#6aa6ff}.tk-a{color:#e4a0ff}.tk-s{color:#a8d18a}.tk-c{color:#7d7a80}.tk-k{color:#6aa6ff}.tk-n{color:#e8b86d}
 
 /* scroll button */
-#down{position:absolute;z-index:15;right:16px;bottom:128px;width:44px;height:44px;border-radius:50%;
-  background:var(--bg);border:2px solid var(--blue);display:none;align-items:center;justify-content:center}
-#down.show{display:flex}
-#down svg{width:20px;height:20px;color:var(--blue)}
+#down{position:absolute;z-index:15;right:24px;bottom:calc(var(--comph,113px) + 15px);width:34px;height:34px;border-radius:50%;
+  background:#262326;border:0;padding:0;display:flex;align-items:center;justify-content:center;color:#f2f2f3;
+  opacity:0;transform:scale(.7);pointer-events:none;transition:opacity .22s ease,transform .22s cubic-bezier(.3,1.4,.5,1)}
+#down.show{opacity:1;transform:scale(1);pointer-events:auto}
+#down .chev{width:15px;height:15px;position:relative;z-index:1}
+#down .ring{position:absolute;inset:0;width:100%;height:100%;overflow:visible;opacity:0;transition:opacity .3s ease}
+#down .ring circle{fill:none;stroke-width:1.5}
+#down .ring .trk{stroke:rgba(77,107,254,.38)}
+#down .ring .arc{stroke:#4d6bfe;stroke-linecap:round;transform-origin:50% 50%}
+.busy #down .ring{opacity:1}
+.busy #down .ring .arc{animation:dspin 1.7s linear infinite}
+@keyframes dspin{to{transform:rotate(360deg)}}
 
 /* composer */
 .composer{position:absolute;z-index:20;left:0;right:0;bottom:0;padding:0 14px max(14px,env(safe-area-inset-bottom));
@@ -108,10 +116,10 @@ body{position:fixed;inset:0;width:100%;overflow:hidden}
 #inp{width:100%;background:none;border:0;outline:0;resize:none;color:var(--text);font:inherit;font-size:17px;line-height:1.35;
   height:26px;max-height:140px;display:block;padding:0}
 #inp::placeholder{color:#7b787c}
-.row{display:flex;align-items:center;justify-content:space-between;margin-top:14px}
-.chips{display:flex;gap:10px}
-.chip{height:34px;padding:0 13px;border-radius:17px;background:var(--chip);color:#5b7bff;border:1px solid #27345f;display:flex;align-items:center;gap:7px;font-size:15.5px;font-weight:600}
-.chip svg{width:19px;height:19px}
+.row{display:flex;align-items:center;justify-content:space-between;margin-top:17.5px}
+.chips{display:flex;gap:8px}
+.chip{height:31px;padding:0 11px;border-radius:16px;background:var(--chip);color:#5b7bff;border:1px solid #27345f;display:flex;align-items:center;gap:6px;font-size:14px;font-weight:600}
+.chip svg{width:17px;height:17px}
 .chip.off{background:transparent;border-color:#33303a;color:#9a98a0}
 .chip.on{background:#26346b;border-color:#4d6bfe;color:#8aa2ff}
 .acts{display:flex;gap:10px;align-items:center}
@@ -199,7 +207,7 @@ body{position:fixed;inset:0;width:100%;overflow:hidden}
 
   <div id="chat"></div>
 
-  <button id="down" aria-label="Ke bawah"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9.5l6 6 6-6"/></svg></button>
+  <button id="down" aria-label="Ke bawah"><svg class="ring" viewBox="0 0 34 34"><circle class="trk" cx="17" cy="17" r="16.25"/><circle class="arc" cx="17" cy="17" r="16.25" pathLength="100" stroke-dasharray="27 73"/></svg><svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9.5l6 6 6-6"/></svg></button>
 
   <div class="composer" id="comp">
     <div class="box">
@@ -263,11 +271,65 @@ function syncState(){
 }
 function grow(){inp.style.height='26px';inp.style.height=Math.min(inp.scrollHeight,140)+'px'}
 function scrollBottom(force){if(force||stick)chat.scrollTop=chat.scrollHeight}
+let lastGap=0;
+function updateDown(){
+  const d=$('#down'), last=chat.lastElementChild;
+  if(!last||!app.classList.contains('has-chat')){d.classList.remove('show');return}
+  const comp=$('#comp').offsetHeight;
+  app.style.setProperty('--comph',comp+'px');
+  const bottom=last.offsetTop+last.offsetHeight, vis=chat.scrollTop+chat.clientHeight-comp;
+  d.classList.toggle('show',bottom-vis>28);
+}
 chat.addEventListener('scroll',()=>{
   const gap=chat.scrollHeight-chat.scrollTop-chat.clientHeight;
-  stick=gap<60; $('#down').classList.toggle('show',gap>140);
-});
-$('#down').onclick=()=>{stick=true;chat.scrollTo({top:chat.scrollHeight,behavior:'smooth'})};
+  lastGap=gap; stick=gap<60; updateDown();
+},{passive:true});
+/* tinggi area chat berubah (keyboard): kalau tadi di dasar, tetap di dasar seperti DeepSeek */
+if(window.ResizeObserver)new ResizeObserver(()=>{ if(lastGap<4)chat.scrollTop=chat.scrollHeight-chat.clientHeight; updateDown() }).observe(chat);
+/* teks jawaban bertambah -> hitung ulang tombol */
+{let q=0;new MutationObserver(()=>{if(q)return;q=requestAnimationFrame(()=>{q=0;updateDown()})}).observe(chat,{childList:true,subtree:true,characterData:true})}
+
+/* scroll halus dan pelan saat jawaban muncul: awal jawaban naik sampai tepat di bawah header, lalu berhenti (isi di bawahnya diakses lewat tombol panah) */
+let follow=false, followEnd=false, fRaf=0;
+function stopFollow(){follow=false;followEnd=false;cancelAnimationFrame(fRaf)}
+function startFollow(a){
+  cancelAnimationFrame(fRaf); follow=true; followEnd=false;
+  const pad=parseFloat(getComputedStyle(chat).paddingTop)||0;
+  (function step(){
+    if(!follow)return;
+    const comp=$('#comp').offsetHeight, last=chat.lastElementChild;
+    const max=Math.max(0,chat.scrollHeight-chat.clientHeight);
+    let target;
+    if(followEnd&&last)target=Math.min(max,Math.max(0,last.offsetTop+last.offsetHeight-chat.clientHeight+comp+16));
+    else target=Math.max(0,Math.min(max,a.offsetTop-pad));
+    const d=target-chat.scrollTop;
+    if(Math.abs(d)>0.6){
+      const st=Math.max(1.2,Math.abs(d)*0.045);
+      chat.scrollTop+=d>0?Math.min(st,d):-Math.min(st,-d);
+    }
+    if(!busy&&Math.abs(d)<2){follow=false;return}
+    fRaf=requestAnimationFrame(step);
+  })();
+}
+['touchstart','wheel','mousedown'].forEach(ev=>chat.addEventListener(ev,stopFollow,{passive:true}));
+$('#down').onclick=()=>{
+  const last=chat.lastElementChild; if(!last)return;
+  if(busy){followEnd=true; if(!follow){follow=true;startFollowEnd()}}
+  else chat.scrollTo({top:Math.max(0,last.offsetTop+last.offsetHeight-chat.clientHeight+$('#comp').offsetHeight+16),behavior:'smooth'});
+};
+function startFollowEnd(){
+  cancelAnimationFrame(fRaf); follow=true; followEnd=true;
+  (function step(){
+    if(!follow)return;
+    const comp=$('#comp').offsetHeight, last=chat.lastElementChild; if(!last){follow=false;return}
+    const max=Math.max(0,chat.scrollHeight-chat.clientHeight);
+    const target=Math.min(max,Math.max(0,last.offsetTop+last.offsetHeight-chat.clientHeight+comp+16));
+    const d=target-chat.scrollTop;
+    if(Math.abs(d)>0.6){const st=Math.max(1.5,Math.abs(d)*0.08);chat.scrollTop+=d>0?Math.min(st,d):-Math.min(st,-d)}
+    if(!busy&&Math.abs(d)<2){follow=false;return}
+    fRaf=requestAnimationFrame(step);
+  })();
+}
 
 /* ---------- efek muncul jawaban & posisi pertanyaan ---------- */
 function fadeTail(root,log){
@@ -814,8 +876,8 @@ async function send(){
   const dots=a.querySelector('.dots'), th=a.querySelector('.think-h'), tb=a.querySelector('.think-body'), tv=tb.querySelector('.tview'), ti=tb.querySelector('.inner'), md=a.querySelector('.md');
   let thinkTxt='', ansTxt='', t0=Date.now(), secs=0, thinkDone=!useThink, started=false, shown=null, prevL=0; const flog=[];
   const msg={role:'assistant',text:'',think:useThink?'':null,secs:0}; cur.msgs.push(msg);
-  keepQ(uEl);
   busy=true; syncState();
+  startFollow(a);
   const sig={stop:false}; abort=()=>{sig.stop=true;if(sig.ctl)sig.ctl.abort()};
   th.onclick=()=>{ if(thinkDone) tb.classList.toggle('collapsed') };
 
@@ -934,6 +996,10 @@ function fit(){
     let h=vv.height;
     /* iOS sering tidak melaporkan keyboard ke visualViewport: selama kolom ketik fokus di layar sentuh, pakai tinggi keyboard yang diketahui */
     if(coarse&&(kbPending||document.activeElement===inp)&&h>window.innerHeight-120)h=Math.max(200,window.innerHeight-getKb());
+    /* layar penuh tapi tinggi yang dilaporkan kurang sedikit (bilah bawah/status): perpanjang sampai dasar layar agar kotak ketik tidak kelewat tinggi */
+    if(!(coarse&&(kbPending||document.activeElement===inp))&&h>window.innerHeight-120){
+      const ex=screen.height-(vv.offsetTop+h); if(ex>20&&ex<70)h+=ex;
+    }
     app.style.setProperty('--vvh',h+'px');app.style.top=vv.offsetTop+'px';
   }
   if(window.scrollY||window.scrollX)window.scrollTo(0,0);
