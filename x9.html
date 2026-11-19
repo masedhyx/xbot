@@ -4,6 +4,11 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#020200">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Obrolan">
+<meta name="format-detection" content="telephone=no">
 <title>Obrolan baru</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%234d6bfe'/%3E%3Cpath d='M16 7l2.2 6.8H25l-5.5 4 2.1 6.7L16 20.5 10.4 24.5l2.1-6.7L7 13.8h6.8z' fill='white'/%3E%3C/svg%3E">
 <style>
@@ -16,9 +21,10 @@
 html,body{height:100%;margin:0;background:var(--bg);color:var(--text);
   font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
   -webkit-font-smoothing:antialiased;overscroll-behavior:none}
+body{position:fixed;inset:0;width:100%}
 button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:pointer}
 svg{display:block}
-#app{position:relative;height:100dvh;max-width:520px;margin:0 auto;overflow:hidden;display:flex;flex-direction:column}
+#app{position:relative;height:100vh;height:100dvh;max-width:520px;margin:0 auto;overflow:hidden;display:flex;flex-direction:column}
 
 /* top bar */
 .top{position:absolute;z-index:20;top:0;left:0;right:0;padding:max(14px,env(safe-area-inset-top)) 16px 10px;
@@ -39,7 +45,7 @@ svg{display:block}
 .logo{width:110px;height:110px;object-fit:contain}
 
 /* chat */
-#chat{flex:1;overflow-y:auto;padding:74px 16px 190px;display:none;scrollbar-width:none}
+#chat{flex:1;overflow-y:auto;padding:calc(max(14px,env(safe-area-inset-top)) + 60px) 16px 190px;display:none;scrollbar-width:none}
 #chat::-webkit-scrollbar{display:none}
 .has-chat #chat{display:block}
 .u{display:flex;justify-content:flex-end;margin:6px 0 22px}
@@ -47,17 +53,25 @@ svg{display:block}
 .a{padding:0 8px;font-size:17px;line-height:1.55}
 .think-h{display:flex;align-items:center;gap:7px;color:#969499;font-size:17px;font-weight:400;line-height:1.35;margin:0 0 11px;cursor:pointer;user-select:none;min-height:24px}
 .think-h svg{width:15px;height:15px;flex:none;color:#969499;transition:transform .22s ease}
-.think-h.loading:after{content:"";width:13px;height:13px;border:1.7px solid #55525a;border-top-color:var(--blue);border-right-color:var(--blue);border-radius:50%;display:inline-block;animation:thinkspin .8s linear infinite;margin-left:3px}
-@keyframes thinkspin{to{transform:rotate(360deg)}}
-.think-h.done:after{display:none}
 .think-h.done svg{transform:rotate(0)}
+.think-h.done.open svg{transform:rotate(90deg)}
+.ph{display:flex;align-items:center;gap:5px;height:26px;margin:2px 0 14px 3px;color:#7b787c;font-size:15px}
+.ph i{width:5px;height:5px;border-radius:50%;background:#6b686d;animation:bl 1s infinite}
+.ph i:nth-child(2){animation-delay:.18s}.ph i:nth-child(3){animation-delay:.36s}
+.pht{margin-left:8px}
+.ar{display:flex;align-items:center;justify-content:space-between;margin:0 0 6px}
+.ag{display:flex;gap:20px}
+.ab{width:22px;height:22px;display:flex;align-items:center;justify-content:center;color:#8f8d92}
+.ab svg{width:19px;height:19px}
+.ab.on{color:var(--text)}
+.ab.flip svg{transform:scaleY(-1)}
 .think-body{border-left:1px solid #343238;margin:0 0 18px 14px;padding:0 0 0 32px;color:#858287;font-size:16.5px;font-weight:400;line-height:1.55;position:relative;min-height:42px}
 .think-body.live{max-height:178px;overflow:hidden;-webkit-mask-image:linear-gradient(to bottom,transparent 0,#000 12%,#000 78%,transparent 100%);mask-image:linear-gradient(to bottom,transparent 0,#000 12%,#000 78%,transparent 100%)}
 .think-body.collapsed{display:none}
 .think-body p{margin:0 0 10px}
 .think-body .inner{white-space:pre-wrap;transition:opacity .2s ease}
 .think-body .inner.swap{opacity:.35}
-@media(max-width:600px){.think-h{font-size:17px;margin-bottom:11px}.think-body{font-size:16.5px;line-height:1.55;padding-left:32px;margin-left:14px;max-height:178px}}
+@media(max-width:600px){.think-h{font-size:17px;margin-bottom:11px}.think-body{font-size:16.5px;line-height:1.55;padding-left:32px;margin-left:14px}}
 .md p{margin:0 0 14px}
 .source-icon{display:inline-block;width:14px;height:14px;object-fit:contain;vertical-align:-2px;margin-right:5px;border-radius:3px}
 .md h1,.md h2,.md h3{margin:18px 0 10px;line-height:1.3}
@@ -135,7 +149,7 @@ svg{display:block}
 .sheet .btns{display:flex;gap:10px;margin-top:14px;padding-top:14px;position:sticky;bottom:0;background:#1e1b1e}
 .sheet .btns button{flex:1;height:46px;border-radius:14px;background:#2a272b;font-size:16px}
 .sheet .btns .pri{background:var(--blue);font-weight:600}
-.toast{position:absolute;z-index:80;left:50%;top:78px;transform:translateX(-50%);background:#333035;padding:10px 16px;border-radius:12px;font-size:14px;opacity:0;pointer-events:none;transition:opacity .2s}
+.toast{position:absolute;z-index:80;left:50%;top:calc(max(14px,env(safe-area-inset-top)) + 64px);transform:translateX(-50%);background:#333035;padding:10px 16px;border-radius:12px;font-size:14px;opacity:0;pointer-events:none;transition:opacity .2s}
 .toast.show{opacity:1}
 .toast{width:max-content;max-width:88%;text-align:center}
 .sec{margin:22px 0 0;font-size:12.5px;font-weight:600;color:#c9c7ca;letter-spacing:.04em;text-transform:uppercase}
@@ -235,7 +249,7 @@ const sleep=ms=>new Promise(r=>setTimeout(r,ms));
 const esc=s=>s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 const store={get(k,d){try{return JSON.parse(localStorage.getItem(k))??d}catch{return d}},set(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch{}}};
 
-let convos=store.get('convos',[]), cur=null, busy=false, abort=null, stick=true;
+let convos=store.get('convos',[]), cur=null, busy=false, abort=null, stick=true, follow=true;
 let useThink=true, useSearch=true;
 
 /* ---------- helpers ---------- */
@@ -253,7 +267,18 @@ chat.addEventListener('scroll',()=>{
   const gap=chat.scrollHeight-chat.scrollTop-chat.clientHeight;
   stick=gap<60; $('#down').classList.toggle('show',gap>140);
 });
-$('#down').onclick=()=>{stick=true;chat.scrollTo({top:chat.scrollHeight,behavior:'smooth'})};
+$('#down').onclick=()=>{follow=false;chat.scrollTo({top:chat.scrollHeight,behavior:'smooth'})};
+// Seperti DeepSeek: layar hanya mengikuti jawaban sampai awal jawaban menyentuh bagian atas,
+// lalu diam di sana (tidak ikut turun ke ujung jawaban). Sentuhan/scroll user menghentikan pengikutan.
+['touchstart','wheel','mousedown'].forEach(ev=>chat.addEventListener(ev,()=>{follow=false},{passive:true}));
+function updDown(){$('#down').classList.toggle('show',chat.scrollHeight-chat.scrollTop-chat.clientHeight>140)}
+function followTurn(a){
+  if(!follow||!a){updDown();return}
+  const top=a.getBoundingClientRect().top-chat.getBoundingClientRect().top+chat.scrollTop;
+  const target=Math.min(chat.scrollHeight-chat.clientHeight,top-46);
+  if(target>chat.scrollTop)chat.scrollTop=target;
+  updDown();
+}
 
 /* ---------- markdown ---------- */
 function inline(s){
@@ -326,27 +351,44 @@ chat.addEventListener('click',e=>{
 /* ---------- conversation view ---------- */
 function persist(){store.set('convos',convos.slice(0,60))}
 function showChat(){app.classList.add('has-chat')}
-function buildTurn(msg){
-  const a=document.createElement('div'); a.className='a';
-  if(msg.think!=null){
+const LEGACY=/^(Berpikir selama|Dihentikan setelah|Menyusun jawaban|Menghubungkan ke model|Mencari informasi|Model utama gagal)/;
+const I_UP='<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6.8 17H4.2a.9.9 0 0 1-.9-.9V9.4a.9.9 0 0 1 .9-.9h2.6M6.8 17V8.5l2.9-5.2c1.3-.1 2.2.9 2 2.1l-.4 2.8h4.1a1.5 1.5 0 0 1 1.5 1.8l-1 5.1a1.8 1.8 0 0 1-1.8 1.4z"/></svg>';
+const I_SPK='<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3.2 8v4h3l4.2 3.6V4.4L6.2 8z"/><path d="M13.3 7.6a3.5 3.5 0 0 1 0 4.8M15.7 5.6a6.5 6.5 0 0 1 0 8.8"/></svg>';
+const I_SHR='<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M11.8 3.8l5.2 4.6-5.2 4.6v-2.6c-3.8 0-6.2 1.4-7.8 4.4.3-4.6 3-7.8 7.8-8.4z"/></svg>';
+const I_RG='<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M16.4 10a6.4 6.4 0 1 1-1.9-4.5"/><path d="M16.6 3.6v3.3h-3.3"/></svg>';
+function actionsHTML(last){
+  return '<div class="ar"><div class="ag">'+
+    '<button class="ab" data-a="copy" aria-label="Salin">'+COPY+'</button>'+
+    '<button class="ab" data-a="up" aria-label="Suka">'+I_UP+'</button>'+
+    '<button class="ab flip" data-a="down" aria-label="Tidak suka">'+I_UP+'</button>'+
+    '<button class="ab" data-a="spk" aria-label="Bacakan">'+I_SPK+'</button>'+
+    '<button class="ab" data-a="shr" aria-label="Bagikan">'+I_SHR+'</button></div>'+
+    (last?'<button class="ab rg" data-a="regen" aria-label="Ulangi">'+I_RG+'</button>':'')+'</div>';
+}
+function buildTurn(msg,isLast){
+  const a=document.createElement('div'); a.className='a'; a._msg=msg;
+  const th=(msg.think&&!LEGACY.test(msg.think))?msg.think:'';
+  if(th){
     a.insertAdjacentHTML('beforeend',
-      `<div class="think-h done"><span>Memikirkan</span>${CHEV}</div><div class="think-body collapsed"><div class="inner"></div></div>`);
-    a.querySelector('.inner').textContent=msg.think;
+      `<div class="think-h done"><span>${msg.stopped?'Dihentikan setelah':'Berpikir selama'} ${msg.secs||1} detik</span>${CHEV_R}</div><div class="think-body collapsed"><div class="inner"></div></div>`);
+    a.querySelector('.inner').textContent=th;
     const h=a.querySelector('.think-h'), b=a.querySelector('.think-body');
-    h.onclick=()=>b.classList.toggle('collapsed');
+    h.onclick=()=>{b.classList.toggle('collapsed');h.classList.toggle('open')};
   }
   const md=document.createElement('div'); md.className='md'; md.innerHTML=render(msg.text||'');
-  a.appendChild(md); return a;
+  a.appendChild(md);
+  if(msg.text)a.insertAdjacentHTML('beforeend',actionsHTML(isLast));
+  return a;
 }
 function openConvo(c){
   cur=c; chat.innerHTML='';
   $('#ttl').textContent=c.title||'Obrolan baru';
   if(c.msgs.length){showChat()}else app.classList.remove('has-chat');
-  for(const m of c.msgs){
+  c.msgs.forEach((m,mi)=>{
     if(m.role==='user'){chat.insertAdjacentHTML('beforeend','<div class="u"><div></div></div>');chat.lastChild.firstChild.textContent=m.text}
-    else chat.appendChild(buildTurn(m));
-  }
-  stick=true; requestAnimationFrame(()=>scrollBottom(true));
+    else chat.appendChild(buildTurn(m,mi===c.msgs.length-1));
+  });
+  stick=true; follow=false; requestAnimationFrame(()=>scrollBottom(true));
   closeDrawer(); renderHist();
 }
 function newChat(){
@@ -425,6 +467,12 @@ const DEMO_HTML=String.raw`<!DOCTYPE html>
 
 function demoPlan(q){
   const lq=q.toLowerCase();
+  if(/^\s*(hai|halo|hi|hello|hey|p)\s*[!.]*\s*$/.test(lq)){
+    return {
+      think:`Hmm, the user just said "${q}" which is a simple greeting. This is a very straightforward opening. I should respond warmly and openly to invite further conversation. A friendly greeting back with an offer to help would be appropriate here.\n\nI can use a casual, welcoming tone with an emoji to match the informal nature of the greeting. The key is to acknowledge the greeting and immediately pivot to being helpful by asking what they need.`,
+      text:`Hai! Ada yang bisa saya bantu hari ini? 😊`
+    };
+  }
   if(/html|web|situs|halaman|landing/.test(lq)){
     const long=/panjang|long|lengkap/.test(lq);
     return {
@@ -468,7 +516,7 @@ const PROVIDERS={
     ['openai/gpt-oss-20b','GPT-OSS 20B — lebih ringan & cepat'],
     ['qwen/qwen3.8-27b','Qwen 3.8 27B — penalaran & umum']]}
 };
-const DEFAULT_MASTER_PROMPT = `Anda adalah asisten AI yang cerdas, teliti, hemat biaya, dan dapat dipercaya.
+const OLD_MASTER_PROMPT = `Anda adalah asisten AI yang cerdas, teliti, hemat biaya, dan dapat dipercaya.
 
 GAYA JAWABAN
 - Jawab dalam bahasa pengguna; gunakan bahasa Indonesia bila pengguna memakai bahasa Indonesia.
@@ -492,6 +540,32 @@ HEMAT API
 - Gunakan jawaban sesingkat mungkin yang tetap lengkap dan benar. Jangan melakukan pencarian web untuk salam, obrolan ringan, hitungan sederhana, definisi umum yang stabil, atau tugas yang dapat dijawab dari konteks.
 - Jangan mengulang pencarian atau meminta data yang sudah tersedia. Gunakan hanya tool yang benar-benar diperlukan dan batasi hasil pada sumber paling relevan.
 - Jangan menampilkan penalaran internal. Berikan hasil, alasan singkat bila perlu, dan sumber yang relevan.`;
+const DEFAULT_MASTER_PROMPT = `Anda adalah asisten AI yang cerdas, teliti, hemat biaya, dan dapat dipercaya.
+
+GAYA JAWABAN
+- Jawab dalam bahasa pengguna; gunakan bahasa Indonesia bila pengguna memakai bahasa Indonesia.
+- Utamakan jawaban singkat, jelas, ramah, langsung ke inti, dan mudah dipahami.
+- Jika pertanyaan sederhana, jawab satu atau beberapa kalimat tanpa penjelasan yang tidak diperlukan.
+- Jika perlu penjelasan, berikan konteks seperlunya, susun poin-poin ringkas, dan fokus pada inti topik.
+- Untuk sapaan atau obrolan ringan, balas hangat dan singkat dengan satu emoji yang pas (contoh: "Hai! Ada yang bisa saya bantu hari ini? 😊").
+- Tebalkan kata kunci penting dengan **teks tebal** bila membantu.
+- Jangan mengulang pertanyaan, basa-basi panjang, atau menambahkan kesimpulan yang mengulang isi.
+
+AKURASI DAN KEJUJURAN
+- Dahulukan ketepatan daripada kecepatan atau terdengar meyakinkan. Jangan mengarang fakta, angka, kutipan, tautan, nama sumber, atau kemampuan.
+- Bedakan fakta terverifikasi, perkiraan, dan opini. Jika tidak yakin atau bukti tidak cukup, katakan dengan jelas apa yang belum dapat dipastikan.
+- Periksa konsistensi, tanggal, satuan, dan asumsi sebelum menjawab. Jika pertanyaan ambigu dan jawabannya bisa berubah, tanyakan satu klarifikasi yang paling penting.
+- Jangan mengklaim telah mencari web atau memeriksa sumber bila pencarian tidak dilakukan.
+
+INFORMASI TERKINI DAN SUMBER
+- Untuk pertanyaan yang menyebut terbaru, hari ini, sekarang, terkini, terupdate, atau kejadian yang cepat berubah, gunakan pencarian web bila fitur dan API pencarian tersedia. Cari informasi paling baru yang relevan, perhatikan tanggal publikasi dan tanggal kejadian, lalu bandingkan sumber tepercaya bila diperlukan.
+- Untuk fakta penting atau informasi yang diminta bersumber, sertakan tautan sumber yang benar-benar mendukung klaim. Utamakan situs resmi, dokumentasi primer, lembaga berwenang, dan media tepercaya. Jangan menciptakan sumber.
+- Jika pencarian tidak tersedia atau gagal, jelaskan keterbatasan itu dan jangan menyajikan informasi lama sebagai kabar terbaru.
+
+HEMAT API
+- Gunakan jawaban sesingkat mungkin yang tetap lengkap dan benar. Jangan melakukan pencarian web untuk salam, obrolan ringan, hitungan sederhana, definisi umum yang stabil, atau tugas yang dapat dijawab dari konteks.
+- Jangan mengulang pencarian atau meminta data yang sudah tersedia. Gunakan hanya tool yang benar-benar diperlukan dan batasi hasil pada sumber paling relevan.
+- Berikan hasil, alasan singkat bila perlu, dan sumber yang relevan.`;
 const DEFAULT_MODEL='groq|qwen/qwen3.8-27b';
 const CK='<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 10.5l4 4 8-9"/></svg>';
 
@@ -513,7 +587,7 @@ function why(code,txt){
 }
 function apiErr(code,body){const w=why(code,body);const e=new Error(w.msg+(code?' (HTTP '+code+')':''));e.kind=w.kind;e.code=code;return e}
 
-function loadCfg(){const c=store.get('cfg2',null)||{};return {gemini:c.gemini||'',groq:c.groq||'',model:c.model||DEFAULT_MODEL,search:c.search||{},masterPrompt:c.masterPrompt||DEFAULT_MASTER_PROMPT}}
+function loadCfg(){const c=store.get('cfg2',null)||{};return {gemini:c.gemini||'',groq:c.groq||'',model:c.model||DEFAULT_MODEL,search:c.search||{},masterPrompt:(c.masterPrompt&&c.masterPrompt!==OLD_MASTER_PROMPT)?c.masterPrompt:DEFAULT_MASTER_PROMPT}}
 const label=t=>PROVIDERS[t.p].name+' · '+t.m.split('/').pop();
 
 /* urutan fallback: model terpilih → model lain di penyedia sama → penyedia lain.
@@ -603,7 +677,7 @@ async function streamAPI(c,ui,sig,t,cfg,ctx){
     r=await fetch(PROVIDERS[t.p].url+'/chat/completions',{
       method:'POST',signal:ctl.signal,
       headers:{'Content-Type':'application/json',Authorization:'Bearer '+cfg[t.p]},
-      body:JSON.stringify({model:t.m,messages:msgs,stream:true,max_tokens:700,temperature:0.2})
+      body:JSON.stringify({model:t.m,messages:msgs,stream:true,max_tokens:6000,temperature:0.2})
     });
   }catch(e){ if(sig.stop)throw e; throw apiErr(0,e.message) }
   if(!r.ok)throw apiErr(r.status,(await r.text()).slice(0,300));
@@ -727,50 +801,96 @@ async function testTarget(id){
   }
 }
 
-async function send(){
-  const q=inp.value.trim(); if(!q)return;
-  if(busy){return}
-  if(!cur)newChat();
-  inp.value='';grow();
-  const first=cur.msgs.length===0;
-  cur.msgs.push({role:'user',text:q});
-  if(first){cur.title=q.slice(0,40);convos.unshift(cur);$('#ttl').textContent=cur.title}
-  showChat();
-  chat.insertAdjacentHTML('beforeend','<div class="u"><div></div></div>'); chat.lastChild.firstChild.textContent=q;
+/* ---------- judul otomatis ---------- */
+async function genTitle(q,ans,cfg,chain){
+  const prompt='Buat judul obrolan yang sangat singkat (2 sampai 4 kata, bahasa Indonesia, tanpa tanda kutip, tanpa titik) berdasarkan percakapan ini.\n\nPengguna: '+q.slice(0,300)+'\nAsisten: '+ans.slice(0,300)+'\n\nJudul:';
+  let tried=0;
+  for(const t of chain){
+    if((stat['m|'+t.p+'|'+t.m]||{}).s==='bad')continue;
+    if(++tried>2)break;
+    const ctl=new AbortController(), tm=setTimeout(()=>ctl.abort(),15000);
+    try{
+      const r=await fetch(PROVIDERS[t.p].url+'/chat/completions',{method:'POST',signal:ctl.signal,
+        headers:{'Content-Type':'application/json',Authorization:'Bearer '+cfg[t.p]},
+        body:JSON.stringify({model:t.m,messages:[{role:'user',content:prompt}],max_tokens:400,temperature:0.3})});
+      if(!r.ok)continue;
+      const j=await r.json();
+      let x=((j.choices&&j.choices[0]&&j.choices[0].message&&j.choices[0].message.content)||'').replace(/<think>[\s\S]*?(<\/think>|$)/g,'');
+      x=(x.split('\n').map(v=>v.trim()).filter(Boolean)[0]||'').replace(/^judul\s*:\s*/i,'').replace(/^["'“”*#\s]+|["'“”*.\s]+$/g,'');
+      if(x)return x.slice(0,40);
+    }catch{}finally{clearTimeout(tm)}
+  }
+  return null;
+}
+async function autoTitle(c,q,ans,cfg,chain){
+  c.autoTitled=true;
+  let t=chain.length?await genTitle(q,ans,cfg,chain):q.replace(/[^\p{L}\p{N}\s]/gu,'').split(/\s+/).filter(Boolean).slice(0,4).join(' ');
+  if(!t)return;
+  t=t.charAt(0).toUpperCase()+t.slice(1);
+  c.title=t; persist(); renderHist();
+  if(cur===c)$('#ttl').textContent=t;
+}
 
-  // assistant shell
+async function send(opt){
+  const regen=!!(opt&&opt.regen);
+  let q;
+  if(regen){
+    if(busy||!cur)return;
+    const lu=[...cur.msgs].reverse().find(m=>m.role==='user'); if(!lu)return;
+    q=lu.text;
+    const la=[...chat.querySelectorAll('.a')].pop(); if(la)la.remove();
+    if(cur.msgs.length&&cur.msgs[cur.msgs.length-1].role==='assistant')cur.msgs.pop();
+  }else{
+    q=inp.value.trim(); if(!q)return;
+    if(busy){return}
+    if(!cur)newChat();
+    inp.value='';grow();
+    const first=cur.msgs.length===0;
+    cur.msgs.push({role:'user',text:q});
+    // judul header tetap "Obrolan baru" sampai jawaban selesai (seperti DeepSeek)
+    if(first){cur.title=q.slice(0,40);convos.unshift(cur)}
+    showChat();
+    chat.insertAdjacentHTML('beforeend','<div class="u"><div></div></div>'); chat.lastChild.firstChild.textContent=q;
+  }
+  const c=cur;
+
+  // assistant shell: titik-titik dulu, header "Memikirkan" baru muncul saat penalaran pertama datang
   const a=document.createElement('div'); a.className='a';
-  a.innerHTML=`<div class="think-h" style="display:${useThink?'flex':'none'}"><span>Memikirkan</span>${CHEV}</div><div class="think-body live" style="display:${useThink?'block':'none'}"><div class="inner"></div></div><div class="md"></div>`;
+  a.innerHTML=`<div class="ph"><i></i><i></i><i></i><span class="pht"></span></div><div class="think-h" style="display:none"><span>Memikirkan</span>${CHEV}</div><div class="think-body live" style="display:none"><div class="inner"></div></div><div class="md"></div>`;
   chat.appendChild(a);
-  const th=a.querySelector('.think-h'), tb=a.querySelector('.think-body'), ti=tb.querySelector('.inner'), md=a.querySelector('.md');
-  let thinkTxt='', ansTxt='', t0=Date.now(), secs=0, thinkDone=!useThink;
-  const msg={role:'assistant',text:'',think:useThink?'':null,secs:0}; cur.msgs.push(msg);
-  stick=true; scrollBottom(true);
+  const ph=a.querySelector('.ph'), pht=a.querySelector('.pht'), th=a.querySelector('.think-h'), tb=a.querySelector('.think-body'), ti=tb.querySelector('.inner'), md=a.querySelector('.md');
+  let thinkTxt='', ansTxt='', t0=Date.now(), secs=0, thinkDone=!useThink, thinkShown=false;
+  const msg={role:'assistant',text:'',think:'',secs:0}; c.msgs.push(msg); a._msg=msg;
+  follow=true; stick=true; scrollBottom(true);
   busy=true; syncState();
   const sig={stop:false}; abort=()=>{sig.stop=true;if(sig.ctl)sig.ctl.abort()};
-  th.onclick=()=>{ if(thinkDone) tb.classList.toggle('collapsed') };
+  th.onclick=()=>{ if(thinkDone&&thinkShown){tb.classList.toggle('collapsed');th.classList.toggle('open')} };
 
-  // Status hanya melaporkan tahap kerja yang benar-benar terjadi; bukan simulasi
-  // atau pembukaan chain-of-thought internal model.
-  const paintThink=(value)=>{if(!useThink||thinkDone)return;thinkTxt=value;ti.textContent=value;};
-  if(useThink){th.classList.add('loading');paintThink('Menghubungkan ke model…')}
   const ui={
-    status(value){paintThink(value)},
-    // Jangan tampilkan reasoning_content mentah dari penyedia model.
-    think(t){},
+    status(v){ if(ansTxt||thinkShown)return; pht.textContent=(v&&!/^Menghubungkan/.test(v))?v:'' },
+    // penalaran asli dari model (reasoning_content / <think>) ditampilkan mengalir
+    think(t){
+      if(!useThink||thinkDone||ansTxt||!t)return;
+      if(!thinkTxt)t=t.replace(/^\s+/,'');
+      if(!t)return;
+      if(!thinkShown){thinkShown=true;ph.style.display='none';th.style.display='';tb.style.display=''}
+      thinkTxt+=t; ti.textContent=thinkTxt; tb.scrollTop=tb.scrollHeight; followTurn(a);
+    },
     endThink(){
       if(thinkDone)return; thinkDone=true;
-      secs=Math.max(1,Math.round((Date.now()-t0)/1000)); msg.secs=secs;
-      msg.think=sig.stop?'Dihentikan setelah '+secs+' detik':'Berpikir selama '+secs+' detik';
-      th.innerHTML=`<span>${sig.stop?'Dihentikan setelah':'Berpikir selama'} ${secs} detik</span>${CHEV}`;
-      th.classList.remove('loading'); th.classList.add('done');
-      ti.textContent='Proses selesai.';
-      tb.classList.remove('live'); tb.classList.add('collapsed');
+      secs=Math.max(1,Math.round((Date.now()-t0)/1000)); msg.secs=secs; msg.stopped=!!sig.stop;
+      ph.style.display='none';
+      if(thinkShown){
+        th.innerHTML=`<span>${sig.stop?'Dihentikan setelah':'Berpikir selama'} ${secs} detik</span>${CHEV_R}`;
+        th.classList.add('done');
+        tb.classList.remove('live'); tb.classList.add('collapsed');
+      }else{th.style.display='none';tb.style.display='none'}
     },
-    text(t){if(!ansTxt&&useThink)paintThink('Menyusun jawaban…');ansTxt+=t;msg.text=ansTxt;md.innerHTML=render(ansTxt,true);scrollBottom()},
+    text(t){ph.style.display='none';ansTxt+=t;msg.text=ansTxt;md.innerHTML=render(ansTxt,true);followTurn(a)},
     got(){return ansTxt.length>0},
     any(){return ansTxt.length>0||thinkTxt.length>0},
-    reset(){ansTxt='';msg.text='';md.innerHTML='';}
+    reset(){ansTxt='';msg.text='';md.innerHTML='';thinkTxt='';ti.textContent='';thinkShown=false;thinkDone=!useThink;
+      th.style.display='none';tb.style.display='none';ph.style.display='flex'}
   };
 
   const cfg=loadCfg(), chain=buildChain(cfg);
@@ -779,24 +899,55 @@ async function send(){
       let ctx='', found=null;
       if(useSearch&&hasSearch(cfg)&&shouldSearch(q)){
         ui.status('Mencari informasi…');
-        md.innerHTML='<p class="srch">Mencari di web…</p>';
         found=await doSearch(q.slice(0,300),cfg,sig);
         if(found)ctx=searchContext(found); else if(!sig.stop)toast('Pencarian gagal, lanjut tanpa web',2200);
       }
       if(!sig.stop){
         ui.status('Menghubungkan ke model…');
-        await runChain(cur,ui,sig,chain,cfg,ctx);
+        await runChain(c,ui,sig,chain,cfg,ctx);
         if(found&&!sig.stop&&ui.got())ui.text('\n\n**Sumber:**\n'+found.res.map((x,i)=>{let host='';try{host=new URL(x.url).hostname}catch{}return `${i+1}. ${host?'!favicon('+host+') ':''}[${x.title.replace(/[\[\]]/g,'')}](${x.url.replace(/[\s")]/g,'')})`}).join('\n'));
       }
     }else await streamDemo(q,ui,sig);
   }catch(e){
     if(!sig.stop){ansTxt+=(ansTxt?'\n\n':'')+'Terjadi kesalahan: '+e.message;msg.text=ansTxt}
   }
+  const failed=/^Terjadi kesalahan/.test(ansTxt)&&!thinkTxt;
   ui.endThink();
-  msg.think=thinkTxt||(useThink?'':null);
+  msg.think=thinkTxt;
   md.innerHTML=render(ansTxt||'',false);
-  busy=false;abort=null;syncState();persist();renderHist();scrollBottom();
+  if(ansTxt){chat.querySelectorAll('.rg').forEach(x=>x.remove());a.insertAdjacentHTML('beforeend',actionsHTML(true))}
+  busy=false;abort=null;syncState();persist();renderHist();followTurn(a);
+  if(ansTxt&&!sig.stop&&!failed&&!c.autoTitled)autoTitle(c,q,ansTxt,cfg,chain);
 }
+
+/* ---------- ikon aksi di bawah jawaban ---------- */
+function plainText(t){return String(t||'').replace(/```[\s\S]*?```/g,' ').replace(/[*#`]/g,'').replace(/!favicon\([^)]*\)/g,'').replace(/\[([^\]]+)\]\([^)]*\)/g,'$1')}
+function copyText(txt){
+  (navigator.clipboard?navigator.clipboard.writeText(txt):Promise.reject()).catch(()=>{
+    const t=document.createElement('textarea');t.value=txt;document.body.appendChild(t);t.select();try{document.execCommand('copy')}catch{}t.remove();
+  });
+}
+chat.addEventListener('click',e=>{
+  const b=e.target.closest('.ab'); if(!b)return;
+  const a=b.closest('.a'), msg=a&&a._msg, k=b.dataset.a;
+  if(k==='copy'){copyText(msg?msg.text:a.innerText);toast('Tersalin')}
+  else if(k==='up'||k==='down'){
+    const on=!b.classList.contains('on');
+    a.querySelectorAll('[data-a=up],[data-a=down]').forEach(x=>x.classList.remove('on'));
+    if(on)b.classList.add('on');
+  }
+  else if(k==='spk'){
+    if(!('speechSynthesis' in window)){toast('Suara tidak didukung');return}
+    if(speechSynthesis.speaking){speechSynthesis.cancel();b.classList.remove('on');return}
+    const u=new SpeechSynthesisUtterance(plainText(msg?msg.text:a.innerText)); u.lang='id-ID';
+    u.onend=u.onerror=()=>b.classList.remove('on'); b.classList.add('on'); speechSynthesis.speak(u);
+  }
+  else if(k==='shr'){
+    const txt=msg?msg.text:a.innerText;
+    if(navigator.share)navigator.share({text:txt}).catch(()=>{}); else{copyText(txt);toast('Tersalin')}
+  }
+  else if(k==='regen')send({regen:true});
+});
 
 /* ---------- events ---------- */
 inp.addEventListener('input',()=>{grow();syncState()});
@@ -825,6 +976,17 @@ $('#sSave').onclick=()=>{
   store.set('cfg2',c);$('#modal').classList.remove('show');toast('Tersimpan');
 };
 
+// ikon layar utama + tinggi layar penuh saat dibuka dari ikon (mode aplikasi)
+(()=>{
+  const lg=document.querySelector('.logo');
+  if(lg&&lg.src){const l=document.createElement('link');l.rel='apple-touch-icon';l.href=lg.src;document.head.appendChild(l)}
+  const standalone=navigator.standalone||(window.matchMedia&&matchMedia('(display-mode: standalone)').matches);
+  if(standalone&&window.visualViewport){
+    const vv=window.visualViewport;
+    const fit=()=>{app.style.height=vv.height+'px';window.scrollTo(0,0)};
+    vv.addEventListener('resize',fit);vv.addEventListener('scroll',fit);fit();
+  }
+})();
 newChat(); syncState();
 })();
 </script>
