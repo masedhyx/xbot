@@ -1043,8 +1043,9 @@ async function send(){
   // Paksa thinking muncul kalau model tidak mengirim reasoning
   if(useThink && !thinkTxt && !sig.stop){
     const forced = `Memahami pertanyaan: "${q.slice(0,80)}${q.length>80?'…':''}"\nMerencanakan jawaban yang jelas, ringkas, dan berguna.\nMemastikan bahasa dan gaya sesuai konteks percakapan.`;
-    ui.think(forced);
-    await sleep(900);
+    begin();
+    raw.think(forced);
+    await sleep(1100);
   }
   await idle(); raw.endThink(); if(dots.parentNode)dots.remove();
   msg.think=thinkTxt||(useThink?'':null);
