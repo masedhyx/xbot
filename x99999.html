@@ -116,6 +116,14 @@ body{position:fixed;inset:0;width:100%;overflow:hidden}
 .cb pre{margin:0;padding:12px 14px 16px;border-top:1px solid #2a272b;overflow-x:hidden;white-space:pre-wrap;word-break:break-word;
   font-family:ui-monospace,"SF Mono",Menlo,monospace;font-size:13.5px;line-height:1.5;color:#e6e4e8;tab-size:2}
 .tk-t{color:#6aa6ff}.tk-a{color:#e4a0ff}.tk-s{color:#a8d18a}.tk-c{color:#7d7a80}.tk-k{color:#6aa6ff}.tk-n{color:#e8b86d}
+.cb-a{display:flex;align-items:center;gap:16px}
+.cb-h .run{color:#8fb0ff}
+.rp{border-top:1px solid #2a272b;padding:10px 14px 12px}
+.rp iframe{display:block;width:100%;height:260px;border:0;border-radius:8px;background:#fff;margin-bottom:8px}
+.rp iframe.hid{display:none}
+.rp-o{font:13px/1.5 ui-monospace,"SF Mono",Menlo,monospace;color:#e6e4e8;white-space:pre-wrap;word-break:break-word;max-height:240px;overflow:auto}
+.rp-o:empty{display:none}
+.rp-o .e{color:#ff8f8f}.rp-o .w{color:#e8b86d}.rp-o .i{color:var(--muted)}
 
 /* scroll button */
 #down{position:absolute;z-index:15;right:24px;bottom:calc(var(--comph,113px) + 15px);width:34px;height:34px;border-radius:50%;
@@ -132,7 +140,7 @@ body{position:fixed;inset:0;width:100%;overflow:hidden}
 @keyframes dspin{to{transform:rotate(360deg)}}
 
 /* composer */
-.composer{position:absolute;z-index:20;left:0;right:0;bottom:0;padding:0 14px max(14px,env(safe-area-inset-bottom));
+.composer{position:absolute;z-index:20;left:0;right:0;bottom:0;padding:0 14px max(10px,calc(env(safe-area-inset-bottom) - 22px));
   background:linear-gradient(rgba(2,2,0,0),var(--bg) 22%)}
 .box{background:var(--panel);border:1px solid var(--line);border-radius:26px;padding:14px 16px 12px}
 #inp{width:100%;background:none;border:0;outline:0;resize:none;color:var(--text);font:inherit;font-size:17px;line-height:1.35;
@@ -229,6 +237,17 @@ body{position:fixed;inset:0;width:100%;overflow:hidden}
 .doc-menu button:active{background:#333033}
 .doc-menu svg{width:18px;height:18px;color:#bdbbc0;flex:0 0 18px}
 /* ===== FITUR DOKUMEN (selesai) ===== */
+
+/* terminal linux (v86) */
+#term{position:fixed;inset:0;z-index:300;background:#000;display:none;flex-direction:column;height:var(--vvh,100dvh)}
+#term.show{display:flex}
+#term .th{display:flex;align-items:center;gap:10px;padding:max(12px,env(safe-area-inset-top)) 14px 10px;border-bottom:1px solid var(--line);font-size:15px}
+#term .th span{flex:1;color:var(--muted);font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#term .th button,#term .ti button{background:#242124;border-radius:12px;padding:9px 14px;font-size:14px}
+#tout{flex:1;margin:0;padding:12px 14px;overflow:auto;color:#b7f5b0;font:13px/1.45 ui-monospace,Menlo,monospace;white-space:pre-wrap;word-break:break-all}
+#term .ti{display:flex;gap:8px;padding:10px 12px max(12px,env(safe-area-inset-bottom));border-top:1px solid var(--line)}
+#term .tg{display:flex;align-items:center;gap:5px;font-size:13px;color:#c9c7ca;white-space:nowrap}
+#tin{flex:1;min-width:0;background:#1b191c;border:1px solid var(--line);border-radius:12px;padding:10px 12px;color:var(--text);font:16px ui-monospace,Menlo,monospace;outline:0}
 </style>
 </head>
 <body>
@@ -284,6 +303,7 @@ body{position:fixed;inset:0;width:100%;overflow:hidden}
     <button class="dbtn" id="dNew">+ Obrolan baru</button>
     <button class="dbtn" id="dMode">Mode model</button>
     <button class="dbtn" id="dSet">Pengaturan API</button>
+    <button class="dbtn" id="dTerm">Terminal Linux</button>
   </aside>
 
   <div id="modal"><div class="sheet">
@@ -539,7 +559,7 @@ function render(md,streaming){
       let closed=false;
       while(i<lines.length){ if(/^```/.test(lines[i])){closed=true;break} buf.push(lines[i]);i++ }
       const code=buf.join('\n');
-      out.push(`<div class="cb"><div class="cb-h"><span>${esc(lang)}</span><button class="cp">${COPY}Salin</button></div><pre data-raw="${encodeURIComponent(code)}">${hl(code,lang)}</pre></div>`);
+      out.push(`<div class="cb"><div class="cb-h"><span>${esc(lang)}</span><span class="cb-a">${closed&&/^(js|javascript|html|python|py)$/i.test(lang)?'<button class="run">▶ Jalankan</button>':''}<button class="cp">${COPY}Salin</button></span></div><pre data-raw="${encodeURIComponent(code)}">${hl(code,lang)}</pre></div>`);
       i++; continue;
     }
     let m;
@@ -569,6 +589,73 @@ chat.addEventListener('click',e=>{
   });
   const old=b.innerHTML; b.innerHTML=COPY+'Tersalin'; setTimeout(()=>b.innerHTML=old,1400);
 });
+
+/* ---------- jalankan kode: JavaScript / HTML / Python (di iframe terisolasi, tanpa akses ke data aplikasi) ---------- */
+(function(){
+  function capW(){
+    const s=(t,m)=>parent.postMessage({__run:1,t,m},'*'),f=v=>{try{return typeof v==='string'?v:v instanceof Error?String(v):JSON.stringify(v,null,1)}catch(_){return String(v)}};
+    console.log=console.info=(...a)=>s('l',a.map(f).join(' '));console.warn=(...a)=>s('w',a.map(f).join(' '));console.error=(...a)=>s('e',a.map(f).join(' '));
+    addEventListener('error',e=>s('e',(e.message||'Error')+(e.lineno?' (baris '+e.lineno+')':'')));
+    addEventListener('unhandledrejection',e=>s('e',f(e.reason)));
+  }
+  function jsW(){
+    const s=(t,m)=>postMessage({t,m}),f=v=>{try{return typeof v==='string'?v:v instanceof Error?String(v):JSON.stringify(v,null,1)}catch(_){return String(v)}};
+    console.log=console.info=(...a)=>s('l',a.map(f).join(' '));console.warn=(...a)=>s('w',a.map(f).join(' '));console.error=(...a)=>s('e',a.map(f).join(' '));
+    onmessage=async e=>{s('start');try{await new (Object.getPrototypeOf(async function(){}).constructor)(e.data)()}catch(x){s('e',String(x))}s('done')};
+  }
+  function pyW(){
+    const s=(t,m)=>postMessage({t,m}),B='https://cdn.jsdelivr.net/pyodide/v0.26.4/full/';let py;
+    onmessage=async e=>{
+      try{
+        if(!py){s('i','Memuat Python (pertama kali butuh beberapa detik)…');importScripts(B+'pyodide.js');py=await loadPyodide({indexURL:B});
+          py.setStdout({batched:m=>s('l',m)});py.setStderr({batched:m=>s('e',m)})}
+        s('start');await py.runPythonAsync(e.data);
+      }catch(x){s('e',String(x.message||x).trim().split('\n').slice(-6).join('\n'))}
+      s('done');
+    };
+  }
+  const BOOT='<script>let w;onmessage=e=>{const d=e.data;if(!d||d.code==null)return;if(!w){'
+    +'w=new Worker(URL.createObjectURL(new Blob(["("+d.src+")()"],{type:"text/javascript"})));'
+    +'w.onmessage=x=>parent.postMessage(Object.assign({__run:1},x.data),"*");'
+    +'w.onerror=x=>{parent.postMessage({__run:1,t:"e",m:x.message||"Error"},"*");x.preventDefault()}}'
+    +'w.postMessage(d.code)}<\/script>';
+  const add=(o,t,m)=>{const l=document.createElement('div');if(t!=='l')l.className=t;l.textContent=m;o.appendChild(l);o.scrollTop=o.scrollHeight};
+  const find=src=>[...document.querySelectorAll('iframe.rf')].find(f=>f.contentWindow===src);
+  let pyF=null;
+  window.addEventListener('message',e=>{
+    const d=e.data; if(!d||!d.__run)return;
+    const f=find(e.source); if(!f||!f._r)return; const r=f._r;
+    if(d.t==='start'){clearTimeout(r.tm);r.tm=setTimeout(()=>r.stop('Dihentikan: berjalan lebih dari '+r.lim+' detik'),r.lim*1000)}
+    else if(d.t==='done'){clearTimeout(r.tm);if(r.q&&!r.o.childNodes.length)add(r.o,'i','(selesai, tidak ada output)');if(f!==pyF)f.remove()}
+    else add(r.o,d.t,d.m);
+  });
+  chat.addEventListener('click',e=>{
+    const b=e.target.closest('.run'); if(!b)return;
+    const cb=b.closest('.cb'), old=cb.querySelector('.rp');
+    if(old){old.remove();b.textContent='▶ Jalankan';return}
+    const code=decodeURIComponent(cb.querySelector('pre').dataset.raw), lang=cb.querySelector('.cb-h span').textContent.toLowerCase();
+    const isPy=/^(py|python)$/.test(lang), isHtml=lang==='html', dom=!isHtml&&!isPy&&/\b(document|window|alert)\b/.test(code);
+    const rp=document.createElement('div');rp.className='rp';cb.appendChild(rp);b.textContent='✕ Tutup';
+    const o=document.createElement('div');o.className='rp-o';
+    const f=(isPy&&pyF)?pyF:document.createElement('iframe');
+    const r={o,lim:isPy?20:8,q:!(isHtml||dom)};
+    r.stop=m=>{clearTimeout(r.tm);add(o,'e',m);if(f===pyF)pyF=null;f.remove()};
+    f._r=r;
+    if(isHtml||dom){
+      const inj='<script>('+capW+')()<\/script>';
+      const src=isHtml?code:'<script>'+code.replace(/<\/script/gi,'<\\/script')+'<\/script>';
+      f.className='rf';f.setAttribute('sandbox','allow-scripts allow-forms allow-modals');
+      f.srcdoc=/<head[^>]*>/i.test(src)?src.replace(/<head[^>]*>/i,m=>m+inj):inj+src;
+      rp.appendChild(f);
+    }else{
+      const go=()=>f.contentWindow.postMessage({code,src:(isPy?pyW:jsW).toString()},'*');
+      if(f===pyF&&f.isConnected)go();
+      else{f.className='rf hid';f.setAttribute('sandbox','allow-scripts');f.srcdoc=BOOT;f.onload=go;
+        if(isPy){pyF=f;document.body.appendChild(f)}else rp.appendChild(f)}
+    }
+    rp.appendChild(o);
+  });
+})();
 
 chat.addEventListener('click',e=>{
   const p=e.target.closest('.spill'); if(!p)return;
@@ -882,7 +969,8 @@ function srcHTML(list){
 const partial=(s,tag)=>{for(let k=Math.min(tag.length-1,s.length);k>0;k--)if(tag.startsWith(s.slice(-k)))return k;return 0};
 async function streamAPI(c,ui,sig,t,cfg,ctx){
   const msgs=c.msgs.filter(m=>m.text).map(m=>({role:m.role==='user'?'user':'assistant',content:DOC.wrap(m)})); // [DOC]
-  const sys=[(store.get('master2','')||'').trim(),nowCtx(),ctx].filter(Boolean).join('\n\n');
+  const sys=[(store.get('master2','')||'').trim(),nowCtx(),ctx,TERM.on()?TERM.prompt():''].filter(Boolean).join('\n\n');
+  if(TERM.follow&&msgs.length&&msgs[msgs.length-1].role==='assistant')msgs.push({role:'user',content:'Lanjutkan berdasarkan hasil terminal di atas. Kalau sudah cukup, jelaskan hasilnya ke pengguna tanpa blok term lagi.'});
   if(sys)msgs.unshift({role:'system',content:sys});
   const ctl=new AbortController(); sig.ctl=ctl;
   let r;
@@ -1118,6 +1206,14 @@ async function send(){
       }
       if(!sig.stop){
         await runChain(cur,ui,sig,chain,cfg,ctx);
+        for(let n=0;TERM.on()&&n<5&&!sig.stop;n++){ // bot memakai terminal Linux
+          await idle(); const cmd=TERM.extract(ansTxt); if(!cmd)break;
+          toast('Menjalankan di terminal…',2500);
+          const res=await TERM.run(cmd,sig); if(sig.stop)break;
+          ui.text('\n\n**Hasil terminal:**\n```text\n'+res+'\n```\n\n'); await idle();
+          TERM.follow=true; await runChain(cur,ui,sig,chain,cfg,ctx);
+        }
+        TERM.follow=false;
         if(found&&!sig.stop&&ui.got())msg.sources=found.res.map(x=>({title:String(x.title||'').slice(0,120),url:x.url}));
       }
     }else if(cfg.mode==='manual'){throw new Error('Mode manual memakai Groq saja. Isi API key Groq di menu → Pengaturan API.')}
@@ -1207,8 +1303,11 @@ function fit(){
   if(vv){
     let h=vv.height;
     /* iOS sering tidak melaporkan keyboard ke visualViewport: selama kolom ketik fokus di layar sentuh, pakai tinggi keyboard yang diketahui */
-    if(coarse&&(kbPending||document.activeElement===inp)&&h>window.innerHeight-120)h=Math.max(200,window.innerHeight-getKb());
-    app.style.setProperty('--vvh',h+'px');app.style.top=vv.offsetTop+'px';
+    let kb=h<window.innerHeight-120;
+    if(coarse&&(kbPending||document.activeElement===inp)&&h>window.innerHeight-120){h=Math.max(200,window.innerHeight-getKb());kb=true}
+    /* mode aplikasi layar utama (PWA): tinggi vv sering kurang dari layar, jadi tanpa keyboard pakai tinggi penuh */
+    const sa=navigator.standalone===true||matchMedia('(display-mode: standalone)').matches;
+    app.style.setProperty('--vvh',(sa&&!kb)?'100%':h+'px');app.style.top=vv.offsetTop+'px';
   }
   if(window.scrollY||window.scrollX)window.scrollTo(0,0);
 }
@@ -1442,6 +1541,76 @@ const DOC=(()=>{
   };
 })();
 /* ===== FITUR DOKUMEN (selesai) ===== */
+
+/* ===== TERMINAL LINUX (v86: emulator x86 di browser) ===== */
+const TERM=(function(){
+  const LIB='https://cdn.jsdelivr.net/npm/v86/build/', BIOS='https://cdn.jsdelivr.net/gh/copy/v86@master/bios/', IMG='https://k.copy.sh/buildroot-bzimage.bin';
+  const ov=document.createElement('div'); ov.id='term';
+  ov.innerHTML='<div class="th"><b>Terminal Linux</b><span id="tst">belum dijalankan</span><label class="tg"><input type="checkbox" id="tbot">Izinkan bot</label><button id="tx">Tutup</button></div><pre id="tout"></pre><div class="ti"><input id="tin" placeholder="ketik perintah, mis. ls" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" enterkeyhint="send"><button id="tsend">Kirim</button><button id="tc">^C</button></div>';
+  document.body.appendChild(ov);
+  const out=ov.querySelector('#tout'), tin=ov.querySelector('#tin'), st=ov.querySelector('#tst');
+  let emu=null, loading=false, raw='', pend=false, cap='', capOn=false, follow=false;
+  const bot=ov.querySelector('#tbot'); bot.checked=store.get('termbot',false)===true; bot.onchange=()=>{store.set('termbot',bot.checked);if(bot.checked){toast('Bot boleh memakai terminal');boot()}};
+  function paint(){ if(pend)return; pend=true; requestAnimationFrame(()=>{
+    pend=false; if(raw.length>60000)raw=raw.slice(-40000);
+    let t=raw.replace(/\x1b\[[0-9;?]*[A-Za-z]/g,'').replace(/\r/g,'').replace(/\x07/g,'');
+    while(/[^\n]\x08/.test(t))t=t.replace(/[^\n]\x08/g,'');
+    out.textContent=t.replace(/\x08/g,''); out.scrollTop=out.scrollHeight;
+  })}
+  function lib(){return new Promise((ok,no)=>{
+    if(window.V86||window.V86Starter)return ok();
+    const e=document.createElement('script'); e.src=LIB+'libv86.js'; e.onload=ok; e.onerror=()=>no(new Error('libv86.js gagal dimuat (cek internet)')); document.head.appendChild(e);
+  })}
+  async function boot(){
+    if(emu||loading)return; loading=true; st.textContent='memuat emulator…';
+    try{
+      await lib(); const V=window.V86||window.V86Starter;
+      emu=new V({wasm_path:LIB+'v86.wasm',memory_size:128*1024*1024,vga_memory_size:2*1024*1024,
+        bios:{url:BIOS+'seabios.bin'},vga_bios:{url:BIOS+'vgabios.bin'},
+        bzimage:{url:IMG,async:false},cmdline:'tsc=reliable mitigations=off random.trust_cpu=on',
+        filesystem:{},autostart:true,disable_keyboard:true,disable_mouse:true,disable_speaker:true});
+      emu.add_listener('serial0-output-byte',b=>{const ch=String.fromCharCode(b);raw+=ch;if(capOn)cap+=ch;paint()});
+      emu.add_listener('emulator-ready',()=>{st.textContent='booting Linux… (tekan Enter bila kosong)'});
+      setTimeout(()=>{if(emu&&/#|%|\$/.test(raw))st.textContent='berjalan'},8000);
+    }catch(e){ st.textContent='gagal: '+e.message; emu=null }
+    loading=false;
+  }
+  function send(s){ if(!emu){toast('Terminal belum siap');return} emu.serial0_send(s) }
+  const go=()=>{send(tin.value+'\n');tin.value=''};
+  ov.querySelector('#tsend').onclick=go;
+  ov.querySelector('#tc').onclick=()=>send('\x03');
+  tin.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();go()}});
+  ov.querySelector('#tx').onclick=()=>ov.classList.remove('show');
+  $('#dTerm').onclick=()=>{closeDrawer();ov.classList.add('show');boot();setTimeout(()=>tin.focus(),200)};
+  const ansi=/\x1b\[[0-9;?]*[A-Za-z]/g;
+  async function ready(sig){
+    await boot(); if(!emu)return false;
+    for(let i=0;i<45&&!sig.stop;i++){
+      cap='';capOn=true; emu.serial0_send('echo "<<R""DY>>"\n');
+      for(let j=0;j<20;j++){await sleep(100); if(cap.includes('<<RDY>>')){capOn=false;return true}}
+    }
+    capOn=false; return false;
+  }
+  async function run(cmd,sig){
+    if(!(await ready(sig)))return '(terminal belum siap)';
+    cap='';capOn=true; emu.serial0_send(cmd.trim()+'\necho "<<E""ND:$?>>"\n');
+    const t0=Date.now(); let m=null;
+    while(!sig.stop&&Date.now()-t0<20000){await sleep(150); if((m=/<<END:(\d+)>>/.exec(cap)))break}
+    capOn=false; let note='';
+    if(!m){emu.serial0_send('\x03\n');note='\n(waktu habis 20 detik, dihentikan)'}
+    let t=(m?cap.slice(0,m.index):cap).replace(ansi,'').replace(/\r/g,'');
+    t=t.split('\n').filter(l=>!l.includes('echo "<<E""ND')).join('\n').trim();
+    if(t.length>2000)t='…'+t.slice(-2000);
+    return (t||'(tanpa output)')+(m?'\n[exit '+m[1]+']':'')+note;
+  }
+  return {
+    on:()=>bot.checked, run, get follow(){return follow}, set follow(v){follow=v},
+    extract(txt){const r=[...txt.matchAll(/```term\n([\s\S]*?)```/g)],l=r[r.length-1];
+      return l&&!txt.slice(l.index+l[0].length).trim()?l[1].trim():''},
+    prompt:()=>'Kamu punya akses ke terminal Linux sungguhan di browser pengguna (BusyBox, 32-bit, tanpa internet, tanpa python/apt). Untuk menjalankan perintah, tulis SATU blok kode berlabel term berisi perintah shell, lalu BERHENTI menulis tepat setelah blok itu; hasilnya akan dikirim kembali kepadamu. Pakai perintah singkat dan aman. Setelah hasil diterima, jelaskan ke pengguna.'
+  };
+})();
+/* ===== TERMINAL LINUX (selesai) ===== */
 
 DOC.init(); // [DOC]
 newChat(); syncState();
