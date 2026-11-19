@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
-<meta name="theme-color" content="#020200">
+<meta name="theme-color" content="#000000">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -13,7 +13,7 @@
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%234d6bfe'/%3E%3Cpath d='M16 7l2.2 6.8H25l-5.5 4 2.1 6.7L16 20.5 10.4 24.5l2.1-6.7L7 13.8h6.8z' fill='white'/%3E%3C/svg%3E">
 <style>
 :root{
-  --bg:#110e11; --panel:#1f1c1f; --line:#3a373a; --bubble:#353235;
+  --bg:#000000; --panel:#1f1c1f; --line:#3a373a; --bubble:#353235;
   --text:#faf7fa; --muted:#8c8a8d; --blue:#4d6bfe; --chip:#2a2f45;
   --code:#1b191c;
 }
@@ -29,7 +29,7 @@ svg{display:block}
 /* top bar */
 .top{position:absolute;z-index:20;top:0;left:0;right:0;padding:calc(max(14px,env(safe-area-inset-top)) + 4px) 16px 10px;
   display:flex;align-items:center;justify-content:space-between;pointer-events:none;
-  background:linear-gradient(var(--bg) 60%,rgba(17,14,17,0))}
+  background:linear-gradient(var(--bg) 60%,rgba(0,0,0,0))}
 .top>*{pointer-events:auto}
 .pill{height:44px;border-radius:22px;background:#1f1c1f;border:1px solid #2c292c;display:flex;align-items:center;justify-content:center}
 .pill.one{width:44px}
@@ -107,7 +107,7 @@ svg{display:block}
 
 /* composer: jarak ke keyboard = 12px seperti DeepSeek (kelas .kb dipasang saat keyboard terbuka) */
 .composer{position:absolute;z-index:20;left:0;right:0;bottom:0;padding:0 12px max(12px,env(safe-area-inset-bottom));
-  background:linear-gradient(rgba(17,14,17,0),var(--bg) 22%)}
+  background:linear-gradient(rgba(0,0,0,0),var(--bg) 22%)}
 .kb .composer{padding-bottom:12px}
 .box{background:var(--panel);border:1px solid var(--line);border-radius:28px;padding:19px 11px 10px}
 #inp{width:100%;background:none;border:0;outline:0;resize:none;color:var(--text);font:inherit;font-size:17px;line-height:24px;
