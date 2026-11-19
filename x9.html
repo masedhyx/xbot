@@ -174,6 +174,13 @@ svg{display:block}
 .mrow .ck{width:18px;height:18px;opacity:0;flex:none}
 .mrow .ck svg{width:18px;height:18px}
 .mrow.sel .ck{opacity:1}
+.rrow{display:flex;align-items:center;gap:10px;padding:9px 0 9px 2px;border-top:1px solid var(--line);font-size:15px;cursor:pointer}
+.rrow .ml{flex:1}
+.rrow .ck{width:18px;height:18px;opacity:0;flex:none}
+.rrow .ck svg{width:18px;height:18px}
+.rrow.sel .ck{opacity:1}
+.reff{display:none;margin:0 0 0 18px}
+.reff.show{display:block}
 .legend{display:flex;flex-wrap:wrap;gap:4px 14px;font-size:12.5px;color:var(--muted);margin:0}
 .legend span{display:flex;align-items:center;gap:6px}
 .legend .dot{width:9px;height:9px;box-shadow:none}
@@ -596,7 +603,7 @@ function why(code,txt){
 }
 function apiErr(code,body){const w=why(code,body);const e=new Error(w.msg+(code?' (HTTP '+code+')':''));e.kind=w.kind;e.code=code;return e}
 
-function loadCfg(){const c=store.get('cfg2',null)||{};return {gemini:c.gemini||'',groq:c.groq||'',model:c.model||DEFAULT_MODEL,search:c.search||{},masterPrompt:(c.masterPrompt&&c.masterPrompt!==OLD_MASTER_PROMPT)?c.masterPrompt:DEFAULT_MASTER_PROMPT}}
+function loadCfg(){const c=store.get('cfg2',null)||{};return {gemini:c.gemini||'',groq:c.groq||'',model:c.model||DEFAULT_MODEL,search:c.search||{},reasonMode:c.reasonMode==='manual'?'manual':'auto',reasonEffort:['low','medium','high'].includes(c.reasonEffort)?c.reasonEffort:'medium',masterPrompt:(c.masterPrompt&&c.masterPrompt!==OLD_MASTER_PROMPT)?c.masterPrompt:DEFAULT_MASTER_PROMPT}}
 const label=t=>PROVIDERS[t.p].name+' · '+t.m.split('/').pop();
 
 /* urutan fallback: model terpilih → model lain di penyedia sama → penyedia lain.
@@ -686,7 +693,7 @@ async function streamAPI(c,ui,sig,t,cfg,ctx){
     r=await fetch(PROVIDERS[t.p].url+'/chat/completions',{
       method:'POST',signal:ctl.signal,
       headers:{'Content-Type':'application/json',Authorization:'Bearer '+cfg[t.p]},
-      body:JSON.stringify({model:t.m,messages:msgs,stream:true,max_tokens:6000,temperature:0.2})
+      body:JSON.stringify(Object.assign({model:t.m,messages:msgs,stream:true,max_tokens:6000,temperature:0.2},(t.p==='groq'&&cfg.reasonMode==='manual')?{reasoning_effort:/gpt-oss/.test(t.m)?cfg.reasonEffort:'default'}:{}))
     });
   }catch(e){ if(sig.stop)throw e; throw apiErr(0,e.message) }
   if(!r.ok)throw apiErr(r.status,(await r.text()).slice(0,300));
@@ -761,7 +768,7 @@ async function runChain(c,ui,sig,chain,cfg,ctx){
 /* ---------- pengaturan & tes titik ---------- */
 let draft={model:DEFAULT_MODEL};
 function openSettings(){
-  const c=loadCfg(); draft={model:c.model};
+  const c=loadCfg(); draft={model:c.model,rm:c.reasonMode,re:c.reasonEffort};
   let h='<div class="legend"><span><i class="dot ok"></i>aktif</span><span><i class="dot bad"></i>kuota habis / model tidak cocok</span><span><i class="dot"></i>belum dites</span></div>';
   h+='<div class="sec">Model AI</div>';
   for(const p in PROVIDERS){
@@ -769,6 +776,10 @@ function openSettings(){
     h+=`<div class="kl"><label for="k_${p}">${P.name} API key</label>${dot('p|'+p)}</div><input id="k_${p}" type="password" placeholder="${esc(P.ph)}" autocomplete="off">`;
     h+='<div class="mlist">'+P.models.map(m=>`<div class="mrow" data-m="${esc(p+'|'+m[0])}"><span class="ck">${CK}</span><span class="ml">${esc(m[1])}</span>${dot('m|'+p+'|'+m[0])}</div>`).join('')+'</div>';
   }
+  h+='<div class="sec">Penalaran Groq</div>';
+  h+='<div class="mlist">'+[['auto','Otomatis (seperti sekarang)'],['manual','Manual (atur tingkat penalaran)']].map(r=>`<div class="rrow" data-rm="${r[0]}"><span class="ck">${CK}</span><span class="ml">${r[1]}</span></div>`).join('')+'</div>';
+  h+='<div class="reff" id="reff">'+[['low','Rendah (cepat)'],['medium','Sedang'],['high','Tinggi (paling dalam)']].map(r=>`<div class="rrow" data-re="${r[0]}"><span class="ck">${CK}</span><span class="ml">${r[1]}</span></div>`).join('')+'</div>';
+  h+='<div class="master-hint">Berlaku hanya untuk model Groq. Tingkat penalaran bekerja di GPT-OSS; Qwen hanya menyala/mati (mengikuti tombol Berpikir).</div>';
   h+='<div class="sec">Pencarian web</div>';
   for(const k in SEARCH){
     h+=`<div class="kl"><label for="k_${k}">${SEARCH[k].name} API key</label>${dot('s|'+k)}</div><input id="k_${k}" type="password" placeholder="${esc(SEARCH[k].ph)}" autocomplete="off">`;
@@ -781,8 +792,13 @@ function openSettings(){
   for(const p in PROVIDERS)$('#k_'+p).value=c[p];
   for(const k in SEARCH)$('#k_'+k).value=c.search[k]||'';
   $('#masterPrompt').value=c.masterPrompt||'';
-  paintModels();
+  paintModels(); paintReason();
   closeDrawer(); $('#modal').classList.add('show'); $('.sheet').scrollTop=0;
+}
+function paintReason(){
+  document.querySelectorAll('#setBody .rrow[data-rm]').forEach(r=>r.classList.toggle('sel',r.dataset.rm===draft.rm));
+  document.querySelectorAll('#setBody .rrow[data-re]').forEach(r=>r.classList.toggle('sel',r.dataset.re===draft.re));
+  const e=$('#reff'); if(e)e.classList.toggle('show',draft.rm==='manual');
 }
 function paintModels(){document.querySelectorAll('#setBody .mrow').forEach(r=>r.classList.toggle('sel',r.dataset.m===draft.model))}
 async function testTarget(id){
@@ -974,6 +990,7 @@ $('#menu').onclick=openDrawer; $('#scrim').onclick=closeDrawer;
 $('#dSet').onclick=openSettings;
 $('#setBody').addEventListener('click',e=>{
   const d=e.target.closest('.dotb'); if(d){testTarget(d.dataset.t);return}
+  const rr=e.target.closest('.rrow'); if(rr){if(rr.dataset.rm)draft.rm=rr.dataset.rm; if(rr.dataset.re)draft.re=rr.dataset.re; paintReason(); return}
   const m=e.target.closest('.mrow'); if(m){draft.model=m.dataset.m;paintModels()}
 });
 $('#sCancel').onclick=()=>$('#modal').classList.remove('show');
@@ -982,6 +999,7 @@ $('#sSave').onclick=()=>{
   for(const p in PROVIDERS)c[p]=$('#k_'+p).value.trim();
   for(const k in SEARCH)c.search[k]=$('#k_'+k).value.trim();
   c.masterPrompt=$('#masterPrompt').value.trim();
+  c.reasonMode=draft.rm; c.reasonEffort=draft.re;
   store.set('cfg2',c);$('#modal').classList.remove('show');toast('Tersimpan');
 };
 
