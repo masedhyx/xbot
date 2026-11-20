@@ -65,12 +65,13 @@ body{position:fixed;inset:0;width:100%;overflow:hidden}
 .think-body{position:relative;margin:0 0 12px;padding-left:16px;color:#97949b;font-size:15px;line-height:24px}
 .think-body::before{content:"";position:absolute;left:4px;top:18px;bottom:3px;width:1.5px;border-radius:1px;background:#3d3a42}
 .think-body::after{content:"";position:absolute;left:2.5px;top:9.5px;width:5px;height:5px;border-radius:50%;background:#a09da4}
-.think-body .tview{overflow:hidden;scroll-behavior:smooth}
+.think-body .tview{overflow:hidden;scroll-behavior:auto}
 .think-body.live .tview{max-height:128px}
 .think-body.live .tview.ov{-webkit-mask-image:linear-gradient(transparent 0,#000 28px);mask-image:linear-gradient(transparent 0,#000 28px)}
 .think-body.collapsed{display:none}
 .think-body .inner{white-space:pre-wrap;word-break:break-word}
-.fi{animation:fi .65s ease-out both}
+.fi{animation:fi .28s ease-out both}
+.fc{animation:fi .22s ease-out both}
 @keyframes fi{from{opacity:0}to{opacity:1}}
 .md>:last-child{margin-bottom:0}
 .aa{display:flex;align-items:center;gap:20px;height:30px;margin-top:14px;animation:fi .35s ease-out both}
@@ -1154,15 +1155,23 @@ async function send(){
     think(t){
       begin(); if(!t)return;
       th.classList.add('has-t');
-      const sp=document.createElement('span'); sp.className='fi'; sp.textContent=t; ti.appendChild(sp); thinkTxt+=t;
+      { // satu span per huruf, muncul berurutan dalam 1 frame => aliran huruf kontinu, bukan blok
+        const fr=document.createDocumentFragment(), L=t.length;
+        for(let i=0;i<L;i++){const sp=document.createElement('span'); sp.className='fc'; sp.style.animationDelay=(i/L*16)+'ms'; sp.textContent=t[i]; fr.appendChild(sp)}
+        ti.appendChild(fr); thinkTxt+=t;
+      }
       const needMask=tv.scrollHeight>tv.clientHeight+1;
       tv.classList.toggle('ov',needMask);
       // smooth internal scroll (DeepSeek-style continuous follow inside think box)
-      if(needMask){
-        const target=tv.scrollHeight-tv.clientHeight;
-        const cur=tv.scrollTop;
-        if(Math.abs(target-cur)>1) tv.scrollTop=cur+(target-cur)*0.55;
-        else tv.scrollTop=target;
+      if(needMask&&!tv._r){
+        tv._r=1; let ls=performance.now();
+        (function stepScroll(){
+          const n2=performance.now(), dts=Math.min(50,n2-ls); ls=n2;
+          const target=tv.scrollHeight-tv.clientHeight, c=tv.scrollTop, d=target-c;
+          { const tn=performance.now(); if(!tv._tw||Math.abs(target-tv._tw.to)>1)tv._tw={t0:tn,from:tv.scrollTop,to:target};
+          const p=Math.min(1,(tn-tv._tw.t0)/300), e=1-Math.pow(1-p,3); tv.scrollTop=tv._tw.from+(tv._tw.to-tv._tw.from)*e; }
+          if(!thinkDone)requestAnimationFrame(stepScroll); else tv._r=0;
+        })();
       }
     },
     endThink(){
@@ -1179,21 +1188,30 @@ async function send(){
   };
 
   // pacer: keluaran ultra-halus ala DeepSeek 1:1 — thinking lebih “berpikir”, jawaban tetap responsif
-  const Q=[]; let pumping=false, rcvT=0, rcvA=0;
+  const Q=[]; let pumping=false, rcvT=0, rcvA=0, pr=0, acc=0, lastT=performance.now(), lastK='';
   const idle=()=>new Promise(r=>{const c=()=>((!pumping&&!Q.length)||sig.stop)?r():setTimeout(c,40);c()});
   function pump(){
-    if(pumping)return; pumping=true;
+    if(pumping)return; pumping=true; pr=0; lastT=performance.now();
     (async()=>{
       while(Q.length&&!sig.stop){
         const it=Q[0];
-        if(it.k==='e'){Q.shift();raw.endThink();await sleep(480);continue}
+        if(it.k==='e'){Q.shift();raw.endThink();await sleep(140);continue}
         let back=0; for(const x of Q){if(x.k===it.k)back+=x.s.length;else break}
-        // thinking lebih pelan & natural (match video ~40-60 char/s), jawaban sedikit lebih cepat
-        let cut=Math.min(Math.max(it.k==='t'?2:5, Math.ceil(back/(it.k==='t'?32:22))), it.s.length);
-        if(cut<it.s.length){const m=it.s.slice(cut,cut+10).search(/[\s,.;:!?)\]]/); if(m>=0)cut+=m+1}
+        // ala DeepSeek (diukur dari rekaman 60fps): 1 pembaruan per frame, ukuran potongan
+        // adaptif = backlog/5 sehingga lag tampilan <= ~80ms dan teks tetap mengalir kontinu
+        // (teks berpikir terukur ~300-600 char/s mengikuti kecepatan kedatangan model)
+        // kecepatan dihaluskan (low-pass) + akumulator pecahan => karakter per frame rata, tanpa lonjakan
+        const nowT=performance.now(), dt=Math.min(0.05,(nowT-lastT)/1000); lastT=nowT;
+        const want=back/0.18;
+        if(lastK!==it.k||pr<=0){pr=want;acc=0;lastK=it.k}
+        pr+=(want-pr)*Math.min(1,dt*8);
+        acc+=pr*dt; const n=Math.floor(acc);
+        if(n<1){await new Promise(r=>requestAnimationFrame(r));continue}
+        acc-=n;
+        const cut=Math.min(n,it.s.length);
         const part=it.s.slice(0,cut); it.s=it.s.slice(cut); if(!it.s)Q.shift();
         if(it.k==='t')raw.think(part); else raw.text(part);
-        await sleep(it.k==='t'?52:32);
+        await new Promise(r=>requestAnimationFrame(r));
       }
       pumping=false;
     })();
@@ -1239,7 +1257,7 @@ async function send(){
     const forced = `Memahami pertanyaan: "${q.slice(0,80)}${q.length>80?'…':''}"\nMerencanakan jawaban yang jelas, ringkas, dan berguna.\nMemastikan bahasa dan gaya sesuai konteks percakapan.`;
     begin();
     raw.think(forced);
-    await sleep(1100);
+    await sleep(300);
   }
   await idle(); raw.endThink(); if(dots.parentNode)dots.remove();
   msg.think=thinkTxt||(useThink?'':null);
