@@ -217,6 +217,9 @@ body{position:fixed;inset:0;width:100%;overflow:hidden}
 /* mode model */
 #mmodal{position:absolute;inset:0;z-index:60;background:rgba(0,0,0,.6);display:none;align-items:flex-end}
 #mmodal.show{display:flex}
+#pmodal{position:absolute;inset:0;z-index:70;background:rgba(0,0,0,.6);display:none;align-items:flex-end}
+#pmodal.show{display:flex}
+.pwmsg{color:#ff8a8a;font-size:13px;min-height:18px;margin:8px 0 0}
 .opt{display:flex;align-items:center;gap:10px;padding:12px 0 12px 2px;border-top:1px solid var(--line);font-size:16px;cursor:pointer}
 .opt .ck{width:18px;height:18px;opacity:0;flex:none}
 .opt .ck svg{width:18px;height:18px}
@@ -309,15 +312,22 @@ body{position:fixed;inset:0;width:100%;overflow:hidden}
 
   <div id="modal"><div class="sheet">
     <h2>Pengaturan API</h2>
-    <p>Isi API key Gemini dan/atau Groq. Jika satu model atau penyedia error (kuota habis, model tidak cocok), bot otomatis pindah ke model berikutnya. Ketuk titik bulat di samping tiap key untuk mengetes. Kunci hanya disimpan di browser Anda.</p>
+    <p>Isi API key OpenRouter (utama), Gemini, dan/atau Groq. Jika satu model atau penyedia error (kuota habis, model tidak cocok), bot otomatis pindah ke model berikutnya. Ketuk titik bulat di samping tiap key untuk mengetes. Kunci hanya disimpan di browser Anda.</p>
     <div id="setBody"></div>
     <div class="btns"><button id="sCancel">Batal</button><button class="pri" id="sSave">Simpan</button></div>
+  </div></div>
+  <div id="pmodal"><div class="sheet">
+    <h2>Masukkan sandi</h2>
+    <p>Pengaturan API dilindungi sandi.</p>
+    <input id="pwIn" type="password" placeholder="Sandi" autocomplete="off">
+    <div class="pwmsg" id="pwMsg"></div>
+    <div class="btns"><button id="pwCancel">Batal</button><button class="pri" id="pwOk">Masuk</button></div>
   </div></div>
   <div id="mmodal"><div class="sheet">
     <h2>Mode model</h2>
     <p>Otomatis memakai semua model dan pindah sendiri kalau ada yang error. Manual hanya memakai Groq dengan tingkat penalaran pilihanmu.</p>
     <div id="mMode">
-      <div class="opt" data-v="auto"><span class="ck"></span><span class="ml">Otomatis<small>Gemini + Groq, pindah model otomatis saat error</small></span></div>
+      <div class="opt" data-v="auto"><span class="ck"></span><span class="ml">Otomatis<small>OpenRouter + Gemini + Groq, pindah model otomatis saat error</small></span></div>
       <div class="opt" data-v="manual"><span class="ck"></span><span class="ml">Manual<small>Groq saja (perlu API key Groq)</small></span></div>
     </div>
     <div id="mEff" style="display:none">
@@ -777,7 +787,7 @@ function demoPlan(q){
   }
   return {
     think:`User asks in Indonesian: "${q}". Let me think about what they want and how to answer clearly.\n\nI should give a direct, well-organized answer. Keep it helpful and concise.`,
-    text:`Mode demo aktif, jadi saya belum terhubung ke model sungguhan. Buka menu lalu pilih **Pengaturan API** dan isi API key Gemini atau Groq agar bot bisa menjawab pertanyaan apa pun.\n\nSebagai contoh, coba kirim: \`buatkan html sangat panjang\`.`
+    text:`Mode demo aktif, jadi saya belum terhubung ke model sungguhan. Buka menu lalu pilih **Pengaturan API** dan isi API key OpenRouter, Gemini, atau Groq agar bot bisa menjawab pertanyaan apa pun.\n\nSebagai contoh, coba kirim: \`buatkan html sangat panjang\`.`
   };
 }
 
@@ -799,6 +809,11 @@ async function streamDemo(q,ui,sig){
 /* ---------- providers, models & status ---------- */
 // ID model bisa diubah di sini kalau nama di akun Anda berbeda.
 const PROVIDERS={
+  openrouter:{name:'OpenRouter',url:'https://openrouter.ai/api/v1',ph:'sk-or-...',models:[
+    ['openrouter/free','Free Models Router — otomatis pilih model gratis'],
+    ['openai/gpt-oss-120b:free','GPT-OSS 120B (gratis)'],
+    ['nvidia/nemotron-3-super-120b-a12b:free','Nemotron 3 Super 120B (gratis)'],
+    ['qwen/qwen3.8-27b:free','Qwen 3.8 27B (gratis)']]},
   gemini:{name:'Gemini',url:'https://generativelanguage.googleapis.com/v1beta/openai',ph:'AIza...',models:[
     ['gemini-3.8-flash','gemini-3.8-flash'],
     ['gemini-3.6-flash','gemini-3.6-flash'],
@@ -810,12 +825,8 @@ const PROVIDERS={
     ['openai/gpt-oss-120b','GPT-OSS 120B — paling kuat'],
     ['openai/gpt-oss-20b','GPT-OSS 20B — lebih ringan & cepat'],
     ['qwen/qwen3.8-27b','Qwen 3.8 27B — penalaran & umum']]},
-  openrouter:{name:'OpenRouter',url:'https://openrouter.ai/api/v1',ph:'sk-or-...',models:[
-    ['openai/gpt-oss-120b:free','GPT-OSS 120B (gratis)'],
-    ['nvidia/nemotron-3-super-120b-a12b:free','Nemotron 3 Super 120B (gratis)'],
-    ['qwen/qwen3.8-27b:free','Qwen 3.8 27B (gratis)']]}
 };
-const DEFAULT_MODEL='groq|qwen/qwen3.8-27b';
+const DEFAULT_MODEL='openrouter|openrouter/free';
 const CK='<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 10.5l4 4 8-9"/></svg>';
 
 /* status titik: id -> {s:'ok'|'bad'|'load', msg}
@@ -836,7 +847,7 @@ function why(code,txt){
 }
 function apiErr(code,body){const w=why(code,body);const e=new Error(w.msg+(code?' (HTTP '+code+')':''));e.kind=w.kind;e.code=code;return e}
 
-function loadCfg(){const c=store.get('cfg2',null)||{};return {gemini:c.gemini||'',groq:c.groq||'',model:c.model||DEFAULT_MODEL,search:c.search||{},...loadMode()}}
+function loadCfg(){const c=store.get('cfg2',null)||{};return {openrouter:c.openrouter||'',gemini:c.gemini||'',groq:c.groq||'',model:c.model||DEFAULT_MODEL,search:c.search||{},...loadMode()}}
 const label=t=>PROVIDERS[t.p].name+' · '+t.m.split('/').pop();
 
 /* urutan fallback: model terpilih → model lain di penyedia sama → penyedia lain.
@@ -890,6 +901,24 @@ const SEARCH={
     const arr=Array.isArray(j.data)?j.data:((j.data&&j.data.web)||[]);
     return arr.map(x=>({title:x.title||x.url,url:x.url,text:x.description||x.snippet||''}))}}
 };
+/* [TES-GROUNDING-MULAI] sementara: pencarian Google lewat Gemini. Hapus dari sini sampai [TES-GROUNDING-SELESAI] bila selesai. */
+const GG={
+  g35:{name:'Gemini 3.5 Flash-Lite',model:'gemini-3.5-flash-lite'},
+  g31:{name:'Gemini 3.1 Flash-Lite',model:'gemini-3.1-flash-lite'}
+};
+async function ggRun(id,key,q,sig){
+  const j=await jpost('https://generativelanguage.googleapis.com/v1beta/models/'+GG[id].model+':generateContent',
+    {'x-goog-api-key':key},
+    {contents:[{parts:[{text:q}]}],tools:[{google_search:{}}]},sig);
+  const c=j.candidates&&j.candidates[0], gm=c&&c.groundingMetadata;
+  if(!gm)throw new Error('Model menjawab tanpa mencari di Google (grounding tidak aktif)');
+  const ans=((c.content&&c.content.parts)||[]).map(p=>p.text||'').join('').trim();
+  const ch=(gm.groundingChunks||[]).filter(x=>x.web&&x.web.uri);
+  const res=ch.map((x,i)=>({title:x.web.title||x.web.uri,url:x.web.uri,text:i===0?ans:''}));
+  if(!res.length&&ans)res.push({title:'Google Search',url:'https://www.google.com/search?q='+encodeURIComponent(q),text:ans});
+  return res;
+}
+/* [TES-GROUNDING-SELESAI] */
 const hasSearch=cfg=>Object.keys(SEARCH).some(k=>cfg.search[k]);
 // coba berurutan: serper → tavily → firecrawl; yang error dilewati
 async function doSearch(q,cfg,sig){
@@ -901,8 +930,16 @@ async function doSearch(q,cfg,sig){
       if(res.length)return {name:SEARCH[k].name,res};
     }catch(e){ if(sig.stop)return null; setStat('s|'+k,'bad',e.message) }
   }
+  if(cfg.gemini)for(const id in GG){ // [TES-GROUNDING]
+    if(sig.stop)return null;
+    try{
+      const res=await ggRun(id,cfg.gemini,q,sig);
+      setStat('g|'+id,'ok','Berfungsi');
+      if(res.length)return {name:'Google Search ('+GG[id].name+')',res};
+    }catch(e){ if(sig.stop)return null; setStat('g|'+id,'bad',e.message) }
+  }
   const f=await freeSearch(q,sig);
-  if(f&&hasSearch(cfg))toast('Pencarian utama gagal, pakai cadangan ('+f.name+')',2600);
+  if(f&&(hasSearch(cfg)||cfg.gemini))toast('Pencarian utama gagal, pakai cadangan ('+f.name+')',2600);
   return f;
 }
 // cadangan TANPA API key: Wikipedia (id, lalu en). Lewat origin=* agar bisa dipanggil langsung dari browser.
@@ -1073,7 +1110,7 @@ async function runChain(c,ui,sig,chain,cfg,ctx){
 
 /* ---------- pengaturan & tes titik ---------- */
 let draft={model:DEFAULT_MODEL};
-function openSettings(){
+function openSettingsReal(){
   const c=loadCfg(); draft={model:c.model};
   let h='<div class="legend"><span><i class="dot ok"></i>aktif</span><span><i class="dot bad"></i>kuota habis / model tidak cocok</span><span><i class="dot"></i>belum dites</span></div>';
   h+='<div class="sec">Model AI</div>';
@@ -1086,7 +1123,10 @@ function openSettings(){
   for(const k in SEARCH){
     h+=`<div class="kl"><label for="k_${k}">${SEARCH[k].name} API key</label>${dot('s|'+k)}</div><input id="k_${k}" type="password" placeholder="${esc(SEARCH[k].ph)}" autocomplete="off">`;
   }
+  h+='<div class="sec">Tes pencarian Google (sementara)</div><p style="margin:6px 0 0">Memakai key Gemini di atas. Ketuk titik untuk tes masing-masing model.</p>'; // [TES-GROUNDING]
+  for(const g in GG)h+=`<div class="kl"><label>${GG[g].name}</label>${dot('g|'+g)}</div>`;
   h+='<div class="sec">Prompt master</div><p style="margin:6px 0 0">Instruksi utama yang dikirim ke model di setiap obrolan: peran, gaya bahasa, aturan jawaban, dan sebagainya. Kosongkan kalau tidak perlu.</p><textarea id="k_master" maxlength="8000" spellcheck="false" placeholder="Contoh: Kamu adalah asisten berbahasa Indonesia. Jawab singkat, jelas, dan sopan."></textarea>';
+  h+='<div class="sec">Ganti sandi</div><p style="margin:6px 0 0">Sandi untuk membuka menu ini. Disimpan di browser ini saja.</p><label for="p_old">Sandi lama</label><input id="p_old" type="password" autocomplete="off"><label for="p_new">Sandi baru (min. 4 karakter)</label><input id="p_new" type="password" autocomplete="off"><label for="p_new2">Ulangi sandi baru</label><input id="p_new2" type="password" autocomplete="off"><div class="pwmsg" id="pChgMsg"></div><div class="btns" style="position:static;margin-top:8px;padding-top:0"><button class="pri" id="pChg">Ganti sandi</button></div>';
   $('#setBody').innerHTML=h;
   $('#k_master').value=store.get('master2','');
   for(const p in PROVIDERS)$('#k_'+p).value=c[p];
@@ -1094,8 +1134,62 @@ function openSettings(){
   paintModels();
   closeDrawer(); $('#modal').classList.add('show'); $('.sheet').scrollTop=0;
 }
+/* ---------- sandi pengaturan (perlindungan di sisi browser, bukan keamanan penuh) ---------- */
+function sha256(str){
+  const K=[];for(let i=2,n=0;n<64;i++){let p=1;for(let j=2;j*j<=i;j++)if(i%j==0){p=0;break}if(p){K[n++]=(Math.pow(i,1/3)%1)*4294967296|0}}
+  const H=[];for(let i=2,n=0;n<8;i++){let p=1;for(let j=2;j*j<=i;j++)if(i%j==0){p=0;break}if(p){H[n++]=(Math.pow(i,.5)%1)*4294967296|0}}
+  const b=new TextEncoder().encode(str), l=b.length, w=new Int32Array((((l+8)>>6)+1)*16);
+  for(let i=0;i<l;i++)w[i>>2]|=b[i]<<(24-(i&3)*8);
+  w[l>>2]|=0x80<<(24-(l&3)*8); w[w.length-1]=l*8;
+  const rr=(x,n)=>(x>>>n)|(x<<(32-n));
+  for(let o=0;o<w.length;o+=16){
+    const x=new Int32Array(64); for(let i=0;i<16;i++)x[i]=w[o+i];
+    for(let i=16;i<64;i++){const a=x[i-15],c=x[i-2];x[i]=(x[i-16]+(rr(a,7)^rr(a,18)^(a>>>3))+x[i-7]+(rr(c,17)^rr(c,19)^(c>>>10)))|0}
+    let [a,c,d,e,f,g,h,k]=H;
+    for(let i=0;i<64;i++){
+      const t1=(k+(rr(f,6)^rr(f,11)^rr(f,25))+((f&g)^(~f&h))+K[i]+x[i])|0;
+      const t2=((rr(a,2)^rr(a,13)^rr(a,22))+((a&c)^(a&d)^(c&d)))|0;
+      k=h;h=g;g=f;f=(e+t1)|0;e=d;d=c;c=a;a=(t1+t2)|0;
+    }
+    H[0]=(H[0]+a)|0;H[1]=(H[1]+c)|0;H[2]=(H[2]+d)|0;H[3]=(H[3]+e)|0;H[4]=(H[4]+f)|0;H[5]=(H[5]+g)|0;H[6]=(H[6]+h)|0;H[7]=(H[7]+k)|0;
+  }
+  return H.map(v=>(v>>>0).toString(16).padStart(8,'0')).join('');
+}
+const PW_DEFAULT='03523a45f7e9e05a53b7f19b6a4d09603c5a57356fe31847225bf2a744224bfa';
+const pwHash=p=>sha256('botpw1|'+p);
+const pwStored=()=>store.get('pw2',null)||PW_DEFAULT;
+function openSettings(){
+  closeDrawer(); $('#pwIn').value=''; $('#pwMsg').textContent='';
+  $('#pmodal').classList.add('show'); setTimeout(()=>$('#pwIn').focus(),50);
+}
+function pwSubmit(){
+  if(pwHash($('#pwIn').value)===pwStored()){$('#pmodal').classList.remove('show');$('#pwIn').value='';openSettingsReal()}
+  else{$('#pwMsg').textContent='Sandi salah.';$('#pwIn').select()}
+}
+$('#pwOk').onclick=pwSubmit;
+$('#pwIn').addEventListener('keydown',e=>{if(e.key==='Enter')pwSubmit()});
+$('#pwCancel').onclick=()=>{$('#pmodal').classList.remove('show');$('#pwIn').value=''};
+$('#setBody').addEventListener('click',e=>{
+  if(!e.target.closest('#pChg'))return;
+  const m=$('#pChgMsg'), o=$('#p_old').value, n=$('#p_new').value, n2=$('#p_new2').value;
+  if(pwHash(o)!==pwStored()){m.textContent='Sandi lama salah.';return}
+  if(n.length<4){m.textContent='Sandi baru minimal 4 karakter.';return}
+  if(n!==n2){m.textContent='Ulangi sandi tidak sama.';return}
+  store.set('pw2',pwHash(n)); m.textContent='';
+  $('#p_old').value=$('#p_new').value=$('#p_new2').value='';
+  toast('Sandi diganti');
+});
+
 function paintModels(){document.querySelectorAll('#setBody .mrow').forEach(r=>r.classList.toggle('sel',r.dataset.m===draft.model))}
 async function testTarget(id){
+  if(id.startsWith('g|')){ // [TES-GROUNDING]
+    const g=id.slice(2), k=$('#k_gemini').value.trim();
+    if(!k){setStat(id,'bad','Isi API key Gemini dulu');toast('Isi API key Gemini dulu');return}
+    setStat(id,'load','Menguji…');
+    try{const r=await ggRun(g,k,'Siapa presiden Indonesia sekarang?',null);setStat(id,'ok','Grounding aktif ('+r.length+' sumber)');toast(GG[g].name+': pencarian Google aktif',2600)}
+    catch(e){setStat(id,'bad',e.message);toast(GG[g].name+': '+e.message,3200)}
+    return;
+  }
   const [kind,a,b]=id.split('|');
   const key=$('#k_'+a).value.trim();
   if(!key){setStat(id,'bad','Isi API key dulu');toast('Isi API key dulu');return}
