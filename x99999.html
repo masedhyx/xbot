@@ -309,7 +309,7 @@ body{position:fixed;inset:0;width:100%;overflow:hidden}
 
   <div id="modal"><div class="sheet">
     <h2>Pengaturan API</h2>
-    <p>Isi API key Gemini dan/atau Groq. Jika satu model atau penyedia error (kuota habis, model tidak cocok), bot otomatis pindah ke model berikutnya. Ketuk titik bulat di samping tiap key untuk mengetes. Kunci hanya disimpan di browser Anda.</p>
+    <p>Isi API key OpenRouter (utama), Gemini, dan/atau Groq. Jika satu model atau penyedia error (kuota habis, model tidak cocok), bot otomatis pindah ke model berikutnya. Ketuk titik bulat di samping tiap key untuk mengetes. Kunci hanya disimpan di browser Anda.</p>
     <div id="setBody"></div>
     <div class="btns"><button id="sCancel">Batal</button><button class="pri" id="sSave">Simpan</button></div>
   </div></div>
@@ -317,7 +317,7 @@ body{position:fixed;inset:0;width:100%;overflow:hidden}
     <h2>Mode model</h2>
     <p>Otomatis memakai semua model dan pindah sendiri kalau ada yang error. Manual hanya memakai Groq dengan tingkat penalaran pilihanmu.</p>
     <div id="mMode">
-      <div class="opt" data-v="auto"><span class="ck"></span><span class="ml">Otomatis<small>Gemini + Groq, pindah model otomatis saat error</small></span></div>
+      <div class="opt" data-v="auto"><span class="ck"></span><span class="ml">Otomatis<small>OpenRouter + Gemini + Groq, pindah model otomatis saat error</small></span></div>
       <div class="opt" data-v="manual"><span class="ck"></span><span class="ml">Manual<small>Groq saja (perlu API key Groq)</small></span></div>
     </div>
     <div id="mEff" style="display:none">
@@ -777,7 +777,7 @@ function demoPlan(q){
   }
   return {
     think:`User asks in Indonesian: "${q}". Let me think about what they want and how to answer clearly.\n\nI should give a direct, well-organized answer. Keep it helpful and concise.`,
-    text:`Mode demo aktif, jadi saya belum terhubung ke model sungguhan. Buka menu lalu pilih **Pengaturan API** dan isi API key Gemini atau Groq agar bot bisa menjawab pertanyaan apa pun.\n\nSebagai contoh, coba kirim: \`buatkan html sangat panjang\`.`
+    text:`Mode demo aktif, jadi saya belum terhubung ke model sungguhan. Buka menu lalu pilih **Pengaturan API** dan isi API key OpenRouter, Gemini, atau Groq agar bot bisa menjawab pertanyaan apa pun.\n\nSebagai contoh, coba kirim: \`buatkan html sangat panjang\`.`
   };
 }
 
@@ -799,6 +799,11 @@ async function streamDemo(q,ui,sig){
 /* ---------- providers, models & status ---------- */
 // ID model bisa diubah di sini kalau nama di akun Anda berbeda.
 const PROVIDERS={
+  openrouter:{name:'OpenRouter',url:'https://openrouter.ai/api/v1',ph:'sk-or-...',models:[
+    ['openrouter/free','Free Models Router — otomatis pilih model gratis'],
+    ['openai/gpt-oss-120b:free','GPT-OSS 120B (gratis)'],
+    ['nvidia/nemotron-3-super-120b-a12b:free','Nemotron 3 Super 120B (gratis)'],
+    ['qwen/qwen3.8-27b:free','Qwen 3.8 27B (gratis)']]},
   gemini:{name:'Gemini',url:'https://generativelanguage.googleapis.com/v1beta/openai',ph:'AIza...',models:[
     ['gemini-3.8-flash','gemini-3.8-flash'],
     ['gemini-3.6-flash','gemini-3.6-flash'],
@@ -810,12 +815,8 @@ const PROVIDERS={
     ['openai/gpt-oss-120b','GPT-OSS 120B — paling kuat'],
     ['openai/gpt-oss-20b','GPT-OSS 20B — lebih ringan & cepat'],
     ['qwen/qwen3.8-27b','Qwen 3.8 27B — penalaran & umum']]},
-  openrouter:{name:'OpenRouter',url:'https://openrouter.ai/api/v1',ph:'sk-or-...',models:[
-    ['openai/gpt-oss-120b:free','GPT-OSS 120B (gratis)'],
-    ['nvidia/nemotron-3-super-120b-a12b:free','Nemotron 3 Super 120B (gratis)'],
-    ['qwen/qwen3.8-27b:free','Qwen 3.8 27B (gratis)']]}
 };
-const DEFAULT_MODEL='groq|qwen/qwen3.8-27b';
+const DEFAULT_MODEL='openrouter|openrouter/free';
 const CK='<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 10.5l4 4 8-9"/></svg>';
 
 /* status titik: id -> {s:'ok'|'bad'|'load', msg}
@@ -836,7 +837,7 @@ function why(code,txt){
 }
 function apiErr(code,body){const w=why(code,body);const e=new Error(w.msg+(code?' (HTTP '+code+')':''));e.kind=w.kind;e.code=code;return e}
 
-function loadCfg(){const c=store.get('cfg2',null)||{};return {gemini:c.gemini||'',groq:c.groq||'',model:c.model||DEFAULT_MODEL,search:c.search||{},...loadMode()}}
+function loadCfg(){const c=store.get('cfg2',null)||{};return {openrouter:c.openrouter||'',gemini:c.gemini||'',groq:c.groq||'',model:c.model||DEFAULT_MODEL,search:c.search||{},...loadMode()}}
 const label=t=>PROVIDERS[t.p].name+' · '+t.m.split('/').pop();
 
 /* urutan fallback: model terpilih → model lain di penyedia sama → penyedia lain.
