@@ -60,7 +60,7 @@ footer{padding:6px 18px calc(env(safe-area-inset-bottom) + 12px);position:relati
  <div id="ms"><div id="wl"></div></div>
  <footer>
   <div id="pv"></div><div id="gp"></div>
-  <div id="pm" hidden><button id="m_f">Lampirkan file</button><button id="m_c">Ambil foto</button><button id="m_g"><span>Bagikan GPS</span><i class="dt" hidden></i></button><button id="m_w"><span>Cari di web</span><i class="dt" hidden></i></button><button id="m_i">Buat gambar</button><button id="m_a"><span>Agen</span><i class="dt" hidden></i></button><div id="agd" hidden><div class="agr"><button data-d="cepat">Cepat</button><button data-d="std">Seimbang</button><button data-d="dalam">Mendalam</button></div><button id="m_r">Laporan tersimpan</button></div><button id="m_e1"><span>Mata live · Depan</span><i class="dt" hidden></i></button><button id="m_e2"><span>Mata live · Belakang</span><i class="dt" hidden></i></button><button id="m_v">Telephone</button></div>
+  <div id="pm" hidden><button id="m_f">Lampirkan file</button><button id="m_c">Ambil foto</button><button id="m_g"><span>Bagikan GPS</span><i class="dt" hidden></i></button><button id="m_w"><span>Cari di web</span><i class="dt" hidden></i></button><button id="m_i">Buat gambar</button><button id="m_a"><span>Agen</span><i class="dt" hidden></i></button><div id="agd" hidden><div class="agr"><button data-d="cepat">Cepat</button><button data-d="std">Seimbang</button><button data-d="dalam">Mendalam</button></div><button id="m_r">Laporan tersimpan</button></div><button id="m_e1"><span>Mata live · Depan</span><i class="dt" hidden></i></button><button id="m_e2"><span>Mata live · Belakang</span><i class="dt" hidden></i></button><button id="m_a1"><span>Mata auto · Baca teks</span></button><button id="m_a2"><span>Mata auto · Terjemahkan</span></button><button id="m_a3"><span>Mata auto · Komentar</span></button><button id="m_a0"><span>Mata auto · Mati</span></button><button id="m_v">Telephone</button></div>
   <div id="qc"><button data-t="m_w"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.6 2.4 4 5.5 4 9s-1.4 6.6-4 9c-2.6-2.4-4-5.5-4-9s1.4-6.6 4-9z"/></svg><span>Cari di web</span></button><button data-t="m_i"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="3.5" width="17" height="17" rx="4"/><circle cx="9" cy="9.2" r="1.5"/><path d="M20.5 15.5l-4.8-4.8L6 20.5"/></svg><span>Buat gambar</span></button><button data-t="m_f"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20.5 11.5l-8.2 8.2a5.2 5.2 0 0 1-7.4-7.4l8.5-8.5a3.5 3.5 0 0 1 5 5l-8.5 8.5a1.8 1.8 0 0 1-2.5-2.5l7.8-7.8"/></svg><span>Lampirkan file</span></button><button data-t="m_g"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s-6.8-5.9-6.8-11.2a6.8 6.8 0 0 1 13.6 0C18.8 15.1 12 21 12 21z"/><circle cx="12" cy="9.8" r="2.4"/></svg><span>Bagikan GPS</span></button></div>
   <div id="ib"><button id="pl">+</button><textarea id="tx" rows="1" placeholder="Ketik pesan..."></textarea><button id="sd">↑</button></div>
  </footer>
@@ -303,7 +303,7 @@ const FILEFN=e=>{const f=e.target.files[0];e.target.value='';if(!f)return;att=nu
   v.onerror=()=>{note('⚠️ video tidak bisa dibaca');URL.revokeObjectURL(u)};v.src=u;return}
  if(/^image\//.test(f.type)){const r=new FileReader();r.onload=()=>toImg(r.result);r.readAsDataURL(f);return}
  if(/^text\//.test(f.type)||/\.(txt|md|csv|json|js|html|css|py|xml|log)$/i.test(f.name)){const r=new FileReader();r.onload=()=>{docTxt={name:f.name,text:String(r.result).slice(0,30000)};img=null;note('📎 file terlampir: '+f.name)};r.readAsText(f);return}
- if(/^audio\//.test(f.type)){att={k:'a',url:URL.createObjectURL(f),name:f.name||'audio'};note('🎵 audio terlampir: '+(f.name||'audio'));return}
+ if(/^audio\//.test(f.type)){att={k:'a',url:URL.createObjectURL(f),name:f.name||'audio',blob:f};note('🎵 audio terlampir: '+(f.name||'audio'));return}
  note('⚠️ jenis file ini belum didukung');setTimeout(()=>{if($('#pv').textContent.startsWith('⚠️'))note('')},3000)};
 $('#fi').onchange=FILEFN;
 $('#fc').onchange=FILEFN;
@@ -352,6 +352,7 @@ function mountVC(box,raw,auto){const bt=box.querySelector('.bt');if(!bt||!window
 async function send(){
  if(window.__eyeSweeping||window.__sendPre)return;/* cegah kirim ganda saat kamera masih menyala */
  if(busy){stp=true;ctrl.abort();return}stp=false;
+ if(att&&att.k==='a'&&att.blob&&!att.tr&&!(await window.xVoiceNote()))return;
  const t=$('#tx').value.trim();if(!t&&!img&&!docTxt&&!att)return;const lookCmd=/\b(?:lihat|melihat\s+ke|perlihatkan\s+apa\s+yang\s+ada\s+di)\s+(depan|belakang)(?:mu)?\b/i.exec(t);if(lookCmd){const lf=lookCmd[1].toLowerCase()==='depan'?'user':'environment';window.__sendPre=true;try{if(!(eyeOn&&eyeFace===lf))await Promise.race([eyeStart(lf,true),new Promise(r=>setTimeout(r,12000))]);if(window.eyeWarm)await window.eyeWarm()}finally{window.__sendPre=false}}
  const sweepM=!lookCmd&&/\b(?:melihat|lihat)\s+(?:sekeliling|sekitar)(?:\s+(depan|belakang)(?:mu)?)?\b/i.exec(t);const sweepCmd=!!sweepM;let sweepUsed=false;if(sweepCmd){const sf=sweepM[1]?(sweepM[1].toLowerCase()==='depan'?'user':'environment'):null;window.__sendPre=true;try{if(sf?!(eyeOn&&eyeFace===sf):!eyeOn)await Promise.race([eyeStart(sf||'environment',true),new Promise(r=>setTimeout(r,12000))]);if(window.eyeWarm)await window.eyeWarm()}finally{window.__sendPre=false}}
  if(/(pake|pakai|pakek|dengan|lewat|via)\s+(suara|voice|vn)|(balas|bales|jawab)\w*\s+(suara|voice)|suara\s+dong|bicara\s+dong|ngomong\s+dong/i.test(t))VR=1;
@@ -2192,7 +2193,7 @@ const MP=window.MP={
  urls(t){const h=(String(t||'').match(/https:\/\/[^\s<>"')\]]+/g)||[]).slice(0,3).map(u=>{const y=YT(u);if(y)return ytH(y);if(IMG.test(u))return imgH(u);if(VID.test(u))return vidH(u);if(AUD.test(u))return audH(u,decodeURIComponent((u.split('?')[0].split('#')[0].split('/').pop()||'audio')).replace(/\.\w+$/,''));return''}).join('');
   return h?`<div class="mp" style="margin-top:8px">${h}</div>`:''},
  userText(t,a){if(!a)return t;const n=a.name||'';
-  return a.k==='a'?(t||'Aku melampirkan audio ini.')+`\n[Pengguna melampirkan audio "${n}". Kamu tidak bisa mendengarnya; aplikasi memutarkannya untuk pengguna.]`
+  return a.k==='a'?(t||'Aku melampirkan audio ini.')+`\n[Pengguna melampirkan audio "${n}". Isinya sudah ditranskrip otomatis dan ada di pesan ini; aplikasi memutarkannya untuk pengguna.]`
   :(t||'Jelaskan video ini.')+`\n[Pengguna melampirkan video "${n}". Kamu hanya menerima satu cuplikan gambarnya; aplikasi memutarkannya untuk pengguna.]`}
 };
 /* gagal muat -> pesan, bukan kotak kosong */
@@ -4846,7 +4847,7 @@ const mr=new MediaRecorder(s),ch=[],tl=d.children[1],bs=d.querySelectorAll('butt
 return new Promise(res=>{let ok=1,n=0;const sp=()=>{try{mr.state!=='inactive'&&mr.stop()}catch(e){}},tk=setInterval(()=>{n++;tl.textContent='🔴 '+n+' dtk';if(n>=max)sp()},1000);
 mr.onstop=()=>{clearInterval(tk);stop(s);d.remove();if(!ok||!ch.length)return res(C);const ty=(mr.mimeType||(vid?'video/mp4':'audio/mp4')).split(';')[0],ex=/webm/.test(ty)?'webm':/ogg/.test(ty)?'ogg':(vid?'mp4':'m4a');
  try{const f=new File([new Blob(ch,{type:ty})],'rekaman-'+Date.now()+'.'+ex,{type:ty}),dt=new DataTransfer();dt.items.add(f);fi.files=dt.files;fi.dispatchEvent(new Event('change',{bubbles:true}))}catch(e){return res(E('Rekaman tidak bisa dilampirkan: '+(e.message||e)))}
- res({ok:true,lama_detik:n,catatan:vid?'Video terlampir ke pesan berikutnya; bot hanya melihat satu cuplikan gambar, bukan suaranya.':'Audio terlampir ke pesan berikutnya sebagai file suara. Bot TIDAK bisa mendengar isinya; sampaikan itu dengan jujur.'})};
+ res({ok:true,lama_detik:n,catatan:vid?'Video terlampir ke pesan berikutnya; bot hanya melihat satu cuplikan gambar, bukan suaranya.':'Audio terlampir ke pesan berikutnya. Aplikasi mentranskripnya otomatis dengan Gemini sebelum dikirim, jadi bot bisa mendengar dan menjawab isinya.'})};
 bs[0].onclick=()=>{ok=0;sp()};bs[1].onclick=sp;mr.start()})};
 
 /* 6. pindai QR / barcode */
@@ -4895,7 +4896,7 @@ setTimeout(()=>{removeEventListener('deviceorientation',fo);removeEventListener(
 
 /* pengetahuan alat untuk bot: hanya dikirim bila pesan pengguna memuat kata terkait */
 const KW=/telepon|telpon|sms|whatsapp|\bwa\b|email|surel|facetime|maps|peta|rute|navigasi|kontak|vcf|kalender|agenda|jadwal|acara|\.ics|tempel|clipboard|papan klip|rekam|qr|barcode|pindai|scan|sensor|kompas|online|offline|kripto|bitcoin|saham|emas|salat|sholat|gempa|resi|pintasan|shortcut/i;
-const SYS='\n\n[Alat akses luar] Untuk permintaan ini panggil alat dengan satu baris <tool>{"name":...,"args":{...}}</tool> tanpa teks lain. Semua alat yang menyentuh HP meminta persetujuan Lanjut/Batal sendiri; jangan menyatakan sudah terkirim/terhubung sebelum hasil alat ada.\n- buka_aplikasi {"jenis":"telepon|sms|email|whatsapp|facetime|peta","nomor":"","teks":"","email":"","subjek":"","tujuan":""} : membuka aplikasi lain dengan isi terisi; pengguna sendiri yang menekan kirim/panggil\n- pintasan {"nama":"nama Pintasan iOS","teks":""} : jalankan Pintasan iOS\n- kontak_pilih {} : pengguna melampirkan kontak (file .vcf)\n- kalender_buat {"judul":"","mulai":"YYYY-MM-DDTHH:MM","selesai":"","lokasi":"","catatan":"","seharian":false,"ulang":"harian|mingguan|bulanan|tahunan"} : buat file .ics untuk Kalender\n- papan_klip_baca {} : baca teks yang disalin pengguna\n- rekam {"jenis":"audio|video","detik":60} : rekam lalu lampirkan (bot tidak bisa mendengar audio)\n- scan_qr {} : pindai QR/barcode dengan kamera\n- peta_cari {"q":"tempat"} dan rute {"dari":"kosong=lokasi saya","ke":"","mode":"mobil|jalan|sepeda"}\n- info_luar {"jenis":"kripto|saham|emas|salat|gempa|resi","q":"btc | BBCA | kota | nomor resi"}\n- sensor {} : arah kompas dan kemiringan; {"hanya_online":true} untuk status koneksi';
+const SYS='\n\n[Alat akses luar] Untuk permintaan ini panggil alat dengan satu baris <tool>{"name":...,"args":{...}}</tool> tanpa teks lain. Semua alat yang menyentuh HP meminta persetujuan Lanjut/Batal sendiri; jangan menyatakan sudah terkirim/terhubung sebelum hasil alat ada.\n- buka_aplikasi {"jenis":"telepon|sms|email|whatsapp|facetime|peta","nomor":"","teks":"","email":"","subjek":"","tujuan":""} : membuka aplikasi lain dengan isi terisi; pengguna sendiri yang menekan kirim/panggil\n- pintasan {"nama":"nama Pintasan iOS","teks":""} : jalankan Pintasan iOS\n- kontak_pilih {} : pengguna melampirkan kontak (file .vcf)\n- kalender_buat {"judul":"","mulai":"YYYY-MM-DDTHH:MM","selesai":"","lokasi":"","catatan":"","seharian":false,"ulang":"harian|mingguan|bulanan|tahunan"} : buat file .ics untuk Kalender\n- papan_klip_baca {} : baca teks yang disalin pengguna\n- rekam {"jenis":"audio|video","detik":60} : rekam lalu lampirkan (audio ditranskrip otomatis, jadi bot bisa menjawab isinya)\n- scan_qr {} : pindai QR/barcode dengan kamera\n- peta_cari {"q":"tempat"} dan rute {"dari":"kosong=lokasi saya","ke":"","mode":"mobil|jalan|sepeda"}\n- info_luar {"jenis":"kripto|saham|emas|salat|gempa|resi","q":"btc | BBCA | kota | nomor resi"}\n- sensor {} : arah kompas dan kemiringan; {"hanya_online":true} untuk status koneksi';
 const pg=window.galeriSysFor;window.galeriSysFor=function(b){let s='';try{s=pg?pg.call(this,b)||'':''}catch(e){}
  try{const ms=Array.isArray(b&&b.messages)?b.messages:[];let u='';for(let i=ms.length-1;i>=0;i--)if(ms[i]&&ms[i].role==='user'){const c=ms[i].content;u=typeof c==='string'?c:Array.isArray(c)?c.map(x=>(x&&x.text)||'').join(' '):'';break}if(KW.test(u))s+=SYS}catch(e){}return s};
 window._x111Ext={vc,ics};
@@ -5958,19 +5959,25 @@ const LOAD_MS=90000,EXEC_MS=10000;
 /* Kode Worker. Python berjalan di sini, terpisah dari halaman: tidak bisa menyentuh DOM, localStorage, kunci API, atau data aplikasi. */
 const workerMain=function(){
  'use strict';
- const L=[];let cnt=0,len=0;
+ const L=[];let cnt=0,len=0,IMG=0;
  const put=(p,s)=>{if(cnt++<300){const x=p+String(s);len+=x.length;if(len<20000)L.push(x)}};
- const PK={numpy:'numpy',pandas:'pandas',scipy:'scipy',sympy:'sympy',networkx:'networkx',bs4:'beautifulsoup4',yaml:'pyyaml',sklearn:'scikit-learn',statsmodels:'statsmodels'};
+ const PK={numpy:'numpy',pandas:'pandas',scipy:'scipy',sympy:'sympy',networkx:'networkx',bs4:'beautifulsoup4',yaml:'pyyaml',sklearn:'scikit-learn',statsmodels:'statsmodels',matplotlib:'matplotlib'};
  self.onmessage=async e=>{
   const d=e.data||{};let py;
   try{
    importScripts(d.base+'pyodide.js');
-   py=await loadPyodide({indexURL:d.base});
+   py=await loadPyodide({indexURL:d.base});py.globals.set('__xs_send',(k,p)=>{if(k==='img'){if(IMG>=6)return;IMG++}postMessage({kind:k,p:String(p)})});
    /* muat paket yang di-import kode SEBELUM jaringan ditutup */
    const mods=[...new Set([...String(d.code).matchAll(/^\s*(?:import|from)\s+([A-Za-z_]\w*)/gm)].map(m=>m[1]))].filter(m=>PK[m]);
    if(mods.length){try{await py.loadPackage([...new Set(mods.map(m=>PK[m]))])}catch(x){put('[peringatan] gagal memuat paket: ',(x&&x.message)||x)}
     for(const m of mods){try{py.runPython('import '+m)}catch(x){}}}
   }catch(err){postMessage({error:'Gagal memuat Python (Pyodide). Pemuatan pertama butuh internet. Detail: '+String((err&&err.message)||err).slice(0,200)});return}
+  /* grafik & tabel: matplotlib (Agg) dan show_table(df). Gambar/tabel dikirim langsung ke chat, bukan ke model */
+   try{
+    const needP=mods.indexOf('matplotlib')>=0||/\bmatplotlib\b|\bplt\.|\.plot\(/.test(String(d.code));
+    if(needP){try{await py.loadPackage('matplotlib')}catch(x){put('[peringatan] matplotlib gagal dimuat: ',(x&&x.message)||x)}}
+    py.runPython(["import io,base64,json","def __xs_flush():","    import sys","    if 'matplotlib.pyplot' not in sys.modules: return","    import matplotlib.pyplot as plt","    for _n in plt.get_fignums():","        _b=io.BytesIO();plt.figure(_n).savefig(_b,format='png',dpi=110,bbox_inches='tight');__xs_send('img',base64.b64encode(_b.getvalue()).decode())","    plt.close('all')","def show_table(df,n=40):","    d=df.head(n)","    __xs_send('tbl',json.dumps({'h':[str(c) for c in d.columns],'r':[['' if v is None else str(v) for v in row] for row in d.values.tolist()],'n':int(len(df))}))","try:","    import matplotlib","    matplotlib.use('Agg')","    import matplotlib.pyplot as plt","    plt.show=lambda *a,**k: __xs_flush()","except Exception:","    pass"].join('\n'));
+   }catch(x){put('[peringatan] helper grafik: ',(x&&x.message)||x)}
   /* tutup semua jalur keluar: tidak ada jaringan, tidak ada Worker lain, tidak ada penyimpanan */
   for(const k of['fetch','XMLHttpRequest','WebSocket','EventSource','importScripts','Worker','SharedWorker','indexedDB','caches','BroadcastChannel','WebTransport','RTCPeerConnection']){try{Object.defineProperty(self,k,{value:undefined,configurable:true,writable:true})}catch(x){}}
   try{py.runPython("import sys\nfor _m in ('micropip','pyodide.http'):\n    sys.modules[_m]=None",{globals:py.globals.get('dict')()})}catch(x){}
@@ -5979,8 +5986,9 @@ const workerMain=function(){
   postMessage({ready:1});
   const t0=Date.now();let val,err=null;
   try{val=await py.runPythonAsync(String(d.code))}catch(x){err=x}
+   try{py.runPython('__xs_flush()')}catch(x){}
   let out=L.join('\n');if(out.length>4000)out=out.slice(0,4000)+'\n…(output dipotong)';
-  const r={ms:Date.now()-t0,lang:'python'};if(out)r.output=out;
+  const r={ms:Date.now()-t0,lang:'python'};if(IMG)r.grafik=IMG+' grafik sudah ditampilkan di chat (jangan tulis ulang gambarnya)';if(out)r.output=out;
   if(err){const m=String((err&&err.message)||err).trim().split('\n').slice(-8).join('\n');r.error=m.slice(0,1500)}
   else if(val!==undefined&&val!==null){let s;try{s=(typeof val==='string')?val:String(val)}catch(x){s='(hasil tidak bisa ditampilkan)'}try{if(val&&typeof val.destroy==='function')val.destroy()}catch(x){}if(s.length>2000)s=s.slice(0,2000)+'…';r.hasil=s}
   postMessage(r);
@@ -5992,7 +6000,7 @@ const runPy=(code,data,base)=>new Promise(res=>{
  let w,url,done=false,t;
  const fin=r=>{if(done)return;done=true;clearTimeout(t);try{w.terminate()}catch(e){}try{URL.revokeObjectURL(url)}catch(e){}res(r)};
  try{url=URL.createObjectURL(new Blob([WSRC],{type:'text/javascript'}));w=new Worker(url)}catch(e){return res({error:'Worker tidak tersedia di browser ini: '+(e.message||e)})}
- w.onmessage=e=>{const m=e.data||{};
+ w.onmessage=e=>{const m=e.data||{};if(m.kind){try{if(window.__xsPart)window.__xsPart(m)}catch(x){}return}
   if(m.ready){clearTimeout(t);t=setTimeout(()=>fin({error:'Waktu habis ('+EXEC_MS/1000+' detik), kode Python dihentikan (mungkin loop tak berujung)'}),EXEC_MS);return}
   fin(m)};
  w.onerror=e=>fin({error:'Kesalahan saat menjalankan Python: '+((e&&e.message)||'tidak diketahui')});
@@ -6009,7 +6017,7 @@ XT.code=async function(a){
  if(code.length>20000)throw new Error('Kode terlalu panjang (maks 20.000 karakter)');
  let data=null;const m=/^const DATA=([\s\S]*?);\n/.exec(code);   /* bot panel menyisipkan DATA gaya JS; ubah jadi variabel Python */
  if(m){data=m[1];code=code.slice(m[0].length)}
- return runPy(code,data,window._xPyBase);
+ return runPy(code,data!=null?data:(window.__tabData||null),window._xPyBase);
 };
 
 /* beri tahu bot chat utama bahwa Python tersedia (hanya chat utama, hanya menambah teks di akhir) */
@@ -7988,4 +7996,203 @@ new MutationObserver(ins).observe(document.body,{childList:true,subtree:true});
 }catch(e){}})();
 </script>
 <!-- ===== AKHIR VIDEO CALL ===== -->
+
+<!-- ===== TAMBAHAN V3 (di akhir; hapus blok ini untuk membatalkan): 1) voice note ditranskrip Gemini lalu dijawab, 2) mata live auto (baca teks / terjemah / komentar), 3) tabel & grafik Python dari CSV/Excel ===== -->
+<style>
+.xtb{overflow-x:auto;margin:8px 0;border-radius:12px;border:1px solid #2b2b2b;max-width:100%}
+.xtb table{border-collapse:collapse;font-size:13px;width:100%}
+.xtb th,.xtb td{padding:6px 9px;border-bottom:1px solid #1f1f1f;text-align:left;white-space:nowrap}
+.xtb th{background:#111;color:#ddd;font-weight:600}
+.xcap{font-size:12px;color:#8a8a8a;margin:2px 0 4px}
+</style>
+<script>
+(()=>{
+'use strict';
+if(window._xV3)return;window._xV3=1;
+
+const xe=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const xfmt=s=>xe(s).replace(/\*\*(.+?)\*\*/g,'<b>$1</b>').replace(/\n/g,'<br>');
+
+/* ---------- Gemini (kunci dari Pengaturan) ---------- */
+const xModel=()=>String((cfg&&cfg.model&&/^gemini:/.test(cfg.model))?cfg.model:DEF_MODEL).replace(/^gemini:/,'');
+const xKeys=()=>String((cfg&&cfg.keys&&cfg.keys.gemini)||'').split(/[,\s]+/).filter(Boolean);
+async function xGem(parts,max){
+  const keys=xKeys();
+  if(!keys.length)throw new Error('isi key Gemini di Pengaturan (⚙️) dulu');
+  const base='https://generativelanguage.googleapis.com/v1beta/models/'+encodeURIComponent(xModel())+':generateContent?key=';
+  let last=null;
+  for(const k of keys){
+    try{
+      const r=await fetch(base+encodeURIComponent(k),{method:'POST',headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({contents:[{role:'user',parts}],generationConfig:{temperature:0.2,maxOutputTokens:max||1024}})});
+      const d=await r.json();
+      if(d.error)throw new Error(d.error.message||'Gemini error');
+      return ((d.candidates&&d.candidates[0]&&d.candidates[0].content&&d.candidates[0].content.parts)||[]).map(p=>p.text||'').join('').trim();
+    }catch(e){last=e}
+  }
+  throw last||new Error('gagal menghubungi Gemini');
+}
+
+/* ---------- 1. VOICE NOTE ---------- */
+async function xWav(blob){
+  const A=window.AudioContext||window.webkitAudioContext;
+  if(!A)throw new Error('browser tidak mendukung pemrosesan audio');
+  const ac=new A();let buf;
+  try{buf=await ac.decodeAudioData(await blob.arrayBuffer())}finally{try{ac.close()}catch(e){}}
+  if(buf.duration>300)throw new Error('voice note maksimal 5 menit');
+  const oc=new OfflineAudioContext(1,Math.max(1,Math.ceil(buf.duration*16000)),16000);
+  const src=oc.createBufferSource();src.buffer=buf;src.connect(oc.destination);src.start(0);
+  const pcm=(await oc.startRendering()).getChannelData(0),n=pcm.length,dv=new DataView(new ArrayBuffer(44+n*2));
+  const wr=(o,t)=>{for(let i=0;i<t.length;i++)dv.setUint8(o+i,t.charCodeAt(i))};
+  wr(0,'RIFF');dv.setUint32(4,36+n*2,true);wr(8,'WAVE');wr(12,'fmt ');dv.setUint32(16,16,true);
+  dv.setUint16(20,1,true);dv.setUint16(22,1,true);dv.setUint32(24,16000,true);dv.setUint32(28,32000,true);
+  dv.setUint16(32,2,true);dv.setUint16(34,16,true);wr(36,'data');dv.setUint32(40,n*2,true);
+  for(let i=0;i<n;i++){const x=Math.max(-1,Math.min(1,pcm[i]));dv.setInt16(44+i*2,x<0?x*32768:x*32767,true)}
+  return new Uint8Array(dv.buffer);
+}
+const xB64=u8=>{let s='';for(let i=0;i<u8.length;i+=32768)s+=String.fromCharCode.apply(null,u8.subarray(i,i+32768));return btoa(s)};
+const xBlob64=f=>new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>res(String(r.result).split(',')[1]||'');r.onerror=()=>rej(new Error('gagal membaca berkas'));r.readAsDataURL(f)});
+async function xTranscribe(f){
+  let b64,mime='audio/wav';
+  try{b64=xB64(await xWav(f))}
+  catch(e){
+    if(!/^audio\/(mpeg|mp3|wav|x-wav|ogg|aac|flac|aiff|x-aiff)$/i.test(f.type||'')||f.size>15728640)throw new Error('format audio tidak didukung ('+(e.message||e)+')');
+    b64=await xBlob64(f);mime=f.type;
+  }
+  const tr=await xGem([{text:'Transkrip rekaman suara ini persis seperti yang diucapkan, dalam bahasa aslinya. Bagian yang tidak jelas tulis [tidak jelas]. Balas hanya teks transkripnya tanpa komentar.'},{inlineData:{mimeType:mime,data:b64}}],2048);
+  if(!tr)throw new Error('transkrip kosong, audio mungkin tanpa suara');
+  return tr;
+}
+/* dipanggil dari send(): mengubah audio terlampir jadi teks di kotak pesan sebelum dikirim */
+window.xVoiceNote=async function(){
+  const a=att;
+  if(!a||a.k!=='a'||!a.blob||a.tr)return true;
+  window.__sendPre=true;
+  note('🎙️ menerjemahkan pesan suara...');
+  try{
+    const tr=await xTranscribe(a.blob);
+    a.tr=tr;
+    const tx=$('#tx'),cur=tx.value.trim();
+    tx.value=[cur,'[Pesan suara] '+tr].filter(Boolean).join('\n');
+    tx.style.height='auto';tx.style.height=tx.scrollHeight+'px';
+    note('');
+    return true;
+  }catch(e){
+    att=null;
+    note('⚠️ pesan suara gagal ditranskrip: '+(e.message||e)+'. Lampiran dibuang, silakan kirim ulang.');
+    setTimeout(()=>{if($('#pv').textContent.startsWith('⚠️'))note('')},7000);
+    return false;
+  }finally{window.__sendPre=false}
+};
+
+/* ---------- 2. MATA LIVE AUTO ---------- */
+const XLBL={ocr:'Baca teks',terjemah:'Terjemahan',komentar:'Komentar'};
+const XP={
+ ocr:'Baca semua tulisan yang terlihat di gambar ini, lalu tulis teksnya saja dengan rapi. Jika teksnya bukan bahasa Indonesia, tulis teks aslinya lalu terjemahan singkatnya dalam bahasa Indonesia. Jika tidak ada tulisan yang jelas, balas persis: [DIAM]',
+ terjemah:'Jika ada tulisan dalam bahasa selain Indonesia di gambar ini, terjemahkan ke bahasa Indonesia: tulis teks aslinya singkat, lalu terjemahannya. Jika tidak ada tulisan asing, balas persis: [DIAM]',
+ komentar:'Kamu sedang melihat langsung apa yang ada di depanmu. Beri komentar singkat 1-2 kalimat dalam bahasa Indonesia tentang yang terlihat sekarang, dengan gaya santai seperti teman yang ikut melihat. Jangan menyebut kamera, gambar, atau frame. Jika tidak ada yang menarik, balas persis: [DIAM]'
+};
+let xPrev=null,xNext=0,xRun=false,xArmed=false,xNoted=false;
+const xSet=m=>{
+  window.__xAuto=m||null;xPrev=null;xNext=0;xArmed=false;xNoted=false;
+  const pm=$('#pm');if(pm)pm.hidden=true;
+  if(!m){note('');return}
+  const v=document.getElementById('eyev');
+  if(!(v&&v.classList.contains('on')))document.getElementById('m_e2').click();
+};
+document.getElementById('m_a1').addEventListener('click',()=>xSet('ocr'));
+document.getElementById('m_a2').addEventListener('click',()=>xSet('terjemah'));
+document.getElementById('m_a3').addEventListener('click',()=>xSet('komentar'));
+document.getElementById('m_a0').addEventListener('click',()=>xSet(null));
+setInterval(async()=>{
+  const m=window.__xAuto;if(!m)return;
+  const v=document.getElementById('eyev');
+  const on=!!(v&&v.classList.contains('on')&&v.videoWidth);
+  if(!on){if(xArmed){window.__xAuto=null;xArmed=false;note('👁 mata auto dimatikan (kamera mati)')}return}
+  xArmed=true;
+  if(!xNoted){xNoted=true;note('👁 Mata auto aktif: '+XLBL[m])}
+  if(xRun||busy||$('#sd').textContent==='■'||Date.now()<xNext)return;
+  /* lewati bila gambar hampir sama dengan yang terakhir dikirim */
+  const SW=48,SH=Math.max(1,Math.round(SW*v.videoHeight/v.videoWidth));
+  const sc=document.createElement('canvas');sc.width=SW;sc.height=SH;
+  const sx=sc.getContext('2d',{willReadFrequently:true});sx.drawImage(v,0,0,SW,SH);
+  const px=sx.getImageData(0,0,SW,SH).data,g=new Uint8Array(SW*SH);
+  for(let i=0,j=0;i<px.length;i+=4,j++)g[j]=(px[i]*77+px[i+1]*150+px[i+2]*29)>>8;
+  if(xPrev&&xPrev.length===g.length){let s=0;for(let i=0;i<g.length;i++)s+=Math.abs(g[i]-xPrev[i]);if(s/g.length<12)return}
+  xPrev=g;xNext=Date.now()+7000;xRun=true;
+  try{
+    const k=Math.min(1,896/Math.max(v.videoWidth,v.videoHeight)),jc=document.createElement('canvas');
+    jc.width=Math.round(v.videoWidth*k);jc.height=Math.round(v.videoHeight*k);
+    jc.getContext('2d').drawImage(v,0,0,jc.width,jc.height);
+    const b64=jc.toDataURL('image/jpeg',.7).split(',')[1];
+    const t=String(await xGem([{text:XP[m]},{inlineData:{mimeType:'image/jpeg',data:b64}}],400)||'').trim();
+    if(t&&!/\[DIAM\]/.test(t)&&window.__xAuto===m)add('<div class="bt"><div class="xcap">👁 Mata live · '+XLBL[m]+'</div>'+xfmt(t)+'</div>');
+  }catch(e){
+    const msg=e.message||String(e);
+    if(/key/i.test(msg)){window.__xAuto=null;xArmed=false;note('⚠️ '+msg)}
+    else{note('⚠️ mata auto: '+msg);setTimeout(()=>{if($('#pv').textContent.startsWith('⚠️'))note('')},6000)}
+  }finally{xRun=false}
+},1000);
+
+/* ---------- 3. TABEL & GRAFIK PYTHON dari CSV/Excel ---------- */
+const XTAB=/\.(csv|xlsx|xlsm|xls|ods)$/i;
+let xXlsP=null;
+const xNeedXls=()=>{
+  if(window.XLSX)return Promise.resolve(window.XLSX);
+  if(!xXlsP)xXlsP=(async()=>{
+    for(const u of ['https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js','https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js']){
+      try{await new Promise((o,n)=>{const s=document.createElement('script');s.src=u;s.onload=o;s.onerror=n;document.head.appendChild(s)});if(window.XLSX)return window.XLSX}catch(e){}
+    }
+    throw new Error('pustaka Excel gagal dimuat (cek internet)');
+  })().catch(e=>{xXlsP=null;throw e});
+  return xXlsP;
+};
+/* capture: dibaca sebelum FILEFN mengosongkan input */
+document.addEventListener('change',async e=>{
+  const t=e.target;if(!t||t.id!=='fi')return;
+  const f=t.files&&t.files[0];if(!f||!XTAB.test(f.name))return;
+  try{
+    const sheets={};
+    if(/\.csv$/i.test(f.name)){sheets[f.name.replace(/\.csv$/i,'')]=await f.text()}
+    else{
+      const X=await xNeedXls(),wb=X.read(await f.arrayBuffer(),{type:'array'});
+      wb.SheetNames.slice(0,10).forEach(sn=>{sheets[sn]=X.utils.sheet_to_csv(wb.Sheets[sn])});
+    }
+    for(const k in sheets)if(sheets[k].length>600000)sheets[k]=sheets[k].slice(0,600000);
+    window.__tabData=JSON.stringify(sheets);
+    window.__tabInfo={name:f.name,sheets:Object.keys(sheets).map(sn=>{const L=sheets[sn].split('\n');return{n:sn,cols:(L[0]||'').split(',').slice(0,30).join(', '),rows:Math.max(0,L.length-1)}})};
+    setTimeout(()=>note('📊 tabel terlampir: '+f.name+' ('+Object.keys(sheets).length+' sheet). Bot bisa membuat tabel & grafik dengan Python.'),0);
+  }catch(err){note('⚠️ tabel tidak bisa dibaca: '+(err.message||err))}
+},true);
+document.getElementById('nw').addEventListener('click',()=>{window.__tabData=null;window.__tabInfo=null});
+
+/* beri tahu model bahwa data tabel tersedia untuk Python (hanya chat utama) */
+const xPrevG=window.galeriSysFor;
+window.galeriSysFor=function(b){
+  let s='';try{s=typeof xPrevG==='function'?(xPrevG.apply(this,arguments)||''):''}catch(e){s=''}
+  try{
+    const ti=window.__tabInfo;
+    if(ti&&b&&!b.image_gen&&typeof b.system==='string'&&b.system.includes('[Info perangkat pengguna]')){
+      s+=`\n\n[DATA TABEL TERLAMPIR] Berkas "${ti.name}". Sheet dan kolom: ${ti.sheets.map(x=>`"${x.n}" (kolom: ${x.cols}; ${x.rows} baris)`).join('; ')}.
+Untuk tabel, analisis, total/rata-rata/perbandingan, atau grafik: WAJIB pakai alat code dengan lang python. Data ada di variabel DATA (dict: nama sheet -> teks CSV). Contoh satu baris: <tool>{"name":"code","args":{"lang":"python","code":"import pandas as pd, io\\ndf=pd.read_csv(io.StringIO(DATA['NAMA_SHEET']))\\nshow_table(df.head(20))\\nprint(df.describe())"}}</tool>
+Tabel tampil di chat lewat show_table(df) (maks 40 baris). Grafik: pakai matplotlib lalu panggil plt.show(); gambar otomatis tampil di chat. Setelah hasil alat diterima, jelaskan temuannya dengan bahasa biasa; jangan menulis ulang seluruh data.`;
+    }
+  }catch(e){}
+  return s;
+};
+
+/* menampilkan gambar grafik & tabel dari worker Python langsung di chat */
+window.__xsPart=function(m){
+  try{
+    if(m.kind==='img'){add('<div class="bt"><img alt="grafik" src="data:image/png;base64,'+m.p+'" style="max-width:100%;border-radius:14px;display:block;background:#fff"></div>')}
+    else if(m.kind==='tbl'){
+      const T=JSON.parse(m.p);
+      const th=T.h.map(c=>'<th>'+xe(c)+'</th>').join('');
+      const tr=T.r.map(r=>'<tr>'+r.map(c=>'<td>'+xe(c)+'</td>').join('')+'</tr>').join('');
+      add('<div class="bt"><div class="xtb"><table><thead><tr>'+th+'</tr></thead><tbody>'+tr+'</tbody></table></div><div class="xcap">'+T.n+' baris'+(T.n>T.r.length?' (menampilkan '+T.r.length+')':'')+'</div></div>');
+    }
+  }catch(e){}
+};
+})();
+</script>
 </body></html>
