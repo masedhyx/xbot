@@ -60,7 +60,7 @@ footer{padding:6px 18px calc(env(safe-area-inset-bottom) + 12px);position:relati
  <div id="ms"><div id="wl"></div></div>
  <footer>
   <div id="pv"></div><div id="gp"></div>
-  <div id="pm" hidden><button id="m_f">Lampirkan file</button><button id="m_c">Ambil foto</button><button id="m_g"><span>Bagikan GPS</span><i class="dt" hidden></i></button><button id="m_w"><span>Cari di web</span><i class="dt" hidden></i></button><button id="m_i">Buat gambar</button><button id="m_a"><span>Agen</span><i class="dt" hidden></i></button><div id="agd" hidden><div class="agr"><button data-d="cepat">Cepat</button><button data-d="std">Seimbang</button><button data-d="dalam">Mendalam</button></div><button id="m_r">Laporan tersimpan</button></div><button id="m_e1"><span>Mata live · Depan</span><i class="dt" hidden></i></button><button id="m_e2"><span>Mata live · Belakang</span><i class="dt" hidden></i></button><button id="m_a1"><span>Mata auto · Baca teks</span></button><button id="m_a2"><span>Mata auto · Terjemahkan</span></button><button id="m_a3"><span>Mata auto · Komentar</span></button><button id="m_a0"><span>Mata auto · Mati</span></button><button id="m_v">Telephone</button></div>
+  <div id="pm" hidden><button id="m_f">Lampirkan file</button><button id="m_c">Ambil foto</button><button id="m_g"><span>Bagikan GPS</span><i class="dt" hidden></i></button><button id="m_w"><span>Cari di web</span><i class="dt" hidden></i></button><button id="m_i">Buat gambar</button><button id="m_a"><span>Agen</span><i class="dt" hidden></i></button><div id="agd" hidden><div class="agr"><button data-d="cepat">Cepat</button><button data-d="std">Seimbang</button><button data-d="dalam">Mendalam</button></div><button id="m_r">Laporan tersimpan</button></div><button id="m_e1"><span>Mata live · Depan</span><i class="dt" hidden></i></button><button id="m_e2"><span>Mata live · Belakang</span><i class="dt" hidden></i></button><button id="m_am"><span>Mata auto</span><i class="xma-ar">›</i></button><div id="xma" hidden><button id="m_a1"><span>Baca teks</span></button><button id="m_a2"><span>Terjemahkan</span></button><button id="m_a3"><span>Komentar</span></button><button id="m_a0"><span>Mati</span></button></div><button id="m_t"><span>Terminal Linux</span></button><button id="m_v">Telephone</button></div>
   <div id="qc"><button data-t="m_w"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.6 2.4 4 5.5 4 9s-1.4 6.6-4 9c-2.6-2.4-4-5.5-4-9s1.4-6.6 4-9z"/></svg><span>Cari di web</span></button><button data-t="m_i"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="3.5" width="17" height="17" rx="4"/><circle cx="9" cy="9.2" r="1.5"/><path d="M20.5 15.5l-4.8-4.8L6 20.5"/></svg><span>Buat gambar</span></button><button data-t="m_f"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20.5 11.5l-8.2 8.2a5.2 5.2 0 0 1-7.4-7.4l8.5-8.5a3.5 3.5 0 0 1 5 5l-8.5 8.5a1.8 1.8 0 0 1-2.5-2.5l7.8-7.8"/></svg><span>Lampirkan file</span></button><button data-t="m_g"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s-6.8-5.9-6.8-11.2a6.8 6.8 0 0 1 13.6 0C18.8 15.1 12 21 12 21z"/><circle cx="12" cy="9.8" r="2.4"/></svg><span>Bagikan GPS</span></button></div>
   <div id="ib"><button id="pl">+</button><textarea id="tx" rows="1" placeholder="Ketik pesan..."></textarea><button id="sd">↑</button></div>
  </footer>
@@ -8193,6 +8193,131 @@ window.__xsPart=function(m){
     }
   }catch(e){}
 };
+})();
+</script>
+
+<!-- ===== TERMINAL LINUX (v86, port dari x99999; hapus blok ini untuk membatalkan) ===== -->
+<style>
+#xtm{position:fixed;inset:0;z-index:300;background:#000;display:none;flex-direction:column;height:100dvh;color:#fff}
+#xtm.show{display:flex}
+#xtm .xtm-th{display:flex;align-items:center;gap:10px;padding:max(12px,env(safe-area-inset-top)) 14px 10px;border-bottom:1px solid #2b2b2b;font-size:15px}
+#xtm .xtm-th span{flex:1;color:#8a8a8a;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#xtm .xtm-th button,#xtm .xtm-ti button{background:#242124;color:#fff;border-radius:12px;padding:9px 14px;font-size:14px}
+#xtm .xtm-out{flex:1;margin:0;padding:12px 14px;overflow:auto;color:#b7f5b0;font:13px/1.45 ui-monospace,Menlo,monospace;white-space:pre-wrap;word-break:break-all}
+#xtm .xtm-ti{display:flex;gap:8px;padding:10px 12px max(12px,env(safe-area-inset-bottom));border-top:1px solid #2b2b2b}
+#xtm .xtm-tg{display:flex;align-items:center;gap:5px;font-size:13px;color:#c9c7ca;white-space:nowrap}
+#xtm .xtm-in{flex:1;min-width:0;background:#1b191c;border:1px solid #2b2b2b;border-radius:12px;padding:10px 12px;color:#fff;font:16px ui-monospace,Menlo,monospace;outline:0}
+</style>
+<script>
+(()=>{
+'use strict';
+if(window._xTerm)return;window._xTerm=1;
+const LIB='https://cdn.jsdelivr.net/npm/v86/build/',BIOS='https://cdn.jsdelivr.net/gh/copy/v86@master/bios/',IMG='https://k.copy.sh/buildroot-bzimage.bin';
+const ov=document.createElement('div');ov.id='xtm';
+ov.innerHTML='<div class="xtm-th"><b>Terminal Linux</b><span id="xtm-st">belum dijalankan</span><label class="xtm-tg"><input type="checkbox" id="xtm-bot">Izinkan bot</label><button id="xtm-x">Tutup</button></div><pre class="xtm-out" id="xtm-out"></pre><div class="xtm-ti"><input class="xtm-in" id="xtm-in" placeholder="ketik perintah, mis. ls" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" enterkeyhint="send"><button id="xtm-send">Kirim</button><button id="xtm-c">^C</button></div>';
+document.body.appendChild(ov);
+const out=ov.querySelector('#xtm-out'),tin=ov.querySelector('#xtm-in'),st=ov.querySelector('#xtm-st'),bot=ov.querySelector('#xtm-bot');
+let emu=null,loading=false,raw='',pend=false,cap='',capOn=false;
+const lsGet=k=>{try{return localStorage.getItem(k)}catch(e){return null}};
+const lsSet=(k,v)=>{try{localStorage.setItem(k,v)}catch(e){}};
+bot.checked=lsGet('xterm_bot')==='1';
+bot.onchange=()=>{lsSet('xterm_bot',bot.checked?'1':'0');if(bot.checked){note('Bot boleh memakai terminal Linux');boot()}};
+
+function paint(){if(pend)return;pend=true;requestAnimationFrame(()=>{
+  pend=false;if(raw.length>60000)raw=raw.slice(-40000);
+  let t=raw.replace(/\x1b\[[0-9;?]*[A-Za-z]/g,'').replace(/\r/g,'').replace(/\x07/g,'');
+  while(/[^\n]\x08/.test(t))t=t.replace(/[^\n]\x08/g,'');
+  out.textContent=t.replace(/\x08/g,'');out.scrollTop=out.scrollHeight;
+})}
+function lib(){return new Promise((ok,no)=>{
+  if(window.V86||window.V86Starter)return ok();
+  const e=document.createElement('script');e.src=LIB+'libv86.js';e.onload=ok;e.onerror=()=>no(new Error('libv86.js gagal dimuat (cek internet)'));document.head.appendChild(e);
+})}
+async function boot(){
+  if(emu||loading)return;loading=true;st.textContent='memuat emulator…';
+  try{
+    await lib();const V=window.V86||window.V86Starter;
+    emu=new V({wasm_path:LIB+'v86.wasm',memory_size:128*1024*1024,vga_memory_size:2*1024*1024,
+      bios:{url:BIOS+'seabios.bin'},vga_bios:{url:BIOS+'vgabios.bin'},
+      bzimage:{url:IMG,async:false},cmdline:'tsc=reliable mitigations=off random.trust_cpu=on',
+      filesystem:{},autostart:true,disable_keyboard:true,disable_mouse:true,disable_speaker:true});
+    emu.add_listener('serial0-output-byte',b=>{const ch=String.fromCharCode(b);raw+=ch;if(capOn)cap+=ch;paint()});
+    emu.add_listener('emulator-ready',()=>{st.textContent='booting Linux… (tekan Enter bila kosong)'});
+    setTimeout(()=>{if(emu&&/#|%|\$/.test(raw))st.textContent='berjalan'},8000);
+  }catch(e){st.textContent='gagal: '+e.message;emu=null}
+  loading=false;
+}
+function send(s){if(!emu){note('Terminal belum siap');return}emu.serial0_send(s)}
+const go=()=>{send(tin.value+'\n');tin.value=''};
+ov.querySelector('#xtm-send').onclick=go;
+ov.querySelector('#xtm-c').onclick=()=>send('\x03');
+tin.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();go()}});
+ov.querySelector('#xtm-x').onclick=()=>ov.classList.remove('show');
+document.getElementById('m_t').addEventListener('click',()=>{
+  const pm=document.getElementById('pm');if(pm)pm.hidden=true;
+  ov.classList.add('show');boot();setTimeout(()=>tin.focus(),200);
+});
+const ansi=/\x1b\[[0-9;?]*[A-Za-z]/g;
+async function ready(){
+  await boot();if(!emu)return false;
+  for(let i=0;i<45;i++){
+    cap='';capOn=true;emu.serial0_send('echo "<<R""DY>>"\n');
+    for(let j=0;j<20;j++){await sleep(100);if(cap.includes('<<RDY>>')){capOn=false;return true}}
+  }
+  capOn=false;return false;
+}
+async function run(cmd){
+  if(!(await ready()))return '(terminal belum siap)';
+  cap='';capOn=true;emu.serial0_send(cmd.trim()+'\necho "<<E""ND:$?>>"\n');
+  const t0=Date.now();let m=null;
+  while(Date.now()-t0<20000){await sleep(150);if((m=/<<END:(\d+)>>/.exec(cap)))break}
+  capOn=false;let note2='';
+  if(!m){emu.serial0_send('\x03\n');note2='\n(waktu habis 20 detik, dihentikan)'}
+  let t=(m?cap.slice(0,m.index):cap).replace(ansi,'').replace(/\r/g,'');
+  t=t.split('\n').filter(l=>!l.includes('echo "<<E""ND')).join('\n').trim();
+  if(t.length>2000)t='…'+t.slice(-2000);
+  return (t||'(tanpa output)')+(m?'\n[exit '+m[1]+']':'')+note2;
+}
+
+/* alat untuk bot: <tool>{"name":"linux","args":{"cmd":"..."}}</tool>; hanya jalan jika kotak Izinkan bot dicentang */
+const XTL=window.XT;
+XTL.linux=async({cmd}={})=>{
+  if(!bot.checked)throw new Error('Izin terminal belum aktif. Minta pengguna mencentang "Izinkan bot" di Terminal Linux.');
+  cmd=String(cmd||'').trim();if(!cmd)throw new Error('Perintah kosong');
+  if(cmd.length>1500)throw new Error('Perintah terlalu panjang');
+  try{return {ok:true,keluaran:await run(cmd)}}catch(e){return {ok:false,error:(e&&e.message)||String(e)}}
+};
+/* beri tahu model hanya jika izin aktif (chat utama) */
+const prevG=window.galeriSysFor;
+window.galeriSysFor=function(b){
+  let s='';try{s=typeof prevG==='function'?(prevG.apply(this,arguments)||''):''}catch(e){s=''}
+  try{
+    if(bot.checked&&b&&!b.image_gen&&typeof b.system==='string'&&b.system.includes('[Info perangkat pengguna]')){
+      s+='\n\n[TERMINAL LINUX] Kamu punya akses ke terminal Linux sungguhan milik pengguna (BusyBox 32-bit, tanpa internet, tanpa python/apt). Untuk menjalankan perintah shell, balas dengan satu baris: <tool>{"name":"linux","args":{"cmd":"uname -a"}}</tool>. Pakai perintah singkat dan aman. Setelah hasil diterima, jelaskan ke pengguna dengan bahasa biasa.';
+    }
+  }catch(e){}
+  return s;
+};
+})();
+</script>
+<!-- ===== RAPIKAN MENU +: tinggi dibatasi layar dan bisa digulir, jarak tombol sedikit lebih rapat ===== -->
+<style>
+#pm{max-height:calc(100dvh - 210px);overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch}
+#pm button{padding:11px 16px}
+</style>
+<!-- ===== SUBMENU MATA AUTO (di dalam menu +) ===== -->
+<style>
+#xma{display:flex;flex-direction:column;padding-left:14px}
+#xma[hidden]{display:none}
+#m_am .xma-ar{font-style:normal;font-size:20px;color:#8a8a8a;transition:transform .15s}
+#m_am.open .xma-ar{transform:rotate(90deg)}
+#xma button{font-size:15px;padding:9px 12px}
+</style>
+<script>
+(()=>{
+const b=document.getElementById('m_am'),x=document.getElementById('xma');
+if(!b||!x)return;
+b.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();x.hidden=!x.hidden;b.classList.toggle('open',!x.hidden)});
 })();
 </script>
 </body></html>
