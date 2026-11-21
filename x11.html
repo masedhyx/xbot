@@ -289,7 +289,7 @@ const eyeStart=async (f,quiet)=>{
  try{await v.play()}catch(e){}
  note('');eyeDot();
 };
-const eyeShot=()=>{const v=eyeV();if(!v||!eyeOn||!v.videoWidth)return null;const k=Math.min(1,1280/Math.max(v.videoWidth,v.videoHeight)),c=document.createElement('canvas');c.width=Math.round(v.videoWidth*k);c.height=Math.round(v.videoHeight*k);c.getContext('2d').drawImage(v,0,0,c.width,c.height);return c.toDataURL('image/jpeg',.85)};
+const eyeShot=()=>{const v=eyeV();if(!v||!eyeOn||!v.videoWidth)return null;const k=Math.min(1,(window.__vcMax?window.__vcMax():1280)/Math.max(v.videoWidth,v.videoHeight)),c=document.createElement('canvas');c.width=Math.round(v.videoWidth*k);c.height=Math.round(v.videoHeight*k);c.getContext('2d').drawImage(v,0,0,c.width,c.height);return c.toDataURL('image/jpeg',.85)};
 const eyeTxt=()=>eyeOn?`\n\n[Mata live] Kamu punya mata dan sedang melihat langsung kondisi di sekitar pengguna saat ini. Gambar yang kamu terima adalah apa yang kamu lihat sekarang. Jawab seolah kamu melihat langsung dengan matamu sendiri, misalnya: "di depanmu ada meja dan segelas kopi". Jangan pernah menyebut kamera, kamera depan, kamera belakang, frame, foto, atau gambar yang diterima. Jika yang ditanyakan tidak terlihat jelas, katakan dengan jujur bahwa kamu tidak bisa melihatnya dengan jelas. Jangan mengarang hal yang tidak terlihat.`:'';
 const eyeBtn=f=>()=>{$('#pm').hidden=true;if(eyeOn&&eyeFace===f){eyeStop();note('');return}eyeStart(f)};
 $('#m_e1').onclick=eyeBtn('user');
@@ -357,7 +357,7 @@ async function send(){
  if(/(pake|pakai|pakek|dengan|lewat|via)\s+(suara|voice|vn)|(balas|bales|jawab)\w*\s+(suara|voice)|suara\s+dong|bicara\s+dong|ngomong\s+dong/i.test(t))VR=1;
  if(/(pake|pakai|pakek|balas|jawab)\s+(teks|tulisan|chat)\b|(matikan|matiin|stop|off)\s+(mode\s+)?suara|jangan\s+(pake|pakai)\s+suara/i.test(t))VR=0;
  if(VR&&window.speechSynthesis){try{const u=new SpeechSynthesisUtterance(' ');u.volume=0;speechSynthesis.speak(u)}catch(e){}}
- const dt=docTxt;docTxt=null;const at=att;att=null;let im=img,gen=/^\/gambar\s/i.test(t),camIm=false;if(!im&&eyeOn&&!gen&&lookCmd){im=eyeShot();camIm=!!im}else if(!im&&eyeOn&&!gen&&sweepCmd){im=(window.eyeSweep?await window.eyeSweep().catch(()=>null):null)||eyeShot();camIm=!!im;sweepUsed=camIm}const imShown=camIm?null:im;$('#tx').value='';$('#tx').style.height='auto';img=null;$('#pv').textContent='';
+ const dt=docTxt;docTxt=null;const at=att;att=null;let im=img,gen=/^\/gambar\s/i.test(t),camIm=false;if(!im&&eyeOn&&!gen&&(lookCmd||(window.__vcShot&&window.__vcShot(t)))){im=eyeShot();camIm=!!im}else if(!im&&eyeOn&&!gen&&sweepCmd){im=(window.eyeSweep?await window.eyeSweep().catch(()=>null):null)||eyeShot();camIm=!!im;sweepUsed=camIm}const imShown=camIm?null:im;$('#tx').value='';$('#tx').style.height='auto';img=null;$('#pv').textContent='';
  if(window.kbClose)kbClose();
  hist.push({role:'user',content:dt?`[File "${dt.name}"]\n${dt.text}\n\n${t||'Jelaskan isi file ini.'}`:(window.MP&&at?MP.userText(t,at):(t||'Jelaskan foto ini.'))});
  anchor(add(`<div class="um">${window.MP?MP.att(at,imShown):(imShown?`<img src="${imShown}">`:'')}${dt?`<div style="opacity:.75">📄 ${esc(dt.name)}</div>`:''}${esc(t)}${window.MP?MP.urls(t):''}</div>`));
@@ -375,7 +375,7 @@ async function send(){
   if(buf.trim()){const j=JSON.parse(buf);if(!j.s)fin=j}
  }catch(e){fin=e.name=='AbortError'?{text:'(dihentikan)'}:{error:'Tidak bisa terhubung ke server: '+e.message}}
  if(fin&&!fin.error){stage('write');
-  const box=add(`<div class="bm"><div class="bt"></div></div>`);const bt=box.querySelector('.bt'),mp=(q=>window.MP?MP.parse(q):{text:q,items:[],tags:''})(window.PX?PX.eat(cur,fin.text||''):(fin.text||'')),tx=mp.text,step=Math.max(4,Math.ceil(tx.length/((window.__hemat&&window.__hemat())?12:70)));
+  const box=add(`<div class="bm"><div class="bt"></div></div>`);const bt=box.querySelector('.bt'),mp=(q=>window.MP?MP.parse(q):{text:q,items:[],tags:''})(window.PX?PX.eat(cur,fin.text||''):(fin.text||'')),tx=mp.text,step=Math.max(4,Math.ceil(tx.length/((window.__ketikN&&window.__ketikN())||((window.__hemat&&window.__hemat())?12:70))));
   if(fin.image)bt.innerHTML=`<img src="${fin.image}">`;
   const tt=document.createElement('div');bt.appendChild(tt);if(VR&&window.speechSynthesis)bt.style.display='none';
   const CH=[],FD=520,fade=()=>{const now=performance.now();while(CH.length&&now-CH[0].t>FD)CH.shift();if(!CH.length)return;
@@ -1677,13 +1677,14 @@ XT.read=async({url})=>{
 };
 XT.search=async({q})=>{
   if(!q) throw new Error('Query kosong');
-  const r=await origFetch(SERVER_URL.replace(/\/$/,'')+'/chat',{method:'POST',headers:{'Content-Type':'application/json'},
+  const __ac=new AbortController(),__to=setTimeout(()=>__ac.abort(),25000);
+  const r=await origFetch(SERVER_URL.replace(/\/$/,'')+'/chat',{method:'POST',signal:__ac.signal,headers:{'Content-Type':'application/json'},
     body:JSON.stringify({messages:[{role:'user',content:q}],image:null,image_gen:false,
       system:'Cari informasi terbaru di web untuk pertanyaan ini lalu jawab ringkas dalam bahasa Indonesia.',
       now:new Date().toISOString(),tz:Intl.DateTimeFormat().resolvedOptions().timeZone,
       model:DEF_MODEL,imgModel:DEF_IMG,mode:'on',keys:(typeof cfg!=='undefined'&&cfg&&cfg.keys)||{}})});
   if(!r.ok) throw new Error('Pencarian gagal: HTTP '+r.status);
-  const fin=await readFinal(r);
+  let fin;try{fin=await readFinal(r)}finally{clearTimeout(__to)}
   if(!fin||fin.error||!fin.text) throw new Error(fin?.error||'Tidak ada hasil');
   const o={q,hasil:fin.text.slice(0,3000)};try{Object.defineProperty(o,'_src',{value:(Array.isArray(fin.sources)?fin.sources:[]).map(x=>x&&x.url).filter(u=>typeof u==='string')})}catch(e){}return o;
 };
@@ -1733,7 +1734,7 @@ const deepen=async res=>{try{
   const seen=new Set(),urls=[],add=u=>{u=String(u||'').replace(/[)\].,;]+$/,'');if(!/^https?:\/\//i.test(u)||SKIP.test(u)||seen.has(u))return;seen.add(u);urls.push(u)};
   (res._src||[]).forEach(add);(res.hasil.match(/https?:\/\/[^\s)\]>"'<]+/g)||[]).forEach(add);
   const HM2=window.__hemat&&window.__hemat(),pick=urls.slice(0,HM2?2:3);if(!pick.length)return res;
-  const outs=await Promise.all(pick.map(u=>wait(XT.read({url:u}),8000).then(x=>({u,t:String((x&&x.teks)||'').replace(/\s+/g,' ').trim().slice(0,HM2?800:1400)})).catch(()=>null)));
+  const outs=await Promise.all(pick.map(u=>wait(XT.read({url:u}),5000).then(x=>({u,t:String((x&&x.teks)||'').replace(/\s+/g,' ').trim().slice(0,HM2?800:1400)})).catch(()=>null)));
   const ok=outs.filter(o=>o&&o.t.length>200);if(!ok.length)return res;
   return {...res,sumber_dibaca:ok.length,hasil:res.hasil+'\n\n[ISI HALAMAN SUMBER, dibaca otomatis untuk memperdalam jawaban]\n'+ok.map((o,i)=>(i+1)+'. '+o.u+'\n'+o.t).join('\n\n')};
 }catch(e){return res}};
@@ -1827,7 +1828,7 @@ const XSEGAR={
   lastUser(b){const ms=Array.isArray(b&&b.messages)?b.messages:[];for(let i=ms.length-1;i>=0;i--){const m=ms[i];if(m&&m.role==='user'){const c=m.content;return typeof c==='string'?c:Array.isArray(c)?c.map(x=>(x&&x.text)||'').join(' '):''}}return''},
   need(b){try{if(!b||b.image_gen||b.image)return false;const u=this.lastUser(b);if(!u||u.length>400)return false;if(u.indexOf('[HASIL ALAT')===0)return false;return ((window.__hemat&&window.__hemat())?XSEGAR.RE2:this.RE).test(u)}catch(e){return false}},
   sys(){let tgl='',bt='';try{const tz=Intl.DateTimeFormat().resolvedOptions().timeZone;tgl=new Intl.DateTimeFormat('id-ID',{dateStyle:'full',timeZone:tz}).format(new Date());bt=new Intl.DateTimeFormat('id-ID',{month:'long',year:'numeric',timeZone:tz}).format(new Date())}catch(e){tgl=new Date().toDateString();bt=String(new Date().getFullYear())}
-    return `\n\n[ATURAN INFO TERBARU]\nHari ini ${tgl}. Pengetahuan bawaanmu sudah usang untuk hal-hal terbaru.\n- Pengguna menanyakan hal terbaru: WAJIB pakai alat search dulu. Jangan menjawab dari ingatan.\n- Cari minimal 2 kali dengan kata kunci berbeda, dan sertakan bulan dan tahun sekarang di kata kunci (contoh: "iPhone terbaru ${bt}").\n- Buka halaman sumber terbaik dengan read, jangan hanya andalkan cuplikan. Utamakan situs resmi dan berita bertanggal paling baru. Untuk berita pakai juga alat news.\n- Cek tanggal tiap sumber. Kalau sumber terbarunya sudah lama (lebih dari 1-2 bulan untuk topik yang cepat berubah), katakan terus terang.\n- Kalau hasil pencarian bertentangan dengan ingatanmu, percayai hasil pencarian.\n- Tulis tanggal sumber di jawaban. Kalau tidak yakin itu yang paling baru, bilang "ini yang terbaru yang saya temukan".\n- Daftar ditulis dengan poin "-" yang konsisten; jangan memakai tanda * untuk huruf miring.`}
+    return `\n\n[ATURAN INFO TERBARU]\nHari ini ${tgl}. Pengetahuan bawaanmu sudah usang untuk hal-hal terbaru.\n- Pengguna menanyakan hal terbaru: WAJIB pakai alat search dulu. Jangan menjawab dari ingatan.\n- Cari minimal 2 kali dengan kata kunci berbeda, dan sertakan bulan dan tahun sekarang di kata kunci (contoh: "iPhone terbaru ${bt}").\n- Buka halaman sumber terbaik dengan read, jangan hanya andalkan cuplikan. Utamakan situs resmi dan berita bertanggal paling baru. Untuk berita cukup satu pencarian (pakai news ATAU search, jangan keduanya); isi halaman sumber sudah dibaca otomatis.\n- Cek tanggal tiap sumber. Kalau sumber terbarunya sudah lama (lebih dari 1-2 bulan untuk topik yang cepat berubah), katakan terus terang.\n- Kalau hasil pencarian bertentangan dengan ingatanmu, percayai hasil pencarian.\n- Tulis tanggal sumber di jawaban. Kalau tidak yakin itu yang paling baru, bilang "ini yang terbaru yang saya temukan".\n- Daftar ditulis dengan poin "-" yang konsisten; jangan memakai tanda * untuk huruf miring.`}
 };
 XSEGAR.RE2=/(terbaru|terkini|mutakhir|paling\s+baru|up\s?to\s?date|\bberita\b|kabar\s+(terbaru|terkini)|trending|\bviral\b|\blatest\b|\bnewest\b|\bbreaking\b|\bnews\b|\brilis\b|\bdirilis\b|\breleased?\b|klasemen|\bskor\b|hasil\s+pertandingan|harga\s+(saham|emas|bitcoin|btc|kripto|crypto|minyak|bbm|dolar|bensin))/i;
 window.fetch=async(input,init={})=>{
@@ -1862,7 +1863,8 @@ const ANTI_HALU=`
       const calls=blk.length?blk:(()=>{const pt=parseTool(fin.text);return pt?[pt.call]:[]})();
       if(!calls.length) break;
       const outs=[];
-      for(const c of calls){let res;const key=c.name+'|'+JSON.stringify(c.args||{}),n=(SEEN.get(key)||0)+1;SEEN.set(key,n);if(n>=3){res={error:'Panggilan yang sama sudah diulang '+n+' kali. Jangan ulangi; pakai hasil yang sudah ada dan jawab pengguna.'}}else try{res=await XT.run(c.name,c.args)}catch(e){res={error:e.message||String(e)}}outs.push(`[HASIL ALAT ${c.name}]: ${JSON.stringify(res)}`)}
+      const __r=await Promise.all(calls.map(async c=>{let res;const key=c.name+'|'+JSON.stringify(c.args||{}),n=(SEEN.get(key)||0)+1;SEEN.set(key,n);if(n>=3){res={error:'Panggilan yang sama sudah diulang '+n+' kali. Jangan ulangi; pakai hasil yang sudah ada dan jawab pengguna.'}}else try{res=await XT.run(c.name,c.args)}catch(e){res={error:e.message||String(e)}}return `[HASIL ALAT ${c.name}]: ${JSON.stringify(res)}`}));
+      outs.push(...__r);
       body.messages=[...body.messages,
         {role:'assistant',content:fin.text},
         {role:'user',content:outs.join('\n')+'\nSekarang jawab pengguna dengan bahasa biasa.'}];
@@ -7856,4 +7858,134 @@ setTimeout(pasang,900);
 }catch(e){}})();
 </script>
 <!-- ===== AKHIR SAKLAR HEMAT API ===== -->
+<!-- ===== SAKLAR EFEK KETIK (Pengaturan). Bawaan: mode hemat = 12 langkah, mode biasa = 70. Pilih 30/40/50/60 = berlaku di kedua mode. Hapus blok ini untuk membatalkan ===== -->
+<style>
+#ketik-wrap{margin:8px 0;padding:14px 16px;border-radius:16px;background:#161618;border:1px solid #2b2b2e}
+#ketik-wrap b{display:block;font-size:15px;color:#fff;font-weight:600}
+#ketik-wrap .kt-d{display:block;font-size:12.5px;color:#8e8e93;margin:2px 0 10px;line-height:1.35}
+#ketik-seg{display:flex;gap:6px}
+#ketik-seg button{flex:1;padding:9px 0;border:0;border-radius:10px;background:#2c2c2e;color:#d1d1d6;font-size:14px;font-weight:600}
+#ketik-seg button.on{background:#30d158;color:#04210d}
+#ketik-seg button:active{opacity:.8}
+</style>
+<script>
+(()=>{try{
+const K='xbot_ketik',OPS=['','30','40','50','60'];
+const get=()=>{try{const v=localStorage.getItem(K)||'';return OPS.indexOf(v)>-1?v:''}catch(e){return ''}};
+const set=v=>{try{v?localStorage.setItem(K,v):localStorage.removeItem(K)}catch(e){}};
+window.__ketikN=function(){const v=get();return v?parseInt(v,10):0};
+function pasang(){
+ const sm=document.getElementById('sm');
+ if(!sm||sm.hidden||sm.querySelector('#ketik-wrap'))return;
+ const d=document.createElement('div');d.id='ketik-wrap';
+ d.innerHTML='<b>Kecepatan efek ketik</b><span class="kt-d">Jumlah langkah per jawaban: makin besar, makin halus tapi sedikit lebih lama. Bawaan: mode hemat 12, mode biasa 70. Pilihan angka berlaku di kedua mode.</span><div id="ketik-seg">'+OPS.map(o=>'<button type="button" data-v="'+o+'">'+(o||'Bawaan')+'</button>').join('')+'</div>';
+ const ref=sm.querySelector('#hemat-wrap');
+ if(ref&&ref.nextSibling)sm.insertBefore(d,ref.nextSibling);else sm.appendChild(d);
+ const seg=d.querySelector('#ketik-seg'),mark=()=>{const c=get();seg.querySelectorAll('button').forEach(x=>x.classList.toggle('on',x.dataset.v===c))};
+ mark();
+ seg.onclick=e=>{const b=e.target.closest('button');if(!b)return;set(b.dataset.v);mark()};
+}
+const sm=document.getElementById('sm');
+if(sm){new MutationObserver(pasang).observe(sm,{attributes:true,attributeFilter:['hidden'],childList:true})}
+setTimeout(pasang,1100);
+}catch(e){}})();
+</script>
+<!-- ===== AKHIR SAKLAR EFEK KETIK ===== -->
+<!-- ===== VIDEO CALL: 1 Reguler, 2 Medium, 3 Ultra (menu +). Hapus blok ini sampai AKHIR, lalu kembalikan 2 baris kecil di send()/eyeShot untuk membatalkan ===== -->
+<style>
+#vcp{position:fixed;inset:0;z-index:60;background:rgba(0,0,0,.72);display:flex;align-items:flex-end;justify-content:center}
+#vcp[hidden],#vcu[hidden]{display:none}
+#vcp .bx{width:100%;max-width:520px;background:#1c1c1e;border-radius:22px 22px 0 0;padding:18px 16px calc(env(safe-area-inset-bottom) + 18px);color:#fff}
+#vcp h4{margin:0 0 10px;font-size:16px}
+#vcp .o{display:block;width:100%;text-align:left;background:#2c2c2e;color:#fff;border:0;border-radius:14px;padding:12px 14px;margin:8px 0;font-size:15px;font-weight:600}
+#vcp .o small{display:block;font-weight:400;color:#9a9aa0;font-size:12.5px;margin-top:2px}
+#vcp .x{width:100%;background:none;border:0;color:#8e8e93;padding:10px;font-size:15px}
+#vcp input{width:100%;margin-top:6px;background:#111;border:1px solid #333;border-radius:10px;color:#fff;padding:8px;font-size:14px}
+#vc-pip{position:fixed;top:calc(env(safe-area-inset-top) + 14px);right:14px;width:92px;height:124px;object-fit:cover;border-radius:14px;z-index:99999;background:#222;transform:scaleX(-1);border:1px solid #444}
+#vc-fl{position:fixed;top:calc(env(safe-area-inset-top) + 142px);right:14px;width:92px;z-index:99999;background:#1f2937;color:#fff;border:0;border-radius:10px;padding:6px 0;font-size:13px}
+#vtp{position:fixed;inset:0;z-index:60;background:rgba(0,0,0,.72);display:flex;align-items:flex-end;justify-content:center}
+#vtp[hidden],#vcu[hidden]{display:none}
+#vtp .bx{width:100%;max-width:520px;background:#1c1c1e;border-radius:22px 22px 0 0;padding:18px 16px calc(env(safe-area-inset-bottom) + 18px);color:#fff}
+#vtp h4{margin:0 0 10px;font-size:16px}
+#vtp .o{display:block;width:100%;text-align:left;background:#2c2c2e;color:#fff;border:0;border-radius:14px;padding:12px 14px;margin:8px 0;font-size:15px;font-weight:600}
+#vtp .o small{display:block;font-weight:400;color:#9a9aa0;font-size:12.5px;margin-top:2px}
+#vtp .x{width:100%;background:none;border:0;color:#8e8e93;padding:10px;font-size:15px}
+#vtp input{width:100%;margin-top:6px;background:#111;border:1px solid #333;border-radius:10px;color:#fff;padding:8px;font-size:14px}
+#vcu .orb{flex:1;display:grid;place-items:center}#vcu .orb::before{content:"";width:120px;height:120px;border-radius:50%;background:linear-gradient(135deg,#1d9bf0,#8a2be2);box-shadow:0 0 40px rgba(29,155,240,.5);transition:transform .15s,box-shadow .15s}#vcu.sp .orb::before{transform:scale(1.18);box-shadow:0 0 64px rgba(138,43,226,.75)}
+#vcu{position:fixed;inset:0;z-index:70;background:#000;color:#fff;display:flex;flex-direction:column}
+#vcu video{flex:1;min-height:0;width:100%;object-fit:cover;transform:scaleX(-1)}
+#vcu .bar{padding:12px 16px calc(env(safe-area-inset-bottom) + 14px);text-align:center;background:#0b0b0d}
+#vcu .bar div{font-size:14px;color:#cfcfd4;margin-bottom:10px;min-height:20px}
+#vcu .bar button{background:#dc2626;color:#fff;border:0;border-radius:24px;padding:12px 34px;font-size:16px;font-weight:600}
+</style>
+<script>
+(()=>{try{
+const $=i=>document.getElementById(i),LS=k=>{try{return localStorage.getItem(k)}catch(e){return null}};
+const CUE=/\b(ini apa|apa ini|lihat|liat|perhatikan|bagus|cocok|warna|baca|tulisan|foto|gambar|kelihatan|kelihatannya|ada apa|di tangan|yang ini|seperti apa|rapi|model|penampilan)\b/i;
+window.__vcMode=null;
+window.__vcShot=t=>window.__vcMode==='med'||(window.__vcMode==='reg'&&CUE.test(String(t||'')));
+window.__vcMax=()=>window.__vcMode&&window.__hemat&&window.__hemat()?640:1280;
+const pk=document.createElement('div');pk.id='vcp';pk.hidden=true;
+pk.innerHTML='<div class="bx"><h4>Video Call</h4><button class="o" data-m="reg">1. Reguler · hemat<small>Bot melihat hanya saat kalimatmu menyangkut penglihatan.</small></button><button class="o" data-m="med">2. Medium · sedang<small>Bot melihat satu gambar di setiap giliran bicara.</small></button><button class="o" data-m="ultra">3. Ultra · tinggi<small>Suara dan video mengalir terus (Gemini Live). Maks. 5 menit.</small></button><input id="vc-model" aria-label="Model Ultra" placeholder="Model Ultra"><button class="x">Batal</button></div>';
+document.body.appendChild(pk);
+pk.onclick=e=>{if(e.target===pk||e.target.className==='x'){pk.hidden=true;return}const b=e.target.closest('.o');if(!b)return;pk.hidden=true;const m=b.dataset.m;if(m==='ultra'){try{localStorage.setItem('xbot_ultra_model',$('vc-model').value.trim())}catch(e){}ultra(false)}else basic(m)};
+function ins(){const pm=$('pm'),mv=$('m_v');if(!pm||$('m_vc'))return;const b=document.createElement('button');b.id='m_vc';b.textContent='Video Call';b.onclick=()=>{pm.hidden=true;$('vc-model').value=(LS('xbot_ultra_model')&&LS('xbot_ultra_model')!=='gemini-2.0-flash-live-001')?LS('xbot_ultra_model'):'gemini-3.8-live';pk.hidden=false};mv?pm.insertBefore(b,mv):pm.appendChild(b)}
+ins();
+/* Reguler & Medium: panggilan suara lama + kamera depan; gambar ikut pesan sesuai mode */
+async function basic(m){
+ window.__vcMode=m;
+ try{await eyeStart('user',true)}catch(e){}
+ if(!eyeOn){window.__vcMode=null;return}
+ const vb=$('xvoice'),xb=$('xvb');if(!vb||!xb){eyeStop();window.__vcMode=null;alert('Panggilan suara tidak tersedia di browser ini.');return}
+ const v=document.createElement('video');v.id='vc-pip';v.autoplay=true;v.muted=true;v.playsInline=true;v.srcObject=eyeStream;document.body.appendChild(v);v.play().catch(()=>{});
+ const f=document.createElement('button');f.id='vc-fl';f.textContent='🔄 Kamera';document.body.appendChild(f);
+ f.onclick=async()=>{const n=eyeFace==='user'?'environment':'user';await eyeStart(n,true);if(eyeStream){v.srcObject=eyeStream;v.style.transform=n==='user'?'scaleX(-1)':'none'}};
+ const mo=new MutationObserver(()=>{if(!vb.classList.contains('on')){mo.disconnect();window.__vcMode=null;v.remove();f.remove();try{eyeStop()}catch(e){}}});
+ mo.observe(vb,{attributes:true,attributeFilter:['class']});xb.click();
+}
+/* Ultra: Gemini Live lewat WebSocket (audio 16 kHz masuk, 24 kHz keluar, video 1 gambar/detik) */
+function ultra(au){
+ const key=(typeof cfg!=='undefined'&&cfg.keys&&(cfg.keys.gemini||cfg.keys.google))||'';
+ if(!key){alert('API key Gemini belum diisi di Pengaturan.');return}
+ let model=LS('xbot_ultra_model')||'gemini-3.8-live';if(model==='gemini-2.0-flash-live-001')model='gemini-3.8-live';
+ const o=document.createElement('div');o.id='vcu';o.innerHTML=(au?'<div class="orb"></div>':'<video autoplay playsinline muted></video>')+'<div class="bar"><div id="vcu-st">Menyambung…</div><button>Akhiri</button></div>';document.body.appendChild(o);
+ const st=t=>{const e=$('vcu-st');if(e)e.textContent=t};
+ let ws,ac,ms,pr,vt,lt,alive=true,pb=0,srcs=[],t0=Date.now();
+ const done=msg=>{if(!alive)return;alive=false;clearInterval(vt);clearInterval(lt);try{ws&&ws.close()}catch(e){}try{pr&&pr.disconnect()}catch(e){}try{ms&&ms.getTracks().forEach(x=>x.stop())}catch(e){}try{ac&&ac.close()}catch(e){}if(msg)alert(msg);o.remove()};
+ o.querySelector('button').onclick=()=>done();
+ const b64=u8=>{let s='';for(let i=0;i<u8.length;i+=8192)s+=String.fromCharCode.apply(null,u8.subarray(i,i+8192));return btoa(s)};
+ (async()=>{
+  try{ms=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:true,noiseSuppression:true},video:au?false:{facingMode:'user'}})}catch(e){done('Izin kamera/mikrofon ditolak atau tidak tersedia.');return}
+  const vd=o.querySelector('video');if(vd){vd.srcObject=ms;vd.play().catch(()=>{})}
+  try{ac=new(window.AudioContext||window.webkitAudioContext)();await ac.resume()}catch(e){done('Audio tidak didukung browser ini.');return}
+  let fmt=0,ok=false;function open(){try{ws=new WebSocket('wss://generativelanguage.googleapis.com/ws/google.ai.generativelanguage.v1beta.GenerativeService.BidiGenerateContent?key='+encodeURIComponent(key))}catch(e){done('Tidak bisa membuka koneksi.');return}
+  ws.onopen=()=>{const su={model:'models/'+model,systemInstruction:{parts:[{text:au?'Kamu sedang menelepon pengguna dalam bahasa Indonesia. Bicara santai dan singkat seperti telepon biasa. Berhenti bicara saat pengguna memotong.':'Kamu asisten video call berbahasa Indonesia. Jawab singkat dan santai. Kamu bisa melihat kamera pengguna.'}]}};if(fmt===0)su.generationConfig={responseModalities:['AUDIO']};else su.responseModalities=['AUDIO'];ws.send(JSON.stringify({setup:su}))};
+  ws.onerror=()=>{};
+  ws.onclose=e=>{if(alive&&!ok&&fmt===0){fmt=1;setTimeout(()=>{if(alive)open()},150);return}done(alive?'Koneksi terputus (kode '+e.code+(e.reason?': '+String(e.reason).slice(0,200):'')+'). Cek API key dan nama model "'+model+'".':'')};
+  ws.onmessage=async e=>{let d;try{d=JSON.parse(typeof e.data==='string'?e.data:await e.data.text())}catch(x){return}
+   if(d.setupComplete){ok=true;st('Terhubung. Bicara saja.');start();return}
+   const sc=d.serverContent;if(!sc)return;
+   if(sc.interrupted){srcs.forEach(s=>{try{s.stop()}catch(x){}});srcs=[];pb=0}
+   (sc.modelTurn&&sc.modelTurn.parts||[]).forEach(p=>{if(p.inlineData&&p.inlineData.data)play(p.inlineData.data)})};}open();
+  function play(b){const bin=atob(b),n=bin.length>>1,buf=ac.createBuffer(1,n,24000),ch=buf.getChannelData(0);for(let i=0;i<n;i++){let v=bin.charCodeAt(2*i)|(bin.charCodeAt(2*i+1)<<8);if(v>=32768)v-=65536;ch[i]=v/32768}
+   const s=ac.createBufferSource();s.buffer=buf;s.connect(ac.destination);pb=Math.max(pb,ac.currentTime);s.start(pb);pb+=buf.duration;srcs.push(s);s.onended=()=>{srcs=srcs.filter(x=>x!==s)}}
+  function start(){
+   const src=ac.createMediaStreamSource(ms);pr=ac.createScriptProcessor(4096,1,1);const r=ac.sampleRate/16000;
+   pr.onaudioprocess=e=>{if(!alive||ws.readyState!==1)return;const x=e.inputBuffer.getChannelData(0),n=Math.floor(x.length/r),y=new Int16Array(n);for(let i=0;i<n;i++){const v=Math.max(-1,Math.min(1,x[Math.floor(i*r)]));y[i]=v<0?v*32768:v*32767}
+    ws.send(JSON.stringify({realtimeInput:{audio:{data:b64(new Uint8Array(y.buffer)),mimeType:'audio/pcm;rate=16000'}}}))};
+   src.connect(pr);pr.connect(ac.destination);
+   vt=setInterval(()=>{if(!alive||ws.readyState!==1||!vd||!vd.videoWidth)return;const k=320/Math.max(vd.videoWidth,vd.videoHeight),c=document.createElement('canvas');c.width=Math.round(vd.videoWidth*k);c.height=Math.round(vd.videoHeight*k);c.getContext('2d').drawImage(vd,0,0,c.width,c.height);ws.send(JSON.stringify({realtimeInput:{video:{data:c.toDataURL('image/jpeg',.6).split(',')[1],mimeType:'image/jpeg'}}}))},1000);
+   lt=setInterval(()=>{const s=Math.floor((Date.now()-t0)/1000),lim=au?600:300,sk=pb>ac.currentTime;if(s>=lim){done('Batas '+lim/60+' menit tercapai. Panggilan ditutup.');return}o.classList.toggle('sp',sk);st((au?(sk?'Bot berbicara':'Mendengarkan'):'Terhubung')+' · '+Math.floor(s/60)+':'+String(s%60).padStart(2,'0'))},300)}
+ })()}
+
+/* Telephone: pilih Reguler (bergantian, lama) atau Plus (bicara bebas, Gemini Live suara saja) */
+const tp=document.createElement('div');tp.id='vtp';tp.hidden=true;
+tp.innerHTML='<div class="bx"><h4>Telephone</h4><button class="o" data-m="reg">Reguler<small>Bergantian: bot menjawab setelah kamu selesai bicara. Hemat.</small></button><button class="o" data-m="plus">Plus<small>Bicara bebas seperti telepon biasa: kamu bisa memotong bot kapan saja. Maks. 10 menit. Disarankan pakai earphone.</small></button><button class="x">Batal</button></div>';
+document.body.appendChild(tp);let bypass=false;
+tp.onclick=e=>{if(e.target===tp||e.target.className==='x'){tp.hidden=true;return}const b=e.target.closest('.o');if(!b)return;tp.hidden=true;if(b.dataset.m==='plus')ultra(true);else{bypass=true;try{$('m_v').click()}finally{bypass=false}}};
+const pm0=$('pm');if(pm0)pm0.addEventListener('click',e=>{if(bypass)return;if(e.target.closest&&e.target.closest('#m_v')){e.stopPropagation();e.preventDefault();pm0.hidden=true;tp.hidden=false}},true);
+new MutationObserver(ins).observe(document.body,{childList:true,subtree:true});
+}catch(e){}})();
+</script>
+<!-- ===== AKHIR VIDEO CALL ===== -->
 </body></html>
