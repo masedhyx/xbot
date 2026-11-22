@@ -5961,7 +5961,7 @@ const workerMain=function(){
  'use strict';
  const L=[];let cnt=0,len=0,IMG=0;
  const put=(p,s)=>{if(cnt++<300){const x=p+String(s);len+=x.length;if(len<20000)L.push(x)}};
- const PK={numpy:'numpy',pandas:'pandas',scipy:'scipy',sympy:'sympy',networkx:'networkx',bs4:'beautifulsoup4',yaml:'pyyaml',sklearn:'scikit-learn',statsmodels:'statsmodels',matplotlib:'matplotlib'};
+ const PK={numpy:'numpy',pandas:'pandas',scipy:'scipy',sympy:'sympy',networkx:'networkx',bs4:'beautifulsoup4',yaml:'pyyaml',sklearn:'scikit-learn',statsmodels:'statsmodels',matplotlib:'matplotlib',PIL:'pillow',seaborn:'seaborn',lxml:'lxml'};
  self.onmessage=async e=>{
   const d=e.data||{};let py;
   try{
@@ -5969,7 +5969,7 @@ const workerMain=function(){
    py=await loadPyodide({indexURL:d.base});py.globals.set('__xs_send',(k,p)=>{if(k==='img'){if(IMG>=6)return;IMG++}postMessage({kind:k,p:String(p)})});
    /* muat paket yang di-import kode SEBELUM jaringan ditutup */
    const mods=[...new Set([...String(d.code).matchAll(/^\s*(?:import|from)\s+([A-Za-z_]\w*)/gm)].map(m=>m[1]))].filter(m=>PK[m]);
-   if(mods.length){try{await py.loadPackage([...new Set(mods.map(m=>PK[m]))])}catch(x){put('[peringatan] gagal memuat paket: ',(x&&x.message)||x)}
+   if(mods.length){for(const pk of [...new Set(mods.map(m=>PK[m]))]){try{await py.loadPackage(pk)}catch(x){put('[peringatan] gagal memuat paket '+pk+': ',(x&&x.message)||x)}}
     for(const m of mods){try{py.runPython('import '+m)}catch(x){}}}
   }catch(err){postMessage({error:'Gagal memuat Python (Pyodide). Pemuatan pertama butuh internet. Detail: '+String((err&&err.message)||err).slice(0,200)});return}
   /* grafik & tabel: matplotlib (Agg) dan show_table(df). Gambar/tabel dikirim langsung ke chat, bukan ke model */
@@ -6022,7 +6022,7 @@ XT.code=async function(a){
 
 /* beri tahu bot chat utama bahwa Python tersedia (hanya chat utama, hanya menambah teks di akhir) */
 const MK='[Python di alat code]';
-const HINT='\n\n'+MK+' Alat code juga bisa menjalankan Python: <tool>{"name":"code","args":{"lang":"python","code":"print(sum(range(10)))"}}</tool>. Jalan di browser (Pyodide), tanpa internet; output print dan nilai ekspresi terakhir ditampilkan. Paket numpy, pandas, scipy, sympy, networkx, scikit-learn, statsmodels dimuat otomatis saat di-import; matplotlib tidak ada. Pemuatan pertama butuh internet dan bisa 10-30 detik; batas jalan 10 detik. Pakai Python hanya bila pengguna memintanya atau untuk olah data yang lebih mudah dengan pandas/numpy; selain itu tetap pakai JavaScript.';
+const HINT='\n\n'+MK+' Alat code juga bisa menjalankan Python: <tool>{"name":"code","args":{"lang":"python","code":"print(sum(range(10)))"}}</tool>. Jalan di browser (Pyodide), tanpa internet; output print dan nilai ekspresi terakhir ditampilkan. Paket numpy, pandas, scipy, sympy, networkx, scikit-learn, statsmodels dimuat otomatis saat di-import; matplotlib, PIL (pillow), seaborn, dan lxml juga dimuat otomatis saat di-import. Pemuatan pertama butuh internet dan bisa 10-30 detik; batas jalan 10 detik. Pakai Python hanya bila pengguna memintanya atau untuk olah data yang lebih mudah dengan pandas/numpy; selain itu tetap pakai JavaScript.';
 const prevG=window.galeriSysFor;
 window.galeriSysFor=function(b){
  let s='';
@@ -8320,4 +8320,68 @@ if(!b||!x)return;
 b.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();x.hidden=!x.hidden;b.classList.toggle('open',!x.hidden)});
 })();
 </script>
+<!-- ===== TAMBAHAN: SQL (sql.js, SQLite di browser) untuk alat sql - hapus blok ini sampai AKHIR untuk membatalkan. Tidak mengubah kode lain. ===== -->
+<script>
+(()=>{
+if(window._xSql)return;window._xSql=1;
+try{
+const XT=window.XT;
+if(!XT||typeof XT.run!=='function'){console.warn('SQL: XT tidak ditemukan, blok tidak aktif');return}
+const LIB='https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.10.3/';
+let SQLP=null,DB=null;
+const loadLib=()=>{
+  if(window.initSqlJs)return Promise.resolve(window.initSqlJs);
+  if(!SQLP)SQLP=new Promise((res,rej)=>{
+    const s=document.createElement('script');
+    s.src=LIB+'sql-wasm.js';
+    s.onload=()=>res(window.initSqlJs);
+    s.onerror=()=>{SQLP=null;rej(new Error('gagal memuat SQLite (cek koneksi internet)'))};
+    document.head.appendChild(s);
+  });
+  return SQLP;
+};
+const getDB=async()=>{
+  if(DB)return DB;
+  const init=await loadLib();
+  const SQL=await init({locateFile:f=>LIB+f});
+  DB=new SQL.Database();
+  return DB;
+};
+const MAXR=200,MAXSHOW=50;
+XT.sql=async(a={})=>{
+  a=a||{};
+  if(a.reset){
+    if(DB){try{DB.close()}catch(e){}}
+    DB=null;
+    return {ok:true,pesan:'database SQL dikosongkan'};
+  }
+  const q=String(a.sql||a.query||'').trim();
+  if(!q)throw new Error('query SQL kosong');
+  if(q.length>20000)throw new Error('query terlalu panjang');
+  if(/^\s*(attach|detach)\b/i.test(q))throw new Error('ATTACH/DETACH tidak diizinkan');
+  const db=await getDB();
+  const hasil=db.exec(q);
+  const last=hasil[hasil.length-1];
+  if(!last)return {ok:true,pesan:'query dijalankan',baris_diubah:db.getRowsModified()};
+  const h=last.columns,rows=last.values;
+  const shown=rows.slice(0,MAXR).map(r=>r.map(v=>v===null?'NULL':String(v)));
+  try{window.__xsPart&&window.__xsPart({kind:'tbl',p:JSON.stringify({h:h,r:shown,n:rows.length})})}catch(e){}
+  return {kolom:h,jumlah_baris:rows.length,baris:shown.slice(0,MAXSHOW)};
+};
+/* beri tahu bot chat utama bahwa SQL tersedia (hanya menambah teks di akhir) */
+const SMK='[SQL di alat sql]';
+const SHINT='\n\n'+SMK+' Alat sql menjalankan SQLite di browser: <tool>{"name":"sql","args":{"sql":"CREATE TABLE t(a,b); INSERT INTO t VALUES(1,2); SELECT * FROM t;"}}</tool>. Database bertahan selama halaman terbuka dan dipakai bersama antar pesan. Hasil SELECT terakhir ditampilkan sebagai tabel. Untuk mengosongkan database pakai args {"reset":true}.';
+const prevS=window.galeriSysFor;
+window.galeriSysFor=function(b){
+  let s='';
+  try{s=typeof prevS==='function'?(prevS.apply(this,arguments)||''):''}catch(e){s=''}
+  try{
+    if(b&&!b.image_gen&&typeof b.system==='string'&&b.system.includes('[Info perangkat pengguna]')&&!String(s).includes(SMK))s=String(s)+SHINT;
+  }catch(e){}
+  return s;
+};
+}catch(e){try{console.warn('SQL tidak aktif:',e)}catch(_){}}
+})();
+</script>
+<!-- ===== AKHIR TAMBAHAN SQL ===== -->
 </body></html>
