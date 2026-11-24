@@ -1250,10 +1250,12 @@ function openSettingsReal(){
   for(const k in SEARCH){
     h+=`<div class="kl"><label for="k_${k}">${SEARCH[k].name} API key</label>${dot('s|'+k)}</div><input id="k_${k}" type="password" placeholder="${esc(SEARCH[k].ph)}" autocomplete="off">`;
   }
+  h+='<div class="sec">Telephone</div><p style="margin:6px 0 0">Key Gemini untuk fitur Telephone (suara). Kosongkan untuk memakai key Gemini di atas.</p><div class="kl"><label for="k_tel">Telephone API Key</label></div><input id="k_tel" type="password" placeholder="Gemini API key untuk Telephone" autocomplete="off">';
   h+='<div class="sec">Prompt master</div><p style="margin:6px 0 0">Instruksi utama yang dikirim ke model di setiap obrolan: peran, gaya bahasa, aturan jawaban, dan sebagainya. Kosongkan kalau tidak perlu.</p><textarea id="k_master" maxlength="8000" spellcheck="false" placeholder="Contoh: Kamu adalah asisten berbahasa Indonesia. Jawab singkat, jelas, dan sopan."></textarea>';
   h+='<div class="sec">Ganti sandi</div><p style="margin:6px 0 0">Sandi untuk membuka menu ini. Disimpan di browser ini saja.</p><label for="p_old">Sandi lama</label><input id="p_old" type="password" autocomplete="off"><label for="p_new">Sandi baru (min. 4 karakter)</label><input id="p_new" type="password" autocomplete="off"><label for="p_new2">Ulangi sandi baru</label><input id="p_new2" type="password" autocomplete="off"><div class="pwmsg" id="pChgMsg"></div><div class="btns" style="position:static;margin-top:8px;padding-top:0"><button class="pri" id="pChg">Ganti sandi</button></div>';
   $('#setBody').innerHTML=h;
   $('#k_master').value=store.get('master2','');
+  try{$('#k_tel').value=localStorage.getItem('tel_gkey')||''}catch(e){}
   for(const p in PROVIDERS)$('#k_'+p).value=c[p];
   for(const k in SEARCH)$('#k_'+k).value=c.search[k]||'';
   paintModels();
@@ -1578,6 +1580,7 @@ $('#sSave').onclick=()=>{
   const c={model:draft.model,search:{}};
   for(const p in PROVIDERS)c[p]=$('#k_'+p).value.trim();
   for(const k in SEARCH)c.search[k]=$('#k_'+k).value.trim();
+  try{localStorage.setItem('tel_gkey',$('#k_tel').value.trim())}catch(e){}
   store.set('cfg2',c);store.set('master2',$('#k_master').value.trim());$('#modal').classList.remove('show');toast('Tersimpan');
 };
 
@@ -2062,22 +2065,21 @@ new MutationObserver(syncPh).observe(app,{attributes:true,attributeFilter:['clas
   const sheet=document.createElement('div'); sheet.id='vtp'; sheet.hidden=true;
   sheet.innerHTML='<div class="bx"><h4>Telephone</h4>'+
     '<button class="o" data-m="plus"><b>Plus</b><small>Bicara bebas seperti telepon biasa: kamu bisa memotong bot kapan saja. Maks. 10 menit. Disarankan pakai earphone.</small></button>'+
-    '<input class="k" id="tel-key" type="password" placeholder="Gemini API key (disimpan di browser ini)" autocomplete="off">'+
     '<button class="x" id="tel-cancel">Batal</button></div>';
   document.body.appendChild(sheet);
-  const keyIn=sheet.querySelector('#tel-key');
+  const getKey=()=>{let k=LS('tel_gkey').trim();if(!k){try{k=((JSON.parse(localStorage.getItem('cfg2'))||{}).gemini||'').trim()}catch(e){}}return k};
 
   /* tombol Telephone di kolom kosong drawer, tepat di atas "+ Obrolan baru" */
   const tb=document.createElement('button'); tb.className='dbtn'; tb.id='dTel'; tb.textContent='Telephone';
   const dNew=document.getElementById('dNew'); dNew.parentNode.insertBefore(tb,dNew);
-  tb.onclick=()=>{document.getElementById('app').classList.remove('drawer-open'); keyIn.value=LS('tel_gkey'); sheet.hidden=false};
+  tb.onclick=()=>{document.getElementById('app').classList.remove('drawer-open'); sheet.hidden=false};
 
   sheet.addEventListener('click',e=>{
     if(e.target===sheet||e.target.id==='tel-cancel'){sheet.hidden=true;return}
     const b=e.target.closest('.o'); if(!b)return;
-    const key=(keyIn.value||'').trim()||LS('tel_gkey');
-    if(!key){alert('Isi Gemini API key dulu.');keyIn.focus();return}
-    LSS('tel_gkey',key); sheet.hidden=true;
+    const key=getKey();
+    if(!key){alert('Isi Telephone API Key dulu di menu → Pengaturan API.');return}
+    sheet.hidden=true;
     startPlus(key);
   });
 
