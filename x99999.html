@@ -2032,5 +2032,144 @@ new MutationObserver(syncPh).observe(app,{attributes:true,attributeFilter:['clas
 })();
 })();
 </script>
+<!-- ===== TELEPHONE · PLUS (alur dari x11: Gemini Live, suara saja, bisa dipotong). Blok mandiri; hapus blok ini untuk membatalkan ===== -->
+<script>
+(function(){
+  const LIVE_MODEL_DEF='gemini-3.8-live', LIM=600;
+  const LS=k=>{try{return localStorage.getItem(k)||''}catch(e){return''}};
+  const LSS=(k,v)=>{try{localStorage.setItem(k,v)}catch(e){}};
+
+  const css=document.createElement('style');
+  css.textContent=`
+  #vtp{position:fixed;inset:0;z-index:70;background:rgba(0,0,0,.55);display:flex;align-items:flex-end;justify-content:center}
+  #vtp[hidden]{display:none}
+  #vtp .bx{width:100%;max-width:520px;background:#1e1b1e;border-radius:24px 24px 0 0;padding:18px 16px calc(18px + env(safe-area-inset-bottom));color:#f2f2f3;font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text",sans-serif}
+  #vtp h4{margin:0 4px 12px;font-size:19px;font-weight:600}
+  #vtp .o{display:block;width:100%;text-align:left;background:#2b282b;border-radius:16px;padding:14px 16px;margin:0 0 10px;font:inherit;color:inherit}
+  #vtp .o b{display:block;font-size:17px;font-weight:600;margin-bottom:4px}
+  #vtp .o small{display:block;color:#8c8a8d;font-size:14px;line-height:20px}
+  #vtp .k{display:block;width:100%;box-sizing:border-box;height:42px;border-radius:12px;border:1px solid #3a3639;background:#141214;color:#f2f2f3;padding:0 12px;font:inherit;font-size:15px;margin:4px 0 10px}
+  #vtp .x{display:block;width:100%;text-align:center;color:#8c8a8d;font:inherit;font-size:17px;padding:10px}
+  #vcu{position:fixed;inset:0;z-index:80;background:#000;display:flex;flex-direction:column;align-items:center;justify-content:center;color:#f2f2f3;font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text",sans-serif}
+  #vcu .orb{width:150px;height:150px;border-radius:50%;background:#4a4a4a;transition:transform .15s,background .3s}
+  #vcu .orb.sp{background:#4d6bfe;transform:scale(1.08)}
+  #vcu .bar{position:absolute;left:0;right:0;bottom:0;padding:16px 20px calc(24px + env(safe-area-inset-bottom));display:flex;align-items:center;justify-content:space-between;gap:12px}
+  #vcu-st{font-size:15px;color:#c9c7ca}
+  #vcu button{height:42px;padding:0 18px;border-radius:21px;background:#ff3b30;color:#fff;font:inherit;font-size:16px}`;
+  document.head.appendChild(css);
+
+  /* panel pilihan Telephone */
+  const sheet=document.createElement('div'); sheet.id='vtp'; sheet.hidden=true;
+  sheet.innerHTML='<div class="bx"><h4>Telephone</h4>'+
+    '<button class="o" data-m="plus"><b>Plus</b><small>Bicara bebas seperti telepon biasa: kamu bisa memotong bot kapan saja. Maks. 10 menit. Disarankan pakai earphone.</small></button>'+
+    '<input class="k" id="tel-key" type="password" placeholder="Gemini API key (disimpan di browser ini)" autocomplete="off">'+
+    '<button class="x" id="tel-cancel">Batal</button></div>';
+  document.body.appendChild(sheet);
+  const keyIn=sheet.querySelector('#tel-key');
+
+  /* tombol Telephone di kolom kosong drawer, tepat di atas "+ Obrolan baru" */
+  const tb=document.createElement('button'); tb.className='dbtn'; tb.id='dTel'; tb.textContent='Telephone';
+  const dNew=document.getElementById('dNew'); dNew.parentNode.insertBefore(tb,dNew);
+  tb.onclick=()=>{document.getElementById('app').classList.remove('drawer-open'); keyIn.value=LS('tel_gkey'); sheet.hidden=false};
+
+  sheet.addEventListener('click',e=>{
+    if(e.target===sheet||e.target.id==='tel-cancel'){sheet.hidden=true;return}
+    const b=e.target.closest('.o'); if(!b)return;
+    const key=(keyIn.value||'').trim()||LS('tel_gkey');
+    if(!key){alert('Isi Gemini API key dulu.');keyIn.focus();return}
+    LSS('tel_gkey',key); sheet.hidden=true;
+    startPlus(key);
+  });
+
+  function startPlus(key){
+    const sv=LS('xbot_ultra_model'), model=(sv&&sv!=='gemini-2.0-flash-live-001')?sv:LIVE_MODEL_DEF;
+    const o=document.createElement('div'); o.id='vcu';
+    o.innerHTML='<div class="orb"></div><div class="bar"><div id="vcu-st">Menyambung…</div><button>Akhiri</button></div>';
+    document.body.appendChild(o);
+    const orb=o.querySelector('.orb'), stEl=o.querySelector('#vcu-st');
+    let ws,ac,ms,pr,src,lt,alive=true,pb=0,srcs=[],t0=Date.now(),ok=false,fmt=0;
+
+    const done=msg=>{
+      if(!alive)return; alive=false; clearInterval(lt);
+      try{ws&&ws.close()}catch(e){}
+      try{pr&&pr.disconnect();src&&src.disconnect()}catch(e){}
+      try{ms&&ms.getTracks().forEach(t=>t.stop())}catch(e){}
+      try{ac&&ac.close()}catch(e){}
+      o.remove(); if(msg)alert(msg);
+    };
+    o.querySelector('button').onclick=()=>done();
+    const b64=u8=>{let s='';for(let i=0;i<u8.length;i+=8192)s+=String.fromCharCode.apply(null,u8.subarray(i,i+8192));return btoa(s)};
+
+    /* AudioContext dibuat langsung saat tombol ditekan (agar browser tidak memblokirnya) */
+    try{ac=new (window.AudioContext||window.webkitAudioContext)()}catch(e){done('Audio tidak didukung browser ini.');return}
+    ac.resume().catch(()=>{});
+
+    (async()=>{
+      try{ms=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:true,noiseSuppression:true}})}
+      catch(e){done('Izin mikrofon ditolak atau tidak tersedia.');return}
+      if(!alive){ms.getTracks().forEach(t=>t.stop());return}
+      open();
+    })();
+
+    function open(){
+      try{ws=new WebSocket('wss://generativelanguage.googleapis.com/ws/google.ai.generativelanguage.v1beta.GenerativeService.BidiGenerateContent?key='+encodeURIComponent(key))}
+      catch(e){done('Tidak bisa membuka koneksi.');return}
+      ws.onopen=()=>{
+        const su={model:'models/'+model,systemInstruction:{parts:[{text:'Kamu sedang menelepon pengguna dalam bahasa Indonesia. Bicara santai dan singkat seperti telepon biasa. Berhenti bicara saat pengguna memotong.'}]}};
+        if(fmt===0)su.generationConfig={responseModalities:['AUDIO']}; else su.responseModalities=['AUDIO'];
+        ws.send(JSON.stringify({setup:su}));
+      };
+      ws.onclose=e=>{
+        if(alive&&!ok&&fmt===0){fmt=1;setTimeout(()=>{if(alive)open()},150);return}
+        done(alive?'Koneksi terputus (kode '+e.code+(e.reason?': '+String(e.reason).slice(0,200):'')+'). Cek API key dan nama model "'+model+'".':'');
+      };
+      ws.onmessage=async e=>{
+        let d; try{d=JSON.parse(typeof e.data==='string'?e.data:await e.data.text())}catch(x){return}
+        if(d.setupComplete){ok=true;stEl.textContent='Terhubung.';start();greet();return}
+        const sc=d.serverContent; if(!sc)return;
+        if(sc.interrupted){srcs.forEach(s=>{try{s.stop()}catch(x){}});srcs=[];pb=0}
+        (sc.modelTurn&&sc.modelTurn.parts||[]).forEach(p=>{if(p.inlineData&&p.inlineData.data)play(p.inlineData.data)});
+      };
+    }
+
+    /* bot menyapa duluan sesuai waktu di perangkat (pagi/siang/sore/malam), sama seperti sapaan di x11 */
+    function greet(){
+      const hr=new Date().getHours(),waktu=hr>=4&&hr<11?'pagi':hr>=11&&hr<15?'siang':hr>=15&&hr<18?'sore':'malam';
+      try{ws.send(JSON.stringify({clientContent:{turns:[{role:'user',parts:[{text:'Mulai panggilan ini dengan menyapa pengguna singkat, tepat dengan kalimat: Halo! Selamat '+waktu+'. Ada yang bisa saya bantu?'}]}],turnComplete:true}}))}catch(e){}
+    }
+
+    /* suara bot: PCM 16-bit 24 kHz */
+    function play(b){
+      const bin=atob(b),n=bin.length>>1,buf=ac.createBuffer(1,n,24000),ch=buf.getChannelData(0);
+      for(let i=0;i<n;i++){let v=bin.charCodeAt(2*i)|(bin.charCodeAt(2*i+1)<<8);if(v>=32768)v-=65536;ch[i]=v/32768}
+      const s=ac.createBufferSource(); s.buffer=buf; s.connect(ac.destination);
+      pb=Math.max(pb,ac.currentTime); s.start(pb); pb+=buf.duration; srcs.push(s);
+      s.onended=()=>{srcs=srcs.filter(x=>x!==s)};
+    }
+
+    /* mikrofon: turunkan ke 16 kHz PCM lalu kirim sebagai realtimeInput */
+    function start(){
+      src=ac.createMediaStreamSource(ms);
+      pr=ac.createScriptProcessor(4096,1,1);
+      const r=ac.sampleRate/16000;
+      pr.onaudioprocess=e=>{
+        if(!alive||!ws||ws.readyState!==1)return;
+        const x=e.inputBuffer.getChannelData(0),n=Math.floor(x.length/r),y=new Int16Array(n);
+        for(let i=0;i<n;i++){const v=Math.max(-1,Math.min(1,x[Math.floor(i*r)]));y[i]=v<0?v*32768:v*32767}
+        ws.send(JSON.stringify({realtimeInput:{audio:{data:b64(new Uint8Array(y.buffer)),mimeType:'audio/pcm;rate=16000'}}}));
+      };
+      src.connect(pr); pr.connect(ac.destination);
+      lt=setInterval(()=>{
+        const s=Math.floor((Date.now()-t0)/1000);
+        if(s>=LIM){done('Batas 10 menit tercapai. Panggilan ditutup.');return}
+        const sk=pb>ac.currentTime;
+        orb.classList.toggle('sp',sk);
+        stEl.textContent=(sk?'Bot berbicara':'Mendengarkan')+' · '+Math.floor(s/60)+':'+String(s%60).padStart(2,'0');
+      },300);
+    }
+  }
+})();
+</script>
+<!-- ===== AKHIR TELEPHONE · PLUS ===== -->
 </body>
 </html>
