@@ -25,9 +25,10 @@ body{position:fixed;inset:0;width:100%;overflow:hidden}
 #app:not(.has-chat) #down{display:none!important}
 
 /* top bar */
-.top{position:absolute;z-index:20;top:0;left:0;right:0;padding:max(14px,env(safe-area-inset-top)) 16px 10px;
+.top{position:fixed;z-index:20;top:0;left:50%;right:auto;width:min(100%,520px);transform:translateX(-50%);
+  padding:max(14px,env(safe-area-inset-top)) 16px 10px;
   display:flex;align-items:center;justify-content:space-between;pointer-events:none;
-  background:linear-gradient(var(--bg) 55%,rgba(2,2,0,0))}
+  background:linear-gradient(var(--bg) 55%,rgba(2,2,0,0));will-change:auto}
 .top>*{pointer-events:auto}
 .pill{height:42px;border-radius:21px;background:#242124;display:flex;align-items:center;justify-content:center}
 .pill.one{width:42px}
@@ -38,10 +39,13 @@ body{position:fixed;inset:0;width:100%;overflow:hidden}
 .title{display:none!important}
 
 /* empty state */
-.empty{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;padding-bottom:100px}
+.empty{position:fixed;z-index:1;left:50%;top:50%;transform:translate(-50%,-50%);
+  width:min(100%,520px);height:200px;display:flex;flex-direction:column;align-items:center;
+  justify-content:center;gap:0;padding:0;pointer-events:none}
 .empty h1{margin:0;font-size:19px;font-weight:600}
 .has-chat .empty{display:none}
-.logo{width:200px;height:200px;display:block;margin:-45px 0;touch-action:manipulation;-webkit-tap-highlight-color:transparent}
+.logo{width:200px;height:200px;display:block;margin:0;touch-action:manipulation;
+  -webkit-tap-highlight-color:transparent;transform:translateZ(0);backface-visibility:hidden}
 
 /* chat */
 #chat{position:relative;flex:1;overflow-y:auto;padding:calc(max(14px,env(safe-area-inset-top)) + 42px + 47px) 20px 190px;display:none;scrollbar-width:none}
