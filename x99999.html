@@ -1602,8 +1602,25 @@ function fit(){
 }
 if(vv){vv.addEventListener('resize',fit);vv.addEventListener('scroll',fit)}
 window.addEventListener('scroll',fit);
-inp.addEventListener('focus',fit);
-inp.addEventListener('blur',fit);
+/* iOS kadang telat/melewatkan event resize saat keyboard muncul: periksa ulang selama & sesudah animasi keyboard */
+let settleUntil=0,settleRaf=0;
+function settle(ms){
+  settleUntil=Math.max(settleUntil,performance.now()+(ms||1200));
+  if(settleRaf)return;
+  const tick=()=>{fit();settleRaf=performance.now()<settleUntil?requestAnimationFrame(tick):0};
+  settleRaf=requestAnimationFrame(tick);
+}
+inp.addEventListener('focus',()=>settle(1500));
+inp.addEventListener('blur',()=>settle(1500));
+document.addEventListener('focusin',()=>settle(1500));
+document.addEventListener('focusout',()=>settle(1500));
+document.addEventListener('touchend',()=>settle(800),{passive:true});
+window.addEventListener('resize',()=>settle(800));
+window.addEventListener('orientationchange',()=>settle(1500));
+window.addEventListener('pageshow',()=>settle(1000));
+document.addEventListener('visibilitychange',()=>{if(!document.hidden)settle(1000)});
+/* jaring pengaman: selama kolom ketik fokus, cek rutin kalau-kalau event terlewat */
+setInterval(()=>{if(document.activeElement===inp||document.hasFocus())fit()},400);
 fit();
 
 /* ===== FITUR DOKUMEN (mulai) =====
