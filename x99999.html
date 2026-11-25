@@ -1607,10 +1607,21 @@ const vv=window.visualViewport;
 const coarse=matchMedia('(pointer:coarse)').matches;
 /* tinggi halaman = tinggi visualViewport yang DILAPORKAN, tanpa tebakan dan tanpa timer:
    kotak ketik bergerak satu kali, searah dan seirama dengan keyboard */
-let lastH=-1,lastTop=-1;
+let lastH=-1,lastTop=-1,focusAt=0,baseH=0;
+document.addEventListener('focusin',()=>{focusAt=performance.now();setTimeout(()=>fit(),450);setTimeout(()=>fit(),1000)});
+document.addEventListener('focusout',()=>{focusAt=0;setTimeout(()=>fit(),50)});
 function fit(){
   if(vv){
-    const h=Math.round(vv.height),kb=h<window.innerHeight-120;
+    let h=Math.round(vv.height);
+    const ae=document.activeElement,typing=ae&&(ae===inp||ae.tagName==='INPUT'||ae.tagName==='TEXTAREA');
+    /* tinggi PENUH acuan = tinggi terakhir saat TIDAK mengetik (bekerja juga kalau WebView sendiri yang mengecil) */
+    if(!typing||!baseH)baseH=h;
+    let kb=h<baseH-120;
+    /* CADANGAN: hanya kalau iOS sama sekali tidak mengecilkan tampilan padahal kolom ketik fokus >0,8 dtk */
+    if(typing&&!kb&&coarse&&window.innerWidth<700&&focusAt&&performance.now()-focusAt>400){
+      const land=window.innerWidth>window.innerHeight;
+      h=Math.round(baseH*(land?0.5:0.62));kb=true;
+    }
     /* mode aplikasi layar utama (PWA): tanpa keyboard pakai tinggi penuh */
     const sa=navigator.standalone===true||matchMedia('(display-mode: standalone)').matches;
     const top=Math.round(vv.offsetTop);
@@ -1621,8 +1632,25 @@ function fit(){
 }
 if(vv){vv.addEventListener('resize',fit);vv.addEventListener('scroll',fit)}
 window.addEventListener('scroll',fit);
-inp.addEventListener('focus',fit);
-inp.addEventListener('blur',fit);
+/* iOS kadang telat/melewatkan event resize saat keyboard muncul: periksa ulang selama & sesudah animasi keyboard */
+let settleUntil=0,settleRaf=0;
+function settle(ms){
+  settleUntil=Math.max(settleUntil,performance.now()+(ms||1200));
+  if(settleRaf)return;
+  const tick=()=>{fit();settleRaf=performance.now()<settleUntil?requestAnimationFrame(tick):0};
+  settleRaf=requestAnimationFrame(tick);
+}
+inp.addEventListener('focus',()=>settle(1500));
+inp.addEventListener('blur',()=>settle(1500));
+document.addEventListener('focusin',()=>settle(1500));
+document.addEventListener('focusout',()=>settle(1500));
+document.addEventListener('touchend',()=>settle(800),{passive:true});
+window.addEventListener('resize',()=>settle(800));
+window.addEventListener('orientationchange',()=>settle(1500));
+window.addEventListener('pageshow',()=>settle(1000));
+document.addEventListener('visibilitychange',()=>{if(!document.hidden)settle(1000)});
+/* jaring pengaman: selama kolom ketik fokus, cek rutin kalau-kalau event terlewat */
+setInterval(()=>{if(document.activeElement===inp||document.hasFocus())fit()},400);
 fit();
 
 /* ===== FITUR DOKUMEN (mulai) =====
