@@ -22,7 +22,7 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:poin
 svg{display:block}
 body{position:fixed;inset:0;width:100%;overflow:hidden}
 #app{position:fixed;top:0;left:0;right:0;width:100%;max-width:520px;margin:0 auto;height:var(--vvh,100dvh);overflow:hidden;display:flex;flex-direction:column;
-  transition:height .38s cubic-bezier(.22,.9,.3,1),top .38s cubic-bezier(.22,.9,.3,1)}
+  transition:height .25s cubic-bezier(.17,.59,.4,.77)}
 #app:not(.has-chat) #down{display:none!important}
 
 /* top bar */
@@ -1585,25 +1585,25 @@ $('#sSave').onclick=()=>{
 ['gesturestart','gesturechange','gestureend'].forEach(e=>document.addEventListener(e,ev=>ev.preventDefault(),{passive:false}));
 document.addEventListener('touchmove',ev=>{if(ev.touches&&ev.touches.length>1)ev.preventDefault()},{passive:false});
 const vv=window.visualViewport;
-let kbPending=false;
 const coarse=matchMedia('(pointer:coarse)').matches;
-function getKb(){try{return parseFloat(localStorage.getItem('kbh'))||340}catch(_){return 340}}
+/* tinggi halaman = tinggi visualViewport yang DILAPORKAN, tanpa tebakan dan tanpa timer:
+   kotak ketik bergerak satu kali, searah dan seirama dengan keyboard */
+let lastH=-1,lastTop=-1;
 function fit(){
   if(vv){
-    let h=vv.height;
-    /* iOS sering tidak melaporkan keyboard ke visualViewport: selama kolom ketik fokus di layar sentuh, pakai tinggi keyboard yang diketahui */
-    let kb=h<window.innerHeight-120;
-    if(coarse&&(kbPending||document.activeElement===inp)&&h>window.innerHeight-120){h=Math.max(200,window.innerHeight-getKb());kb=true}
-    /* mode aplikasi layar utama (PWA): tinggi vv sering kurang dari layar, jadi tanpa keyboard pakai tinggi penuh */
+    const h=Math.round(vv.height),kb=h<window.innerHeight-120;
+    /* mode aplikasi layar utama (PWA): tanpa keyboard pakai tinggi penuh */
     const sa=navigator.standalone===true||matchMedia('(display-mode: standalone)').matches;
-    app.style.setProperty('--vvh',(sa&&!kb)?'100%':h+'px');app.style.top=vv.offsetTop+'px';
+    const top=Math.round(vv.offsetTop);
+    if(top!==lastTop){app.style.top=top+'px';lastTop=top}
+    if(h!==lastH){lastH=h;app.style.setProperty('--vvh',(sa&&!kb)?'100%':h+'px')}
   }
   if(window.scrollY||window.scrollX)window.scrollTo(0,0);
 }
 if(vv){vv.addEventListener('resize',fit);vv.addEventListener('scroll',fit)}
 window.addEventListener('scroll',fit);
-inp.addEventListener('focus',()=>{fit();setTimeout(fit,60);setTimeout(fit,250);setTimeout(fit,500)});
-inp.addEventListener('blur',()=>{setTimeout(fit,60);setTimeout(fit,300)});
+inp.addEventListener('focus',fit);
+inp.addEventListener('blur',fit);
 fit();
 
 /* ===== FITUR DOKUMEN (mulai) =====
@@ -2004,32 +2004,6 @@ newChat(); syncState();
 /* placeholder pendek di layar awal, panjang setelah chat berjalan */
 function syncPh(){inp.placeholder=app.classList.contains('has-chat')?'Ketik pesan atau tahan untuk bicara':'Ketik pesan'}
 new MutationObserver(syncPh).observe(app,{attributes:true,attributeFilter:['class']});syncPh();
-/* cegah iOS menggeser halaman: kolom ketik dipindah sementara ke luar layar saat fokus (teknik Ionic),
-   iOS tidak merasa perlu menggeser layar, jadi header tetap diam dan hanya keyboard + kotak ketik yang naik */
-(function(){
-  let moved=false, t=null;
-  function setKb(v){try{localStorage.setItem('kbh',String(Math.round(v)))}catch(_){}}
-  function restore(){
-    if(!moved)return; moved=false; clearTimeout(t); kbPending=false;
-    inp.style.transform='';inp.style.opacity='';inp.style.pointerEvents='';
-    fit();
-  }
-  function onVV(){
-    if(!vv)return;
-    const kb=window.innerHeight-vv.height;
-    if(kb>120)setKb(kb);   /* belajar tinggi keyboard sebenarnya */
-  }
-  if(vv)vv.addEventListener('resize',onVV);
-  inp.addEventListener('blur',restore);
-  inp.addEventListener('touchend',e=>{
-    if(document.activeElement===inp)return;
-    e.preventDefault();
-    moved=true; kbPending=true; fit();   /* kecilkan tinggi halaman sekarang, kotak ketik naik bersama keyboard */
-    inp.style.transform='translate3d(-9999px,0,0)';inp.style.pointerEvents='none';
-    try{inp.focus({preventScroll:true})}catch(_){inp.focus()}
-    t=setTimeout(restore,350);
-  },{passive:false});
-})();
 })();
 </script>
 <!-- ===== TELEPHONE · PLUS (alur dari x11: Gemini Live, suara saja, bisa dipotong). Blok mandiri; hapus blok ini untuk membatalkan ===== -->
