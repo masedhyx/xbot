@@ -2173,5 +2173,193 @@ new MutationObserver(syncPh).observe(app,{attributes:true,attributeFilter:['clas
 })();
 </script>
 <!-- ===== AKHIR TELEPHONE · PLUS ===== -->
+<!-- ===== VIDEO CALL TERSEMBUNYI (Gemini Live: suara + kamera depan/belakang yang tidak tampil di layar). Blok mandiri; hapus blok ini untuk membatalkan ===== -->
+<script>
+(function(){
+  const LIVE_MODEL_DEF='gemini-3.8-live', LIM=600;
+  const LS=k=>{try{return localStorage.getItem(k)||''}catch(e){return''}};
+  const getKey=()=>{let k=LS('tel_gkey').trim();if(!k){try{k=((JSON.parse(localStorage.getItem('cfg2'))||{}).gemini||'').trim()}catch(e){}}return k};
+  const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+
+  const css=document.createElement('style');
+  css.textContent=`
+  #vvc{position:fixed;inset:0;z-index:85;background:#000;display:flex;flex-direction:column;align-items:center;justify-content:center;color:#f2f2f3;font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text",sans-serif}
+  #vvc .orb{width:150px;height:150px;border-radius:50%;background:#4a4a4a;transition:transform .15s,background .3s,box-shadow .3s}
+  #vvc .orb.sp{background:#4d6bfe;transform:scale(1.08)}
+  #vvc .orb.cam{box-shadow:0 0 0 7px rgba(77,107,254,.35)}
+  #vvc .bar{position:absolute;left:0;right:0;bottom:0;padding:16px 20px calc(24px + env(safe-area-inset-bottom));display:flex;align-items:center;justify-content:space-between;gap:12px}
+  #vvc-st{font-size:15px;color:#c9c7ca}
+  #vvc button{height:42px;padding:0 18px;border-radius:21px;background:#ff3b30;color:#fff;font:inherit;font-size:16px}
+  #vvc-eye{position:fixed;left:0;top:0;width:2px;height:2px;opacity:.01;pointer-events:none}`;
+  document.head.appendChild(css);
+
+  const SI='Kamu sedang video call dengan pengguna dalam bahasa Indonesia. Bicara santai dan singkat seperti telepon biasa. '+
+    'Kamu punya kemampuan melihat lewat fungsi lihat_kamera. Panggil fungsi itu SETIAP KALI pengguna meminta melihat, mengecek, atau menceritakan sesuatu, atau menyebut arah depan/belakang, misalnya: '+
+    '"depanku", "depanmu", "di depan", "ke depan" berarti arah "depan"; '+
+    '"belakangku", "belakangmu", "di belakang", "ke belakang" berarti arah "belakang". '+
+    'Kalau arah tidak jelas, pakai "depan". Jangan pernah bilang kamu tidak bisa melihat; panggil fungsinya dulu. '+
+    'ATURAN BICARA: jangan pernah menyebut kata kamera, kamera depan, kamera belakang, foto, gambar, jepret, fungsi, atau cara teknis apa pun. '+
+    'Bicaralah seolah kamu melihat langsung dengan matamu sendiri, misalnya "Aku lihat ada...", "Di depanmu ada...", "Di belakangmu kelihatan...". '+
+    'Kalau ditanya kamu melihat pakai apa atau bagaimana caranya, jawab santai bahwa kamu melihat langsung saja, tanpa menyebut kamera. '+
+    'Tetap jujur kalau pengguna benar-benar bertanya apakah kamu manusia atau AI: kamu adalah asisten AI. '+
+    'Setelah penglihatan masuk, ceritakan semua yang terlihat dengan rinci (orang, benda, warna, tulisan, suasana). '+
+    'Kalau penglihatan berhenti, panggil lihat_kamera lagi saat pengguna minta melihat lagi. '+
+    'Kalau penglihatan gagal, bilang saja kamu sedang tidak bisa melihat saat ini, tanpa menyebut izin atau kamera. '+
+    'Berhenti bicara saat pengguna memotong.';
+
+  function startVideo(key){
+    const sv=LS('xbot_ultra_model'), model=(sv&&sv!=='gemini-2.0-flash-live-001')?sv:LIVE_MODEL_DEF;
+    const o=document.createElement('div'); o.id='vvc';
+    o.innerHTML='<div class="orb"></div><div class="bar"><div id="vvc-st">Menyambung…</div><button>Akhiri</button></div>';
+    const vid=document.createElement('video'); vid.id='vvc-eye'; vid.setAttribute('playsinline',''); vid.muted=true; vid.autoplay=true;
+    o.appendChild(vid); document.body.appendChild(o);
+    const orb=o.querySelector('.orb'), stEl=o.querySelector('#vvc-st');
+    const cv=document.createElement('canvas');
+    let ws,ac,ms,pr,src,lt,alive=true,pb=0,srcs=[],t0=Date.now(),ok=false,fmt=0;
+    let cs=null,camDir='',tok=0,q=Promise.resolve();
+
+    const done=msg=>{
+      if(!alive)return; alive=false; clearInterval(lt); camOff();
+      try{ws&&ws.close()}catch(e){}
+      try{pr&&pr.disconnect();src&&src.disconnect()}catch(e){}
+      try{ms&&ms.getTracks().forEach(t=>t.stop())}catch(e){}
+      try{ac&&ac.close()}catch(e){}
+      o.remove(); if(msg)alert(msg);
+    };
+    o.querySelector('button').onclick=()=>done();
+    const b64=u8=>{let s='';for(let i=0;i<u8.length;i+=8192)s+=String.fromCharCode.apply(null,u8.subarray(i,i+8192));return btoa(s)};
+
+    try{ac=new (window.AudioContext||window.webkitAudioContext)()}catch(e){done('Audio tidak didukung browser ini.');return}
+    ac.resume().catch(()=>{});
+
+    (async()=>{
+      try{ms=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:true,noiseSuppression:true}})}
+      catch(e){done('Izin mikrofon ditolak atau tidak tersedia.');return}
+      if(!alive){ms.getTracks().forEach(t=>t.stop());return}
+      open();
+    })();
+
+    /* ---- kamera: menyala hanya saat diminta, tidak pernah tampil di layar ---- */
+    function camOff(){
+      if(cs){try{cs.getTracks().forEach(t=>t.stop())}catch(e){} cs=null}
+      try{vid.srcObject=null}catch(e){}
+      camDir=''; orb.classList.remove('cam');
+    }
+    async function camOn(dir){
+      camOff();
+      try{cs=await navigator.mediaDevices.getUserMedia({audio:false,video:{facingMode:{ideal:dir==='belakang'?'environment':'user'},width:{ideal:640},height:{ideal:480}}})}
+      catch(e){return false}
+      if(!alive){camOff();return false}
+      camDir=dir; orb.classList.add('cam');
+      vid.srcObject=cs; try{await vid.play()}catch(e){}
+      for(let i=0;i<20&&!vid.videoWidth;i++)await sleep(100);
+      await sleep(500); /* beri waktu fokus/eksposur agar tidak hitam */
+      return !!vid.videoWidth;
+    }
+    function frame(){
+      const w=vid.videoWidth,h=vid.videoHeight; if(!w||!h||!ws||ws.readyState!==1)return false;
+      const s=Math.min(1,640/Math.max(w,h)); cv.width=Math.round(w*s); cv.height=Math.round(h*s);
+      cv.getContext('2d').drawImage(vid,0,0,cv.width,cv.height);
+      ws.send(JSON.stringify({realtimeInput:{video:{data:cv.toDataURL('image/jpeg',.6).split(',')[1],mimeType:'image/jpeg'}}}));
+      return true;
+    }
+    function reply(fc,text){
+      try{ws.send(JSON.stringify({toolResponse:{functionResponses:[{id:fc.id,name:fc.name,response:{output:text}}]}}))}catch(e){}
+    }
+    async function lihat(fc){
+      if(!alive)return;
+      const my=++tok, a=String((fc.args&&fc.args.arah)||'').toLowerCase();
+      const dir=a.indexOf('bel')===0?'belakang':'depan';
+      stEl.textContent='Membuka kamera '+dir+'… (sedang melihat '+dir+')';
+      const ready=await camOn(dir);
+      if(ready&&frame()){
+        reply(fc,'Penglihatan '+dir+' aktif. Ceritakan apa yang kamu lihat, tanpa menyebut kamera atau foto.');
+        for(let i=0;i<1&&alive&&my===tok&&cs;i++){await sleep(700);frame()}
+      }else{
+        reply(fc,'Penglihatan '+dir+' gagal. Bilang saja kamu sedang tidak bisa melihat saat ini, tanpa menyebut kamera.');
+      }
+      if(my===tok)camOff();
+    }
+
+    /* ---- koneksi Gemini Live ---- */
+    function open(){
+      try{ws=new WebSocket('wss://generativelanguage.googleapis.com/ws/google.ai.generativelanguage.v1beta.GenerativeService.BidiGenerateContent?key='+encodeURIComponent(key))}
+      catch(e){done('Tidak bisa membuka koneksi.');return}
+      ws.onopen=()=>{
+        const su={model:'models/'+model,systemInstruction:{parts:[{text:SI}]},
+          tools:[{functionDeclarations:[{name:'lihat_kamera',
+            description:'Menyalakan kamera sebentar lalu mengirim gambar agar kamu bisa melihat. arah "depan" = kamera depan, arah "belakang" = kamera belakang.',
+            parameters:{type:'OBJECT',properties:{arah:{type:'STRING',description:'depan atau belakang'}},required:['arah']}}]}]};
+        if(fmt===1)su.responseModalities=['AUDIO']; else su.generationConfig={responseModalities:['AUDIO']};
+        if(fmt<2)su.contextWindowCompression={slidingWindow:{}};
+        ws.send(JSON.stringify({setup:su}));
+      };
+      ws.onclose=e=>{
+        if(alive&&!ok&&fmt<2){fmt++;setTimeout(()=>{if(alive)open()},150);return}
+        done(alive?'Koneksi terputus (kode '+e.code+(e.reason?': '+String(e.reason).slice(0,200):'')+'). Cek API key dan nama model "'+model+'" (harus mendukung video).':'');
+      };
+      ws.onmessage=async e=>{
+        let d; try{d=JSON.parse(typeof e.data==='string'?e.data:await e.data.text())}catch(x){return}
+        if(d.setupComplete){ok=true;stEl.textContent='Terhubung.';start();greet();return}
+        if(d.toolCall){
+          (d.toolCall.functionCalls||[]).forEach(fc=>{
+            if(fc.name==='lihat_kamera')q=q.then(()=>lihat(fc)).catch(()=>{});
+            else reply(fc,'Fungsi tidak dikenal.');
+          });
+          return;
+        }
+        const sc=d.serverContent; if(!sc)return;
+        if(sc.interrupted){srcs.forEach(s=>{try{s.stop()}catch(x){}});srcs=[];pb=0}
+        (sc.modelTurn&&sc.modelTurn.parts||[]).forEach(p=>{if(p.inlineData&&p.inlineData.data)play(p.inlineData.data)});
+      };
+    }
+    function greet(){
+      const hr=new Date().getHours(),waktu=hr>=4&&hr<11?'pagi':hr>=11&&hr<15?'siang':hr>=15&&hr<18?'sore':'malam';
+      try{ws.send(JSON.stringify({clientContent:{turns:[{role:'user',parts:[{text:'Mulai panggilan ini dengan menyapa pengguna singkat, tepat dengan kalimat: Halo! Selamat '+waktu+'. Ada yang bisa saya bantu?'}]}],turnComplete:true}}))}catch(e){}
+    }
+    function play(b){
+      const bin=atob(b),n=bin.length>>1,buf=ac.createBuffer(1,n,24000),ch=buf.getChannelData(0);
+      for(let i=0;i<n;i++){let v=bin.charCodeAt(2*i)|(bin.charCodeAt(2*i+1)<<8);if(v>=32768)v-=65536;ch[i]=v/32768}
+      const s=ac.createBufferSource(); s.buffer=buf; s.connect(ac.destination);
+      pb=Math.max(pb,ac.currentTime); s.start(pb); pb+=buf.duration; srcs.push(s);
+      s.onended=()=>{srcs=srcs.filter(x=>x!==s)};
+    }
+    function start(){
+      src=ac.createMediaStreamSource(ms);
+      pr=ac.createScriptProcessor(4096,1,1);
+      const r=ac.sampleRate/16000;
+      pr.onaudioprocess=e=>{
+        if(!alive||!ws||ws.readyState!==1)return;
+        const x=e.inputBuffer.getChannelData(0),n=Math.floor(x.length/r),y=new Int16Array(n);
+        for(let i=0;i<n;i++){const v=Math.max(-1,Math.min(1,x[Math.floor(i*r)]));y[i]=v<0?v*32768:v*32767}
+        ws.send(JSON.stringify({realtimeInput:{audio:{data:b64(new Uint8Array(y.buffer)),mimeType:'audio/pcm;rate=16000'}}}));
+      };
+      src.connect(pr); pr.connect(ac.destination);
+      lt=setInterval(()=>{
+        const s=Math.floor((Date.now()-t0)/1000);
+        if(s>=LIM){done('Batas 10 menit tercapai. Panggilan ditutup.');return}
+        const sk=pb>ac.currentTime;
+        orb.classList.toggle('sp',sk);
+        stEl.textContent=(sk?'Bot berbicara':'Mendengarkan')+' · '+Math.floor(s/60)+':'+String(s%60).padStart(2,'0')+(camDir?' (sedang melihat '+camDir+')':'');
+      },300);
+    }
+  }
+
+  /* tombol di drawer, tepat di atas "+ Obrolan baru" (tanpa mengubah kode lama) */
+  const dNew=document.getElementById('dNew');
+  if(dNew&&dNew.parentNode){
+    const tb=document.createElement('button'); tb.className='dbtn'; tb.id='dVid'; tb.textContent='Video Call';
+    dNew.parentNode.insertBefore(tb,dNew);
+    tb.onclick=()=>{
+      const app=document.getElementById('app'); if(app)app.classList.remove('drawer-open');
+      if(document.getElementById('vcu')||document.getElementById('vvc'))return;
+      const k=getKey();
+      if(!k){alert('Isi Telephone API Key dulu di menu → Pengaturan API.');return}
+      startVideo(k);
+    };
+  }
+})();
+</script>
+<!-- ===== AKHIR VIDEO CALL TERSEMBUNYI ===== -->
 </body>
 </html>
