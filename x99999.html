@@ -21,8 +21,7 @@ html,body{touch-action:manipulation;-webkit-text-size-adjust:100%;height:100%;ma
 button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:pointer}
 svg{display:block}
 body{position:fixed;inset:0;width:100%;overflow:hidden}
-#app{position:fixed;top:0;left:0;right:0;width:100%;max-width:520px;margin:0 auto;height:var(--vvh,100dvh);overflow:hidden;display:flex;flex-direction:column;
-  transition:height .25s cubic-bezier(.17,.59,.4,.77)}
+#app{position:fixed;top:var(--app-top,0px);left:0;right:0;width:100%;max-width:520px;margin:0 auto;height:var(--app-height,100dvh);overflow:hidden;display:flex;flex-direction:column}
 #app:not(.has-chat) #down{display:none!important}
 
 /* top bar */
@@ -286,7 +285,7 @@ body{position:fixed;inset:0;width:100%;overflow:hidden}
 .ub-img{height:110px;max-width:100%;border-radius:12px;object-fit:cover;display:block}
 
 /* terminal linux (v86) */
-#term{position:fixed;inset:0;z-index:300;background:#000;display:none;flex-direction:column;height:var(--vvh,100dvh)}
+#term{position:fixed;inset:0;z-index:300;background:#000;display:none;flex-direction:column;height:var(--app-height,100dvh)}
 #term.show{display:flex}
 #term .th{display:flex;align-items:center;gap:10px;padding:max(12px,env(safe-area-inset-top)) 14px 10px;border-bottom:1px solid var(--line);font-size:15px}
 #term .th span{flex:1;color:var(--muted);font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
@@ -1600,58 +1599,31 @@ $('#sSave').onclick=()=>{
   store.set('cfg2',c);store.set('master2',$('#k_master').value.trim());$('#modal').classList.remove('show');toast('Tersimpan');
 };
 
-/* kunci zoom: blokir cubit; ketuk-dua-kali ditangani touch-action (iOS mengabaikan maximum-scale) */
-['gesturestart','gesturechange','gestureend'].forEach(e=>document.addEventListener(e,ev=>ev.preventDefault(),{passive:false}));
-document.addEventListener('touchmove',ev=>{if(ev.touches&&ev.touches.length>1)ev.preventDefault()},{passive:false});
-const vv=window.visualViewport;
-const coarse=matchMedia('(pointer:coarse)').matches;
-/* tinggi halaman = tinggi visualViewport yang DILAPORKAN, tanpa tebakan dan tanpa timer:
-   kotak ketik bergerak satu kali, searah dan seirama dengan keyboard */
-let lastH=-1,lastTop=-1,focusAt=0,baseH=0;
-document.addEventListener('focusin',()=>{focusAt=performance.now();setTimeout(()=>fit(),450);setTimeout(()=>fit(),1000)});
-document.addEventListener('focusout',()=>{focusAt=0;setTimeout(()=>fit(),50)});
-function fit(){
-  if(vv){
-    let h=Math.round(vv.height);
-    const ae=document.activeElement,typing=ae&&(ae===inp||ae.tagName==='INPUT'||ae.tagName==='TEXTAREA');
-    /* tinggi PENUH acuan = tinggi terakhir saat TIDAK mengetik (bekerja juga kalau WebView sendiri yang mengecil) */
-    if(!typing||!baseH)baseH=h;
-    let kb=h<baseH-120;
-    /* CADANGAN: hanya kalau iOS sama sekali tidak mengecilkan tampilan padahal kolom ketik fokus >0,8 dtk */
-    if(typing&&!kb&&coarse&&window.innerWidth<700&&focusAt&&performance.now()-focusAt>400){
-      const land=window.innerWidth>window.innerHeight;
-      h=Math.round(baseH*(land?0.5:0.62));kb=true;
-    }
-    /* mode aplikasi layar utama (PWA): tanpa keyboard pakai tinggi penuh */
-    const sa=navigator.standalone===true||matchMedia('(display-mode: standalone)').matches;
-    const top=Math.round(vv.offsetTop);
-    if(top!==lastTop){app.style.top=top+'px';lastTop=top}
-    if(h!==lastH){lastH=h;app.style.setProperty('--vvh',(sa&&!kb)?'100%':h+'px')}
+/* Penyesuaian viewport keyboard iOS: gunakan ukuran visual viewport asli.
+   Tanpa tebakan tinggi keyboard, timer berulang, atau animasi perubahan tinggi. */
+(()=>{
+  const root=document.documentElement;
+  let raf=0;
+  function syncViewport(){
+    if(raf)return;
+    raf=requestAnimationFrame(()=>{
+      raf=0;
+      const vv=window.visualViewport;
+      const height=vv?Math.round(vv.height):window.innerHeight;
+      const top=vv?Math.round(vv.offsetTop):0;
+      root.style.setProperty('--app-height',Math.max(1,height)+'px');
+      root.style.setProperty('--app-top',top+'px');
+    });
   }
-  if(window.scrollY||window.scrollX)window.scrollTo(0,0);
-}
-if(vv){vv.addEventListener('resize',fit);vv.addEventListener('scroll',fit)}
-window.addEventListener('scroll',fit);
-/* iOS kadang telat/melewatkan event resize saat keyboard muncul: periksa ulang selama & sesudah animasi keyboard */
-let settleUntil=0,settleRaf=0;
-function settle(ms){
-  settleUntil=Math.max(settleUntil,performance.now()+(ms||1200));
-  if(settleRaf)return;
-  const tick=()=>{fit();settleRaf=performance.now()<settleUntil?requestAnimationFrame(tick):0};
-  settleRaf=requestAnimationFrame(tick);
-}
-inp.addEventListener('focus',()=>settle(1500));
-inp.addEventListener('blur',()=>settle(1500));
-document.addEventListener('focusin',()=>settle(1500));
-document.addEventListener('focusout',()=>settle(1500));
-document.addEventListener('touchend',()=>settle(800),{passive:true});
-window.addEventListener('resize',()=>settle(800));
-window.addEventListener('orientationchange',()=>settle(1500));
-window.addEventListener('pageshow',()=>settle(1000));
-document.addEventListener('visibilitychange',()=>{if(!document.hidden)settle(1000)});
-/* jaring pengaman: selama kolom ketik fokus, cek rutin kalau-kalau event terlewat */
-setInterval(()=>{if(document.activeElement===inp||document.hasFocus())fit()},400);
-fit();
+  if(window.visualViewport){
+    window.visualViewport.addEventListener('resize',syncViewport,{passive:true});
+    window.visualViewport.addEventListener('scroll',syncViewport,{passive:true});
+  }
+  window.addEventListener('resize',syncViewport,{passive:true});
+  window.addEventListener('orientationchange',syncViewport,{passive:true});
+  window.addEventListener('pageshow',syncViewport,{passive:true});
+  syncViewport();
+})();
 
 /* ===== FITUR DOKUMEN (mulai) =====
    Blok ini mandiri. Untuk menghapus fitur dokumen: hapus blok ini, blok CSS "FITUR DOKUMEN",
