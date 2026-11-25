@@ -42,11 +42,7 @@ body{position:fixed;inset:0;width:100%;overflow:hidden}
 .empty{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;padding-bottom:100px}
 .empty h1{margin:0;font-size:19px;font-weight:600}
 .has-chat .empty{display:none}
-.logo{width:110px;height:110px;object-fit:contain}
-.logo .eye{transform-box:fill-box;transform-origin:center;animation:blink 5.5s infinite}
-.logo .e2{animation-delay:.02s}
-@keyframes blink{0%,90%,100%{transform:scaleY(1)}92%{transform:scaleY(.08)}94%{transform:scaleY(1)}96%{transform:scaleY(.08)}98%{transform:scaleY(1)}}
-@media (prefers-reduced-motion:reduce){.logo .eye{animation:none}}
+.logo{width:200px;height:200px;display:block;margin:-45px 0;touch-action:manipulation;-webkit-tap-highlight-color:transparent}
 
 /* chat */
 #chat{position:relative;flex:1;overflow-y:auto;padding:calc(max(14px,env(safe-area-inset-top)) + 42px + 47px) 20px 190px;display:none;scrollbar-width:none}
@@ -315,13 +311,7 @@ body{position:fixed;inset:0;width:100%;overflow:hidden}
   </div>
 
   <div class="empty">
-    <svg class="logo" viewBox="0 0 256 256" role="img" aria-label="Logo">
-      <line x1="128" y1="24" x2="128" y2="40" stroke="#f1f3ff" stroke-width="6" stroke-linecap="round"/>
-      <circle cx="128" cy="18" r="8" fill="#1b2dff"/>
-      <path d="M74 42H182A46 46 0 0 1 228 88V149A46 46 0 0 1 182 195H134L83 245L79 195H74A46 46 0 0 1 28 149V88A46 46 0 0 1 74 42Z" fill="none" stroke="#f1f3ff" stroke-width="8" stroke-linejoin="round"/>
-      <ellipse class="eye" cx="93" cy="120" rx="11" ry="16" fill="#1b2dff"/>
-      <ellipse class="eye e2" cx="161" cy="120" rx="11" ry="16" fill="#1b2dff"/>
-    </svg>
+    <canvas class="logo" id="botc" aria-label="Bot"></canvas>
   </div>
 
   <div id="chat"></div>
@@ -1116,6 +1106,13 @@ function needSearch(q){
   return true;
 }
 /* ---------- waktu & tanggal perangkat ---------- */
+const IDENT=' Identitas: namamu EdhyX dan pembuatmu adalah Marta Edi Sutrisno. Sebutkan hal ini hanya jika pengguna menanyakan namamu atau siapa pembuatmu; selain itu jangan menyebutkannya.';
+function devTime(){
+  const d=new Date(); let tz='';
+  try{tz=Intl.DateTimeFormat().resolvedOptions().timeZone||''}catch(_){}
+  return ' Waktu saat ini menurut perangkat pengguna: '+d.toLocaleString('id-ID',{weekday:'long',day:'numeric',month:'long',year:'numeric',hour:'2-digit',minute:'2-digit',timeZoneName:'short'})+(tz?' (zona '+tz+')':'')+'. Jika ditanya jam atau tanggal, jawab sesuai waktu ini.'+IDENT;
+}
+window.devTime=devTime;
 function nowCtx(){
   const d=new Date(); let tz='';
   try{tz=Intl.DateTimeFormat().resolvedOptions().timeZone||''}catch(_){}
@@ -1147,7 +1144,7 @@ const partial=(s,tag)=>{for(let k=Math.min(tag.length-1,s.length);k>0;k--)if(tag
 async function streamAPI(c,ui,sig,t,cfg,ctx){
   const msgs=c.msgs.filter(m=>m.text).map(m=>({role:m.role==='user'?'user':'assistant',content:DOC.wrap(m)})); // [DOC]
   DOC.cap(msgs);
-  const sys=[(store.get('master2','')||'').trim(),nowCtx(),'Tulis rumus matematika dengan LaTeX: $...$ untuk dalam baris dan $$...$$ untuk rumus tersendiri. Untuk tanda dolar mata uang tulis \\$.',ctx,TERM.on()?TERM.prompt():''].filter(Boolean).join('\n\n');
+  const sys=[(store.get('master2','')||'').trim(),nowCtx(),IDENT.trim(),'Tulis rumus matematika dengan LaTeX: $...$ untuk dalam baris dan $$...$$ untuk rumus tersendiri. Untuk tanda dolar mata uang tulis \\$.',ctx,TERM.on()?TERM.prompt():''].filter(Boolean).join('\n\n');
   if(TERM.follow&&msgs.length&&msgs[msgs.length-1].role==='assistant')msgs.push({role:'user',content:'Lanjutkan berdasarkan hasil terminal di atas. Kalau sudah cukup, jelaskan hasilnya ke pengguna tanpa blok term lagi.'});
   if(sys)msgs.unshift({role:'system',content:sys});
   const ctl=new AbortController(); sig.ctl=ctl;
@@ -2054,11 +2051,15 @@ new MutationObserver(syncPh).observe(app,{attributes:true,attributeFilter:['clas
   #vtp .k{display:block;width:100%;box-sizing:border-box;height:42px;border-radius:12px;border:1px solid #3a3639;background:#141214;color:#f2f2f3;padding:0 12px;font:inherit;font-size:15px;margin:4px 0 10px}
   #vtp .x{display:block;width:100%;text-align:center;color:#8c8a8d;font:inherit;font-size:17px;padding:10px}
   #vcu{position:fixed;inset:0;z-index:80;background:#000;display:flex;flex-direction:column;align-items:center;justify-content:center;color:#f2f2f3;font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text",sans-serif}
-  #vcu .orb{width:150px;height:150px;border-radius:50%;background:#4a4a4a;transition:transform .15s,background .3s}
-  #vcu .orb.sp{background:#4d6bfe;transform:scale(1.08)}
+  #vcu .bc{position:absolute;left:50%;top:50%;width:220px;height:220px;transform:translate(-50%,-50%);pointer-events:none}
+  #vcu .orb{position:relative;width:105px;height:105px;border-radius:50%;background:transparent;transition:transform .15s,background .3s}
+  #vcu .orb.sp{background:transparent;transform:none}
   #vcu .bar{position:absolute;left:0;right:0;bottom:0;padding:16px 20px calc(24px + env(safe-area-inset-bottom));display:flex;align-items:center;justify-content:space-between;gap:12px}
-  #vcu-st{font-size:15px;color:#c9c7ca}
-  #vcu button{height:42px;padding:0 18px;border-radius:21px;background:#ff3b30;color:#fff;font:inherit;font-size:16px}`;
+  #vcu-st{display:none}
+  #vcu .tm{position:absolute;top:calc(20px + env(safe-area-inset-top));left:50%;transform:translateX(-50%);background:#ff3b30;color:#fff;font-size:16px;font-weight:600;font-variant-numeric:tabular-nums;padding:6px 18px;border-radius:999px;line-height:1.2}
+  #vcu .cb{width:64px;height:64px;padding:0;border-radius:50%;display:flex;align-items:center;justify-content:center;color:#fff;background:#2b2b2e}
+  #vcu .cb.end{background:#ff3b30}
+  #vcu .cb svg{width:28px;height:28px}`;
   document.head.appendChild(css);
 
   /* panel pilihan Telephone */
@@ -2084,11 +2085,16 @@ new MutationObserver(syncPh).observe(app,{attributes:true,attributeFilter:['clas
   });
 
   function startPlus(key){
+    let _og=null; const outG=()=>_og||(_og=(()=>{const g=ac.createGain();g.connect(ac.destination);return g})());
     const sv=LS('xbot_ultra_model'), model=(sv&&sv!=='gemini-2.0-flash-live-001')?sv:LIVE_MODEL_DEF;
     const o=document.createElement('div'); o.id='vcu';
-    o.innerHTML='<div class="orb"></div><div class="bar"><div id="vcu-st">Menyambung…</div><button>Akhiri</button></div>';
+    o.innerHTML='<div class="orb"><canvas class="bc"></canvas></div><div id="vcu-st">Menyambung…</div><div class="bar"><button class="cb spk" aria-label="Speaker"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9.5v5h3.5L12 18.5v-13L7.5 9.5z"/><path class="w" d="M16 9a4.2 4.2 0 0 1 0 6M18.6 6.5a8 8 0 0 1 0 11"/><path class="x" d="M16 9.5l5 5M21 9.5l-5 5" style="display:none"/></svg></button><button class="cb end" aria-label="Akhiri panggilan"><svg viewBox="0 0 24 24" fill="#fff"><path d="M12 9c-1.6 0-3.15.25-4.6.72v3.1c0 .39-.23.74-.56.9-.98.49-1.87 1.12-2.66 1.85-.18.18-.43.28-.7.28-.28 0-.53-.11-.71-.29L.29 13.08a.956.956 0 0 1-.29-.7c0-.28.11-.53.29-.71C3.34 8.78 7.46 7 12 7s8.66 1.78 11.71 4.67c.18.18.29.43.29.71 0 .28-.11.53-.29.71l-2.48 2.48c-.18.18-.43.29-.71.29-.27 0-.52-.11-.7-.28a11.27 11.27 0 0 0-2.67-1.85.996.996 0 0 1-.56-.9v-3.1C15.15 9.25 13.6 9 12 9z"/></svg></button></div>';
     document.body.appendChild(o);
     const orb=o.querySelector('.orb'), stEl=o.querySelector('#vcu-st');
+    { const tm=document.createElement('div'); tm.className='tm'; tm.textContent='0:00'; o.appendChild(tm);
+      new MutationObserver(()=>{const m=/(\d+:\d\d)/.exec(stEl.textContent); if(m)tm.textContent=m[1]}).observe(stEl,{childList:true,characterData:true,subtree:true});
+      const bot=window.createBot(o.querySelector('.bc'),{fixed:true,k:.238});
+      new MutationObserver(()=>bot.talk(orb.classList.contains('sp'))).observe(orb,{attributes:true,attributeFilter:['class']}); }
     let ws,ac,ms,pr,src,lt,alive=true,pb=0,srcs=[],t0=Date.now(),ok=false,fmt=0;
 
     const done=msg=>{
@@ -2099,7 +2105,8 @@ new MutationObserver(syncPh).observe(app,{attributes:true,attributeFilter:['clas
       try{ac&&ac.close()}catch(e){}
       o.remove(); if(msg)alert(msg);
     };
-    o.querySelector('button').onclick=()=>done();
+    o.querySelector('.end').onclick=()=>done();
+    o.querySelector('.spk').onclick=e=>{const g=outG(),b=e.currentTarget;g.gain.value=g.gain.value?0:1;b.querySelector('.w').style.display=g.gain.value?'':'none';b.querySelector('.x').style.display=g.gain.value?'none':'';};
     const b64=u8=>{let s='';for(let i=0;i<u8.length;i+=8192)s+=String.fromCharCode.apply(null,u8.subarray(i,i+8192));return btoa(s)};
 
     /* AudioContext dibuat langsung saat tombol ditekan (agar browser tidak memblokirnya) */
@@ -2117,7 +2124,7 @@ new MutationObserver(syncPh).observe(app,{attributes:true,attributeFilter:['clas
       try{ws=new WebSocket('wss://generativelanguage.googleapis.com/ws/google.ai.generativelanguage.v1beta.GenerativeService.BidiGenerateContent?key='+encodeURIComponent(key))}
       catch(e){done('Tidak bisa membuka koneksi.');return}
       ws.onopen=()=>{
-        const su={model:'models/'+model,systemInstruction:{parts:[{text:'Kamu sedang menelepon pengguna dalam bahasa Indonesia. Bicara santai dan singkat seperti telepon biasa. Berhenti bicara saat pengguna memotong.'}]}};
+        const su={model:'models/'+model,systemInstruction:{parts:[{text:'Kamu sedang menelepon pengguna dalam bahasa Indonesia. Bicara santai dan singkat seperti telepon biasa. Berhenti bicara saat pengguna memotong.'+devTime()}]}};
         if(fmt===0)su.generationConfig={responseModalities:['AUDIO']}; else su.responseModalities=['AUDIO'];
         ws.send(JSON.stringify({setup:su}));
       };
@@ -2144,7 +2151,7 @@ new MutationObserver(syncPh).observe(app,{attributes:true,attributeFilter:['clas
     function play(b){
       const bin=atob(b),n=bin.length>>1,buf=ac.createBuffer(1,n,24000),ch=buf.getChannelData(0);
       for(let i=0;i<n;i++){let v=bin.charCodeAt(2*i)|(bin.charCodeAt(2*i+1)<<8);if(v>=32768)v-=65536;ch[i]=v/32768}
-      const s=ac.createBufferSource(); s.buffer=buf; s.connect(ac.destination);
+      const s=ac.createBufferSource(); s.buffer=buf; s.connect(outG());
       pb=Math.max(pb,ac.currentTime); s.start(pb); pb+=buf.duration; srcs.push(s);
       s.onended=()=>{srcs=srcs.filter(x=>x!==s)};
     }
@@ -2184,12 +2191,16 @@ new MutationObserver(syncPh).observe(app,{attributes:true,attributeFilter:['clas
   const css=document.createElement('style');
   css.textContent=`
   #vvc{position:fixed;inset:0;z-index:85;background:#000;display:flex;flex-direction:column;align-items:center;justify-content:center;color:#f2f2f3;font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text",sans-serif}
-  #vvc .orb{width:150px;height:150px;border-radius:50%;background:#4a4a4a;transition:transform .15s,background .3s,box-shadow .3s}
-  #vvc .orb.sp{background:#4d6bfe;transform:scale(1.08)}
+  #vvc .bc{position:absolute;left:50%;top:50%;width:220px;height:220px;transform:translate(-50%,-50%);pointer-events:none}
+  #vvc .orb{position:relative;width:105px;height:105px;border-radius:50%;background:transparent;transition:transform .15s,background .3s,box-shadow .3s}
+  #vvc .orb.sp{background:transparent;transform:none}
   #vvc .orb.cam{box-shadow:0 0 0 7px rgba(77,107,254,.35)}
   #vvc .bar{position:absolute;left:0;right:0;bottom:0;padding:16px 20px calc(24px + env(safe-area-inset-bottom));display:flex;align-items:center;justify-content:space-between;gap:12px}
-  #vvc-st{font-size:15px;color:#c9c7ca}
-  #vvc button{height:42px;padding:0 18px;border-radius:21px;background:#ff3b30;color:#fff;font:inherit;font-size:16px}
+  #vvc-st{display:none}
+  #vvc .tm{position:absolute;top:calc(20px + env(safe-area-inset-top));left:50%;transform:translateX(-50%);background:#ff3b30;color:#fff;font-size:16px;font-weight:600;font-variant-numeric:tabular-nums;padding:6px 18px;border-radius:999px;line-height:1.2}
+  #vvc .cb{width:64px;height:64px;padding:0;border-radius:50%;display:flex;align-items:center;justify-content:center;color:#fff;background:#2b2b2e}
+  #vvc .cb.end{background:#ff3b30}
+  #vvc .cb svg{width:28px;height:28px}
   #vvc-eye{position:fixed;left:0;top:0;width:2px;height:2px;opacity:.01;pointer-events:none}`;
   document.head.appendChild(css);
 
@@ -2208,12 +2219,17 @@ new MutationObserver(syncPh).observe(app,{attributes:true,attributeFilter:['clas
     'Berhenti bicara saat pengguna memotong.';
 
   function startVideo(key){
+    let _og=null; const outG=()=>_og||(_og=(()=>{const g=ac.createGain();g.connect(ac.destination);return g})());
     const sv=LS('xbot_ultra_model'), model=(sv&&sv!=='gemini-2.0-flash-live-001')?sv:LIVE_MODEL_DEF;
     const o=document.createElement('div'); o.id='vvc';
-    o.innerHTML='<div class="orb"></div><div class="bar"><div id="vvc-st">Menyambung…</div><button>Akhiri</button></div>';
+    o.innerHTML='<div class="orb"><canvas class="bc"></canvas></div><div id="vvc-st">Menyambung…</div><div class="bar"><button class="cb spk" aria-label="Speaker"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9.5v5h3.5L12 18.5v-13L7.5 9.5z"/><path class="w" d="M16 9a4.2 4.2 0 0 1 0 6M18.6 6.5a8 8 0 0 1 0 11"/><path class="x" d="M16 9.5l5 5M21 9.5l-5 5" style="display:none"/></svg></button><button class="cb end" aria-label="Akhiri panggilan"><svg viewBox="0 0 24 24" fill="#fff"><path d="M12 9c-1.6 0-3.15.25-4.6.72v3.1c0 .39-.23.74-.56.9-.98.49-1.87 1.12-2.66 1.85-.18.18-.43.28-.7.28-.28 0-.53-.11-.71-.29L.29 13.08a.956.956 0 0 1-.29-.7c0-.28.11-.53.29-.71C3.34 8.78 7.46 7 12 7s8.66 1.78 11.71 4.67c.18.18.29.43.29.71 0 .28-.11.53-.29.71l-2.48 2.48c-.18.18-.43.29-.71.29-.27 0-.52-.11-.7-.28a11.27 11.27 0 0 0-2.67-1.85.996.996 0 0 1-.56-.9v-3.1C15.15 9.25 13.6 9 12 9z"/></svg></button></div>';
     const vid=document.createElement('video'); vid.id='vvc-eye'; vid.setAttribute('playsinline',''); vid.muted=true; vid.autoplay=true;
     o.appendChild(vid); document.body.appendChild(o);
     const orb=o.querySelector('.orb'), stEl=o.querySelector('#vvc-st');
+    { const tm=document.createElement('div'); tm.className='tm'; tm.textContent='0:00'; o.appendChild(tm);
+      new MutationObserver(()=>{const m=/(\d+:\d\d)/.exec(stEl.textContent); if(m)tm.textContent=m[1]}).observe(stEl,{childList:true,characterData:true,subtree:true});
+      const bot=window.createBot(o.querySelector('.bc'),{fixed:true,k:.238});
+      new MutationObserver(()=>bot.talk(orb.classList.contains('sp'))).observe(orb,{attributes:true,attributeFilter:['class']}); }
     const cv=document.createElement('canvas');
     let ws,ac,ms,pr,src,lt,alive=true,pb=0,srcs=[],t0=Date.now(),ok=false,fmt=0;
     let cs=null,camDir='',tok=0,q=Promise.resolve();
@@ -2226,7 +2242,8 @@ new MutationObserver(syncPh).observe(app,{attributes:true,attributeFilter:['clas
       try{ac&&ac.close()}catch(e){}
       o.remove(); if(msg)alert(msg);
     };
-    o.querySelector('button').onclick=()=>done();
+    o.querySelector('.end').onclick=()=>done();
+    o.querySelector('.spk').onclick=e=>{const g=outG(),b=e.currentTarget;g.gain.value=g.gain.value?0:1;b.querySelector('.w').style.display=g.gain.value?'':'none';b.querySelector('.x').style.display=g.gain.value?'none':'';};
     const b64=u8=>{let s='';for(let i=0;i<u8.length;i+=8192)s+=String.fromCharCode.apply(null,u8.subarray(i,i+8192));return btoa(s)};
 
     try{ac=new (window.AudioContext||window.webkitAudioContext)()}catch(e){done('Audio tidak didukung browser ini.');return}
@@ -2286,7 +2303,7 @@ new MutationObserver(syncPh).observe(app,{attributes:true,attributeFilter:['clas
       try{ws=new WebSocket('wss://generativelanguage.googleapis.com/ws/google.ai.generativelanguage.v1beta.GenerativeService.BidiGenerateContent?key='+encodeURIComponent(key))}
       catch(e){done('Tidak bisa membuka koneksi.');return}
       ws.onopen=()=>{
-        const su={model:'models/'+model,systemInstruction:{parts:[{text:SI}]},
+        const su={model:'models/'+model,systemInstruction:{parts:[{text:SI+devTime()}]},
           tools:[{functionDeclarations:[{name:'lihat_kamera',
             description:'Menyalakan kamera sebentar lalu mengirim gambar agar kamu bisa melihat. arah "depan" = kamera depan, arah "belakang" = kamera belakang.',
             parameters:{type:'OBJECT',properties:{arah:{type:'STRING',description:'depan atau belakang'}},required:['arah']}}]}]};
@@ -2320,7 +2337,7 @@ new MutationObserver(syncPh).observe(app,{attributes:true,attributeFilter:['clas
     function play(b){
       const bin=atob(b),n=bin.length>>1,buf=ac.createBuffer(1,n,24000),ch=buf.getChannelData(0);
       for(let i=0;i<n;i++){let v=bin.charCodeAt(2*i)|(bin.charCodeAt(2*i+1)<<8);if(v>=32768)v-=65536;ch[i]=v/32768}
-      const s=ac.createBufferSource(); s.buffer=buf; s.connect(ac.destination);
+      const s=ac.createBufferSource(); s.buffer=buf; s.connect(outG());
       pb=Math.max(pb,ac.currentTime); s.start(pb); pb+=buf.duration; srcs.push(s);
       s.onended=()=>{srcs=srcs.filter(x=>x!==s)};
     }
@@ -2361,5 +2378,454 @@ new MutationObserver(syncPh).observe(app,{attributes:true,attributeFilter:['clas
 })();
 </script>
 <!-- ===== AKHIR VIDEO CALL TERSEMBUNYI ===== -->
+<script>
+
+window.createBot = function(cv, opts){
+opts = opts || {};
+'use strict';
+const TAU = Math.PI * 2;
+const Q = new URLSearchParams('');
+
+/* ============ util ============ */
+function mulberry32(a){return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
+const rnd = mulberry32(Q.get('seed') ? (+Q.get('seed')) : ((Math.random()*4294967296)>>>0));
+const rr = (a,b) => a + (b-a)*rnd();
+const sgn = () => rnd() < 0.5 ? -1 : 1;
+const clamp = (x,a,b) => x<a?a:x>b?b:x;
+const lerp = (a,b,t) => a+(b-a)*t;
+const sstep = (a,b,x) => { x = clamp((x-a)/(b-a),0,1); return x*x*(3-2*x); };
+function wpick(items){let s=0;for(const i of items)s+=i[1];let r=rnd()*s;for(const i of items){r-=i[1];if(r<=0)return i[0];}return items[0][0];}
+const NS = Array.from({length:256}, () => rnd()*2-1);
+function noise(x){const i=Math.floor(x),f=x-i,u=f*f*(3-2*f);return lerp(NS[i&255],NS[(i+1)&255],u);}
+
+class Spr{
+  constructor(x=0){this.x=x;this.v=0;this.t=x;}
+  step(dt,w,z=1){
+    const n=Math.max(1,Math.ceil(dt*w/0.25)),h=dt/n;
+    for(let i=0;i<n;i++){const a=w*w*(this.t-this.x)-2*z*w*this.v;this.v+=a*h;this.x+=this.v*h;}
+    return this.x;
+  }
+}
+
+/* ============ ukuran asli bot (diukur dari rekaman, satuan = jari-jari badan) ============ */
+const EYE_W = 0.245, EYE_H = 0.555, EYE_X = 0.3075;   // jarak pusat-ke-pusat = 0.615 R (diukur dari IMG_2247.png)
+
+/* ============ definisi ekspresi ============ */
+const NEUTRAL = {
+  tilt:0, hs:1, ws:1, ey:0, sep:1, lidTop:0, lidAsym:0, hsAsym:0,
+  shake:0, shakeHz:20, bounce:0, bounceHz:3, roll:0, sink:0, bscale:1,
+  gSpeed:1, blinkRate:1, blinkDur:1, jitter:1, pitchBias:0, lookRange:1, follow:1,
+  snap:6, own:false
+};
+const EMO = {
+  neutral:  {},
+  happy:    {tilt:.16, hs:.80, ey:-.03, bscale:1.02, gSpeed:1.1, blinkRate:1.1, pitchBias:.06, snap:7, own:true, dur:[4,6], w:10},
+  laugh:    {tilt:.34, hs:.38, ey:.0, bscale:1.03, blinkRate:0, jitter:0, pitchBias:.06, snap:11, own:true, dur:[3.8,5.4], w:8},
+  angry:    {tilt:.62, hs:.78, ey:.04, lidTop:.08, shake:.012, shakeHz:26, bscale:1.05, gSpeed:1.2, blinkRate:.2, jitter:.4, pitchBias:-.05, lookRange:.4, follow:.4, snap:15, own:true, dur:[4,6.2], w:9},
+  sad:      {tilt:-.44, hs:.80, ey:.07, lidTop:.30, sink:.06, bscale:.95, gSpeed:.4, blinkRate:.6, blinkDur:2, jitter:.8, pitchBias:-.12, lookRange:.6, roll:-.05, snap:4, own:true, dur:[5,7.5], w:9},
+  surprised:{hs:1.32, ey:-.02, bscale:1.07, gSpeed:1.3, blinkRate:.1, lookRange:.4, jitter:.5, snap:18, own:true, dur:[2.8,3.8], w:7},
+  scared:   {tilt:-.20, hs:1.22, ey:-.02, shake:.02, shakeHz:17, bscale:.95, gSpeed:1.4, blinkRate:2.5, blinkDur:.7, lookRange:1.2, follow:-.8, snap:14, own:true, dur:[3,4.6], w:5},
+  suspicious:{tilt:.20, hs:.86, lidTop:.22, lidAsym:-.18, roll:.07, gSpeed:.6, blinkRate:.6, blinkDur:1.5, lookRange:.8, snap:5, own:true, dur:[4,6], w:7},
+  sleepy:   {hs:.95, lidTop:.5, ey:.04, sink:.04, bscale:.97, gSpeed:.35, blinkRate:.8, blinkDur:3, jitter:.3, pitchBias:-.04, snap:3.5, own:true, dur:[6,8.5], w:5},
+  curious:  {tilt:-.08, hs:1.08, hsAsym:.16, ey:-.02, roll:.13, bscale:1.02, gSpeed:1.1, lookRange:.8, pitchBias:.08, snap:6, own:true, dur:[4,6], w:8},
+  wink:     {tilt:.10, hs:.95, roll:.07, bscale:1.01, snap:8, own:true, dur:[3.2,4.4], w:5},
+  shy:      {hs:.88, ey:.05, sink:.03, bscale:.94, gSpeed:.55, pitchBias:-.08, lookRange:.5, roll:-.08, snap:4.5, own:true, dur:[4,5.6], w:5}
+};
+for (const k in EMO) EMO[k] = Object.assign({}, NEUTRAL, EMO[k]);
+const KEYS = Object.keys(NEUTRAL).filter(k => k !== 'snap' && k !== 'own');
+
+/* ============ state ============ */
+const ps = {}; for (const k of KEYS) ps[k] = new Spr(NEUTRAL[k]);
+const G = {yaw:new Spr(0), pitch:new Spr(0), w:9, z:.85};
+const micro = {x:new Spr(0), y:new Spr(0), next:.5};
+const body = {x:new Spr(0), y:new Spr(0)};
+const ex = {x:new Spr(0), y:new Spr(0), s:new Spr(0)};
+const B = {run:false, t:0, v:0, c:.07, h:.04, o:.14, next:2.5, dbl:false};
+const W = {L:new Spr(0), R:new Spr(0)};          // kedip satu mata (wink)
+const spin = {on:false, t:0, dur:0, from:0, to:0, v:0};
+const I = {t:1.2};
+const TK = {on:false};
+let Qs = [];                                      // antrian aksi bertimer
+let T = 0, fx = null;
+const D = {cur:'neutral', et:0, st:{}, mode:'auto', until:Infinity, idleFor:rr(3,5)};
+
+const SPEED = { slow:[3,1], norm:[6.5,.9], fast:[10,.8], snap:[15,.75] };
+function gaze(y,p,sp='norm'){
+  const s = SPEED[sp]; G.yaw.t = clamp(y,-1.1,1.1); G.pitch.t = clamp(p,-.55,.55); G.w = s[0]; G.z = s[1];
+  if (rnd() < .3 && sp !== 'slow' && Math.hypot(y-G.yaw.x, p-G.pitch.x) > .5) startBlink(true);
+}
+const after = (t, fn) => Qs.push({t, fn});
+
+/* ============ kedip ============ */
+function startBlink(quick){
+  if (B.run) return;
+  const d = ps.blinkDur.x;
+  B.run = true; B.t = 0;
+  B.c = (quick ? .055 : rr(.06,.095)) * d; B.h = rr(.025,.06) * d; B.o = rr(.12,.2) * d;
+  B.dbl = !quick && rnd() < .2 && ps.blinkRate.x > .3;
+}
+function blinkTick(dt){
+  if (B.run){
+    B.t += dt;
+    if (B.t < B.c) { const u = B.t/B.c; B.v = u*u; }
+    else if (B.t < B.c+B.h) B.v = 1;
+    else if (B.t < B.c+B.h+B.o) { const u = (B.t-B.c-B.h)/B.o; B.v = (1-u)*(1-u); }
+    else { B.run = false; B.v = 0; B.next = B.dbl ? .12 : rr(2.2,5.8)/Math.max(ps.blinkRate.x,.01); if (B.dbl) B.dbl = false; }
+  } else {
+    B.next -= dt;
+    if (B.next <= 0) { if (ps.blinkRate.x < .05) B.next = .5; else startBlink(false); }
+  }
+}
+
+/* ============ gerak mata acak saat santai ============ */
+function idleTick(dt){
+  I.t -= dt; if (I.t > 0) return;
+  const lr = ps.lookRange.x, sp = wpick([['slow',35],['norm',45],['fast',20]]);
+  const kind = wpick([['center',22],['side',30],['diag',14],['updown',10],['corner',6],['scan',5],['dart',5],['alert',5],['peek',4],['spin',2],['think',3]]);
+  const s = sgn(), v = sgn();
+  switch(kind){
+    case 'center': gaze(rr(-.1,.1)*lr, rr(-.08,.08)*lr, sp); I.t = rr(.8,2.6); break;
+    case 'side':   gaze(s*rr(.3,.7)*lr, rr(-.1,.12)*lr, sp); I.t = rr(1,3); break;
+    case 'diag':   gaze(s*rr(.3,.7)*lr, v*rr(.2,.45)*lr, sp); I.t = rr(1,2.8); break;
+    case 'updown': gaze(rr(-.15,.15)*lr, v*rr(.3,.5)*lr, sp); I.t = rr(1,2.4); break;
+    case 'corner': gaze(s*rr(.65,.82)*lr, v*rr(.3,.5)*lr, 'norm'); I.t = rr(1.4,2.8); break;
+    case 'scan':
+      gaze(-s*.55, .05, 'slow'); after(1.3, () => gaze(0,.05,'slow')); after(2.5, () => gaze(s*.55,.05,'slow')); after(3.9, () => gaze(0,0,'norm'));
+      I.t = 4.6; break;
+    case 'dart': {
+      const n = 3 + ((rnd()*2)|0); let t = 0;
+      for (let i=0;i<n;i++){ after(t, () => gaze(rr(-.7,.7), rr(-.35,.4), 'snap')); t += rr(.45,.7); }
+      after(t+.3, () => gaze(0,0,'norm')); I.t = t + 1; break; }
+    case 'alert':
+      gaze(0, .04, 'norm'); ex.s.t = .06; after(1.9, () => ex.s.t = 0); I.t = 2.5; break;
+    case 'peek':
+      gaze(s*.78, -.1, 'norm'); ex.x.t = s*.16; ex.y.t = .06;
+      after(1.7, () => { ex.x.t = 0; ex.y.t = 0; gaze(-s*.2,.15,'norm'); }); I.t = 2.6; break;
+    case 'spin':   // mata keluar dari tepi, muncul lagi dari sisi seberang
+      spin.on = true; spin.t = 0; spin.dur = rr(.65,.9); spin.from = 0; spin.to = -s*2.3; spin.v = 0; spin.phase = 1; spin.dir = s;
+      I.t = 3.2; break;
+    case 'think':  gaze(-s*.5, .42, 'norm'); after(1.8, () => gaze(s*.3,.3,'slow')); I.t = 3; break;
+  }
+}
+function spinTick(dt){
+  if (!spin.on) return 0;
+  spin.t += dt;
+  if (spin.phase === 1){
+    const u = clamp(spin.t/spin.dur,0,1), e = u*u*(3-2*u);
+    spin.v = spin.to * e;
+    if (u >= 1){ spin.phase = 2; spin.t = 0; spin.wait = rr(.35,.6); }
+  } else if (spin.phase === 2){
+    spin.v = spin.to;
+    if (spin.t >= spin.wait){ spin.phase = 3; spin.t = 0; spin.v = -spin.to; spin.dur = rr(.7,.95); }
+  } else {
+    const u = clamp(spin.t/spin.dur,0,1), e = 1-(1-u)*(1-u)*(1-u);
+    spin.v = -spin.to * (1-e);
+    if (u >= 1){ spin.on = false; spin.v = 0; }
+  }
+  return spin.v;
+}
+
+/* ============ skrip tiap ekspresi ============ */
+const SC = {
+  happy(st,dt,et){
+    if (st.hop === undefined) { st.hop = .8; st.hk = -9; st.g = 0; }
+    if (et > st.hop){ st.hop = et + rr(1.3,2.5); st.hk = et; }
+    const k = et - st.hk; if (k >= 0 && k < .5) fx.dy -= .07*Math.sin(k/.5*Math.PI);
+    fx.droll += .05*Math.sin(et*1.7);
+    if (et > st.g){ st.g = et + rr(1.2,2.4); gaze(rr(-.35,.35), rr(-.05,.25), 'norm'); }
+  },
+  laugh(st,dt,et){
+    if (!st.init){ st.init = 1; gaze(0,.12,'fast'); st.dur = D.until; }
+    const env = sstep(0,.25,et) * (1 - sstep(Math.min(st.dur,6)-.9, Math.min(st.dur,6), et));
+    const amp = (.6 + .4*Math.pow(Math.sin(et*TAU*.55),2)) * env;
+    const ph = Math.abs(Math.sin(Math.PI*5.8*et));
+    fx.dy -= .065*amp*ph;
+    fx.dlidH = (.09*ph*amp);                       // mata mengerut berdenyut mengikuti "ha-ha"
+    fx.droll += .07*env*Math.sin(et*TAU*1.5) ;
+    fx.ds += .02*amp*ph;
+    fx.dx += .015*env*Math.sin(et*TAU*1.5);
+  },
+  angry(st,dt,et){
+    if (!st.init){ st.init = 1; st.nb = rr(.9,1.6); st.ng = rr(1.0,1.8); st.bk = -9; gaze(0,-.02,'snap'); }
+    if (et > st.nb){ st.nb = et + rr(1.2,2.4); st.bk = et; ex.s.v += .5; }
+    const k = et - st.bk;
+    if (k >= 0 && k < .35) fx.shake = .05*(1-k/.35);
+    if (et > st.ng && !st.back){ st.ng = et + rr(1.4,2.4); const s = sgn(); gaze(s*.5, -.05, 'snap'); st.back = et + .65; }
+    if (st.back && et > st.back){ st.back = 0; gaze(rr(-.05,.05), -.03, 'snap'); }
+  },
+  sad(st,dt,et){
+    if (!st.init){ st.init = 1; st.g = 0; st.sn = rr(1.8,3); st.sk = -9; }
+    if (et > st.g){ st.g = et + rr(2.6,4.2); if (rnd() < .2) gaze(rr(-.1,.1), .12, 'norm'); else gaze(rr(-.38,.38), rr(-.2,-.08), 'slow'); }
+    if (et > st.sn){ st.sn = et + rr(2.2,3.8); st.sk = et; }
+    const k = et - st.sk;
+    if (k >= 0 && k < .5){ const u = k/.5; fx.dy -= .035*Math.abs(Math.sin(u*Math.PI*2)); fx.shake = .006; }
+    fx.ds += .012*Math.sin(et*TAU/5.2);            // desah panjang
+  },
+  surprised(st,dt,et){
+    if (!st.init){ st.init = 1; gaze(0,.02,'snap'); }
+    if (et > 1.4 && !st.d1){ st.d1 = 1; gaze(.6,0,'snap'); after(.6, () => gaze(-.6,0,'snap')); after(1.2, () => gaze(0,0,'fast')); }
+    if (et > 2.4 && !st.bl){ st.bl = 1; startBlink(false); }
+  },
+  scared(st,dt,et){
+    if (!st.init){ st.init = 1; st.n = 0; ex.s.v -= .6; }
+    if (et > st.n){ st.n = et + rr(.6,1.2); gaze(rr(-.55,.55), rr(-.25,.3), 'snap'); }
+    fx.droll += .02*Math.sin(et*30);
+  },
+  suspicious(st,dt,et){
+    if (!st.init){ st.init = 1; st.s = sgn(); gaze(st.s*.52, -.02, 'slow'); st.next = 2.4; }
+    if (et > st.next){
+      if (!st.look){ st.look = 1; st.next = et + .8; gaze(-st.s*.05, 0, 'slow'); }
+      else { st.look = 0; st.s = -st.s; st.next = et + rr(2,3); gaze(st.s*.52, -.02, 'slow'); }
+    }
+    fx.dlid = (st.look ? .18 : 0);
+    fx.dx += st.s * -.03;
+  },
+  sleepy(st,dt,et){
+    if (!st.init){ st.init = 1; st.cyc = 0; gaze(rr(-.2,.2), -.1, 'slow'); }
+    const P = 5.6, c = et % P, n = Math.floor(et/P);
+    if (n !== st.cyc){ st.cyc = n; ex.s.v += .5; startBlink(true); gaze(rr(-.2,.2), -.1, 'norm'); }
+    const down = sstep(.2, 3.8, c) * (1 - sstep(P-.12, P, c));
+    fx.dlid = .32*down;
+    fx.dy += .12*down;
+    fx.droll += .05*down*Math.sin(c*2);
+    if (c < .9) fx.dhs = .14*(1-c/.9);
+  },
+  curious(st,dt,et){
+    if (!st.init){ st.init = 1; st.g = 0; st.s = sgn(); }
+    if (et > st.g){ st.g = et + rr(1.8,2.6); st.s = -st.s; gaze(st.s*.5, rr(.05,.3), 'norm'); after(1.2, () => gaze(0,0,'slow')); }
+    fx.droll += st.s * .12 * sstep(0,.4,(et - (st.g-2.2)));
+    fx.dx += st.s * .04;
+  },
+  wink(st,dt,et){
+    if (!st.init){ st.init = 1; st.k = 0; gaze(.04,.02,'norm'); }
+    const P = 2.1, c = (et-.5) % P;
+    if (et > .5 && c < .45) { W.R.t = 1; fx.dy -= .02*Math.sin(c/.45*Math.PI); fx.droll += .05*Math.sin(c/.45*Math.PI); }
+    else W.R.t = 0;
+  },
+  shy(st,dt,et){
+    if (!st.init){ st.init = 1; st.g = 0; st.s = sgn(); gaze(st.s*.5, -.24, 'slow'); st.look = 0; }
+    if (et > st.g){
+      if (!st.look){ st.look = 1; st.g = et + .5; gaze(0, .02, 'fast'); }
+      else { st.look = 0; st.g = et + rr(2.2,3.2); st.s = sgn(); gaze(st.s*.55, -.24, 'fast'); }
+    }
+    fx.dx += -st.s * .035;
+    ex.x.t = -st.s*.1;
+  }
+};
+
+function onset(name){
+  Qs = []; ex.x.t = 0; ex.y.t = 0; ex.s.t = 0; W.L.t = 0; W.R.t = 0; spin.on = false;
+  if (name === 'surprised') ex.s.v += .9;
+  if (name === 'angry') ex.s.v += .5;
+  if (name === 'happy') ex.y.v -= .5;
+  if (name === 'neutral') I.t = rr(.5,1.2);
+  if (name !== 'neutral' && name !== 'laugh' && name !== 'surprised') startBlink(true);
+}
+function setEmotion(name, durSec){
+  if (!EMO[name]) return;
+  D.cur = name; D.et = 0; D.st = {};
+  D.until = durSec || Infinity;
+  onset(name);
+}
+function directorTick(dt){
+  D.et += dt;
+  if (D.mode === 'auto'){
+    if (D.cur === 'neutral'){
+      if (D.et >= D.idleFor){
+        const names = Object.keys(EMO).filter(n => n !== 'neutral' && n !== D.last);
+        const n = wpick(names.map(k => [k, EMO[k].w]));
+        D.last = n; const d = EMO[n].dur; setEmotion(n, rr(d[0], d[1]));
+      }
+    } else if (D.et >= D.until){ setEmotion('neutral'); D.idleFor = rr(3.5,8); }
+  } else if (D.et >= D.until){ D.mode = 'auto'; setEmotion('neutral'); D.idleFor = rr(3,5); }
+}
+
+/* ============ simulasi satu langkah ============ */
+function tick(dt){
+  dt = Math.min(dt, 1/15); T += dt;
+  fx = {dx:0,dy:0,ds:0,droll:0,shake:0,dlid:0,dlidH:0,dhs:0,dyaw:0,dpitch:0};
+  directorTick(dt);
+  const E = EMO[D.cur];
+  for (const k of KEYS){ ps[k].t = E[k]; ps[k].step(dt, E.snap, .9); }
+
+  for (let i = Qs.length-1; i >= 0; i--){ Qs[i].t -= dt; if (Qs[i].t <= 0){ const f = Qs[i].fn; Qs.splice(i,1); f(); } }
+  if (SC[D.cur]) SC[D.cur](D.st, dt, D.et);
+  if (TK.on){
+    // bicara: pandangan lurus ke depan, getar kecil mengikuti ritme suku kata
+    G.yaw.t = 0; G.pitch.t = 0.01;
+    const syl = Math.abs(Math.sin(T*TAU*2.4 + 1.8*noise(T*.7))) * (.6 + .4*(noise(T*1.7+3)*.5+.5));
+    fx.dx += .05*syl*noise(T*21);
+    fx.dy += .05*syl*noise(T*23+7) - .04*syl;
+    fx.ds += .014*syl;
+    fx.dhs -= .05*syl;
+    fx.droll += .03*syl*noise(T*13+2);
+    TK.nb = (TK.nb === undefined ? 0.6 : TK.nb) - dt;
+    if (TK.nb <= 0){ TK.nb = rr(.7,1.9); startBlink(true); if (rnd() < .4) after(.2, () => startBlink(true)); }
+  } else if (!E.own) idleTick(dt);
+
+  // lirikan kecil (micro-saccade) + melayang halus
+  micro.next -= dt;
+  if (micro.next <= 0){ micro.next = rr(.3,1.3); const jm = TK.on ? .15 : 1; micro.x.t = rr(-.03,.03)*ps.jitter.x*jm; micro.y.t = rr(-.02,.02)*ps.jitter.x*jm; }
+  micro.x.step(dt,40,.6); micro.y.step(dt,40,.6);
+  const drift = ps.jitter.x;
+  const gw = G.w * clamp(ps.gSpeed.x, .25, 1.5);
+  G.yaw.step(dt, gw, G.z); G.pitch.step(dt, gw, G.z);
+
+  blinkTick(dt);
+  W.L.step(dt, 30, .8); W.R.step(dt, 30, .8);
+
+  const spinYaw = spinTick(dt);
+  if (LOCK){ G.yaw.x=G.pitch.x=G.yaw.t=G.pitch.t=0; micro.x.x=micro.y.x=0; spin.on=false; }
+  const yaw = LOCK ? 0 : G.yaw.x + micro.x.x + .015*noise(T*.9)*drift + fx.dyaw + spinYaw;
+  const pitch = LOCK ? 0 : clamp(G.pitch.x + micro.y.x + .012*noise(T*.8+5)*drift + ps.pitchBias.x + fx.dpitch, -.6, .6);
+
+  // badan mengikuti arah pandang (lebih lambat, seperti di rekaman)
+  body.x.t = ps.follow.x * .15 * Math.sin(G.yaw.x)/Math.sin(.7);
+  body.y.t = ps.follow.x * -.12 * Math.sin(G.pitch.x)/Math.sin(.5);
+  body.x.step(dt, 4.5, .75); body.y.step(dt, 4.5, .75);
+  ex.x.step(dt, 5, .75); ex.y.step(dt, 5, .75); ex.s.step(dt, 5, .6);
+
+  // gabungkan gerak badan
+  const shakeAmp = ps.shake.x + fx.shake;
+  const sx = shakeAmp ? shakeAmp*(noise(T*ps.shakeHz.x) + .5*noise(T*ps.shakeHz.x*2.3+17)) : 0;
+  const sy = shakeAmp ? shakeAmp*(noise(T*ps.shakeHz.x+40) + .5*noise(T*ps.shakeHz.x*2.1+55)) : 0;
+  const bnc = ps.bounce.x ? -ps.bounce.x*Math.abs(Math.sin(Math.PI*ps.bounceHz.x*T)) : 0;
+  const breath = .012*Math.sin(T*TAU/4.4);
+  FRAME.x = clamp(body.x.x + ex.x.x + fx.dx + sx + .012*noise(T*.35), -.3, .3);
+  FRAME.y = body.y.x + ex.y.x + fx.dy + ps.sink.x + bnc + sy + .012*noise(T*.3+9);
+  FRAME.s = clamp(ps.bscale.x * (1 + breath) + ex.s.x + fx.ds, .9, 1.1);
+  FRAME.roll = ps.roll.x + fx.droll + .018*noise(T*.25+31);
+  FRAME.yaw = yaw; FRAME.pitch = pitch;
+
+  // mata
+  const blink = B.v;
+  const tiltBase = ps.tilt.x;
+  FRAME.eyes = [-1,1].map(side => {
+    let lid = ps.lidTop.x + (side < 0 ? -1 : 1)*ps.lidAsym.x + fx.dlid;
+    let hs = ps.hs.x + fx.dhs + (side > 0 ? ps.hsAsym.x : 0) - fx.dlidH;
+    const wink = side < 0 ? W.L.x : W.R.x;
+    const open = clamp(1 - lid, .05, 1) * (1 - .88*Math.max(blink, wink));
+    return { side, h: EYE_H*Math.max(hs,.2)*open, w: EYE_W, tilt: tiltBase, lidShift: EYE_H*Math.max(hs,.2)*clamp(lid,0,.95)*.5*(1-.88*Math.max(blink,wink)) };
+  });
+}
+let LOCK = false;
+const FRAME = {x:0,y:0,s:1,roll:0,yaw:0,pitch:0,eyes:[]};
+
+/* ============ gambar ============ */
+const ctx = cv.getContext('2d');
+let VW = 0, VH = 0, DPR = 1;
+function resize(){
+  DPR = Math.min(window.devicePixelRatio || 1, 3);
+  VW = cv.clientWidth || 200; VH = cv.clientHeight || 200;
+  cv.width = Math.round(VW*DPR); cv.height = Math.round(VH*DPR);
+}
+window.addEventListener('resize', resize); resize();
+
+function capsule(w,h){
+  const r = Math.min(w,h)/2, a = w/2, b = h/2;
+  ctx.beginPath();
+  ctx.moveTo(-a+r,-b); ctx.lineTo(a-r,-b); ctx.arc(a-r,-b+r,r,-Math.PI/2,0);
+  ctx.lineTo(a,b-r); ctx.arc(a-r,b-r,r,0,Math.PI/2);
+  ctx.lineTo(-a+r,b); ctx.arc(-a+r,b-r,r,Math.PI/2,Math.PI);
+  ctx.lineTo(-a,-b+r); ctx.arc(-a+r,-b+r,r,Math.PI,Math.PI*1.5);
+  ctx.closePath();
+}
+const ROLL_K = 2.5;
+function rot3(yaw,pitch,roll){
+  const cp=Math.cos(pitch),sp=Math.sin(pitch),cy=Math.cos(yaw),sy=Math.sin(yaw),cr=Math.cos(roll),sr=Math.sin(roll);
+  return (x,y,z) => {
+    const y1=y*cp+z*sp, z1=-y*sp+z*cp;
+    const x2=x*cy+z1*sy, z2=-x*sy+z1*cy;
+    return [x2*cr-y1*sr, x2*sr+y1*cr, z2];
+  };
+}
+function draw(){
+  const dpr = DPR;
+  ctx.setTransform(dpr,0,0,dpr,0,0);
+  ctx.clearRect(0,0,VW,VH);
+  const R = Math.min(VW,VH)*(opts.k||.1925);
+  const cx = VW/2, cy = VH/2;
+  const F = FRAME;
+  ctx.save();
+  ctx.translate(cx + F.x*R, cy + F.y*R);
+  ctx.rotate(F.roll);
+  ctx.scale(R*F.s, R*F.s);
+  ctx.fillStyle = '#fff';
+  ctx.beginPath(); ctx.arc(0,0,1,0,TAU); ctx.fill();
+  ctx.clip();
+  const M = rot3(F.yaw, F.pitch, clamp(ROLL_K*F.yaw*F.pitch,-.6,.6));
+  ctx.fillStyle = '#000';
+  for (const e of F.eyes){
+    const x0 = e.side*EYE_X, y0 = -ps.ey.x;
+    const z0 = Math.sqrt(Math.max(0, 1 - x0*x0 - y0*y0));
+    const p = M(x0,y0,z0);
+    if (p[2] < .02) continue;
+    const E = M(1,0,0), N = M(0,1,0);
+    ctx.save();
+    ctx.translate(p[0], -p[1]);
+    ctx.transform(E[0], -E[1], -N[0], N[1], 0, 0);
+    ctx.translate(0, e.lidShift);
+    ctx.rotate(e.side * e.tilt);
+    capsule(e.w, e.h); ctx.fill();
+    ctx.restore();
+  }
+  ctx.restore();
+}
+
+/* ============ loop & API ============ */
+let last = 0, running = false, raf = 0;
+function loop(ts){
+  if (!running) return;
+  if (!last) last = ts;
+  tick((ts-last)/1000); last = ts; draw();
+  raf = requestAnimationFrame(loop);
+}
+function start(){ if (running) return; running = true; last = 0; resize(); raf = requestAnimationFrame(loop); }
+function stop(){ running = false; cancelAnimationFrame(raf); last = 0; }
+const ORDER = ['happy','laugh','angry','sad','surprised','scared','suspicious','sleepy','curious','wink','shy','neutral'];
+let oi = -1;
+const API = {
+  talk(v){
+    v = !!v; if (v === TK.on) return; TK.on = v;
+    if (v){ Qs = []; spin.on = false; ex.x.t = 0; ex.y.t = 0; ex.s.t = 0; gaze(0,.01,'fast'); }
+    else I.t = rr(.6,1.4);
+  },
+  start, stop,
+  set(name, ms){ D.mode = 'manual'; setEmotion(name, ms ? ms/1000 : Infinity); },
+  auto(){ D.mode = 'auto'; setEmotion('neutral'); D.idleFor = 1; },
+  list: () => Object.keys(EMO),
+  next(){ oi = (oi+1) % ORDER.length; this.set(ORDER[oi], 6000); return ORDER[oi]; },
+  // untuk pengujian
+  pause(){ stop(); }, resume(){ start(); }, step(dt,n=1){ for(let i=0;i<n;i++) tick(dt); draw(); },
+  lock(v){ LOCK = v; },
+  pose(y,p){ G.yaw.x=G.yaw.t=y; G.pitch.x=G.pitch.t=p; G.yaw.v=G.pitch.v=0; I.t=1e9; micro.next=1e9; micro.x.x=micro.y.x=micro.x.t=micro.y.t=0; },
+  state: () => ({emo:D.cur, frame:FRAME, spin:spin.on})
+};
+if(!opts.fixed) cv.addEventListener('pointerdown', () => API.next());
+  if(opts.fixed) D.idleFor = Infinity;
+  draw();
+
+/* bot hanya bergerak saat panelnya terlihat; berhenti saat panel ditutup / tab disembunyikan */
+let inView = false;
+const sync = () => { (inView && !document.hidden) ? start() : stop(); };
+new IntersectionObserver(es => { inView = es[es.length-1].isIntersecting; sync(); }).observe(cv);
+document.addEventListener('visibilitychange', sync);
+return API;
+};
+window.Bot = window.createBot(document.getElementById('botc'));
+</script>
+<script>
+/* pindahkan tombol Berpikir & Cari dari kolom pesan ke panel menu, tepat di atas Telephone (elemen & fungsinya sama, hanya dipindah) */
+(function(){
+  const st=document.createElement('style');
+  st.textContent='#dChips{display:flex;gap:8px;margin:0 0 10px}#dChips .chip{flex:1;justify-content:center;height:42px;border-radius:21px;font-size:15px}';
+  document.head.appendChild(st);
+  const th=document.getElementById('cThink'), se=document.getElementById('cSearch'), tel=document.getElementById('dTel');
+  if(!th||!se||!tel)return;
+  const box=document.createElement('div'); box.id='dChips';
+  tel.parentNode.insertBefore(box,tel);
+  box.appendChild(th); box.appendChild(se);
+})();
+</script>
 </body>
 </html>
