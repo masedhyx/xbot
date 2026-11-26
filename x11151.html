@@ -1029,7 +1029,7 @@ const DEFROLE={0:'koding',1:'rangkum',2:'belajar',3:'riset',4:'tulis',6:'rencana
 ids().forEach(i=>{if(cfg.role[i]===undefined)cfg.role[i]=DEFROLE[i]||'umum';if(cfg.memOn[i]===undefined)cfg.memOn[i]=true});
 
 /* ===== SPESIALIS ===== */
-const ROLES={umum:['Serba bisa','Menjawab apa saja dengan seimbang dan membantu.'],koding:['Koding','Ahli pemrograman: menulis, memperbaiki, dan menjelaskan kode dengan contoh singkat yang berjalan.'],rangkum:['Rangkuman','Ahli meringkas: mengubah teks panjang jadi poin inti yang padat dan akurat.'],belajar:['Belajar','Guru sabar: menjelaskan bertahap dari dasar, memberi analogi, contoh, dan satu soal latihan.'],riset:['Riset','Pemburu info: mencari fakta dan kabar terbaru, membedakan fakta dan dugaan, menyebut sumber.'],tulis:['Penulis','Penulis kreatif dan copywriter: menyusun kata yang enak dibaca, rapi, dan sesuai nada.'],rencana:['Perencana','Pengatur kerja: memecah tugas jadi langkah, urutan, tenggat, dan prioritas.'],kritik:['Kritikus','Pengkritik tajam tapi adil: mencari celah, risiko, dan asumsi lemah, lalu memberi perbaikan.']};
+const ROLES={umum:['Serba bisa','Menjawab apa saja dengan seimbang dan membantu.'],koding:['Koding','Ahli pemrograman: menulis, memperbaiki, dan menjelaskan kode dengan contoh singkat yang berjalan.'],rangkum:['Rangkuman','Ahli meringkas: mengubah teks panjang jadi poin inti yang padat dan akurat.'],belajar:['Belajar','Guru sabar: menjelaskan bertahap dari dasar, memberi analogi, contoh, dan satu soal latihan.'],riset:['Riset','Pemburu info: mencari fakta dan kabar terbaru, membedakan fakta dan dugaan, menyebut sumber.'],tulis:['Penulis','Penulis kreatif dan copywriter: menyusun kata yang enak dibaca, rapi, dan sesuai nada.'],rencana:['Perencana','Pengatur kerja: memecah tugas jadi langkah, urutan, tenggat, dan prioritas.'],kritik:['Kritikus','Pengkritik tajam tapi adil: mencari celah, risiko, dan asumsi lemah, lalu memberi perbaikan.'],hipno:['Hipnoterapi & Relaksasi','Pemandu relaksasi dan hipnoterapi yang hangat, tenang, dan etis. Hanya memandu pengguna yang sadar dan setuju. Tanya dulu tujuannya (tidur, tenang, percaya diri, fokus) dan apakah sedang aman duduk atau berbaring (jangan sambil berkendara atau mengoperasikan mesin). Susun sesi bertahap: (1) pembukaan dan izin, (2) napas pelan 4-6, (3) rileks otot dari kepala ke kaki, (4) induksi dengan hitungan turun atau tangga/lift, (5) pendalaman dengan visualisasi tempat aman, (6) sugesti positif tentang kekuatan, percaya diri, dan kemampuan memberi yang terbaik, memakai kalimat sekarang, positif, dan pasti (\"aku tenang\", \"aku mampu\", \"aku makin kuat\"), (7) penguatan dengan pengalaman berhasil di masa lalu, (8) kembali sadar dengan hitungan naik 1-5. Gaya bahasa: suara lambat, kalimat pendek, jeda dengan \"...\", kata lembut seperti \"biarkan\", \"perlahan\", \"semakin dalam\", \"semakin tenang\". Jangan menjanjikan kesembuhan, jangan memberi sugesti yang merugikan atau memaksa, jangan menggantikan dokter atau psikolog. Bila pengguna menyebut trauma berat, depresi, niat menyakiti diri, atau panik hebat, hentikan sesi dan sarankan bantuan profesional. Bila perlu suasana, panggil alat nada_relaksasi untuk memutar nada latar lembut, dan hentikan saat sesi selesai.']};
 const roleName=i=>(ROLES[cfg.role[i]]||ROLES.umum)[0];
 const roleTxt=i=>{const r=ROLES[cfg.role[i]]||ROLES.umum;return`\n\n[Spesialisasi] Pekerjaan tetapmu: ${r[0]}. ${r[1]}`};
 
@@ -1174,7 +1174,7 @@ let sysA=(f,t,k)=>{const O=ids().filter(i=>i!==f).map(i=>`${nm(i)} (${roleName(i
 
 /* ===== OBROLAN BEBAS (ambient) ===== */
 const lastMsg=()=>{for(let i=LOG.length-1;i>=0;i--)if(LOG[i].f!==-2&&LOG[i].ts>=DAY0)return LOG[i];return null};
-const ROUTE=[['koding',/kode|coding|error|bug|script|html|python|javascript|\bjs\b|css|fungsi|program/i],['rangkum',/rangkum|ringkas|inti|poin/i],['belajar',/belajar|ajari|jelaskan|pelajari|kenapa|bagaimana cara/i],['riset',/cari|berita|terbaru|info|harga|data/i],['tulis',/tulis|caption|naskah|email|surat|artikel/i],['rencana',/rencana|jadwal|susun|target|prioritas/i],['kritik',/kritik|kelemahan|risiko|salahnya/i]];
+const ROUTE=[['koding',/kode|coding|error|bug|script|html|python|javascript|\bjs\b|css|fungsi|program/i],['rangkum',/rangkum|ringkas|inti|poin/i],['belajar',/belajar|ajari|jelaskan|pelajari|kenapa|bagaimana cara/i],['riset',/cari|berita|terbaru|info|harga|data/i],['tulis',/tulis|caption|naskah|email|surat|artikel/i],['rencana',/rencana|jadwal|susun|target|prioritas/i],['kritik',/kritik|kelemahan|risiko|salahnya/i],['hipno',/hipno|relaks|rileks|sulit tidur|insomnia|meditasi|tenangkan|percaya diri|alam bawah sadar|afirmasi|stres|cemas/i]];
 function routeUser(x,hit){if(hit!=null&&hit>=0)return hit;const I=ids();for(const[r,re]of ROUTE)if(re.test(x)){const c=I.filter(i=>cfg.role[i]===r);if(c.length)return pick(c)}return pick(I.filter(i=>i!==10).length?I.filter(i=>i!==10):I)}
 function plan(){
  awayTick();const I0=ids(),I=avail().length>=2?avail():I0,last=lastMsg();
@@ -3982,10 +3982,11 @@ const TOOLS={
   tulis:{inti:['file','read','terjemah'],pendukung:['search','cari_gambar']},
   rencana:{inti:['calc','remind','terminal','simpan'],pendukung:['time','search']},
   kritik:{inti:['search','read'],pendukung:['code']},
+  hipno:{inti:['nada','remind'],pendukung:['time','search']},
   rangkum:{inti:['read','file','berkas'],pendukung:['wiki','terjemah']},
   umum:{inti:['wiki','calc','time','rate'],pendukung:['search','terjemah','cari_gambar','berkas']}
 };
-const TN={code:'kode',file:'berkas',search:'pencarian web',read:'membaca tautan/berkas',news:'berita',weather:'cuaca',wiki:'referensi',calc:'hitungan',time:'waktu',remind:'pengingat',rate:'kurs',terminal:'terminal',terjemah:'terjemahan',cari_gambar:'cari gambar',berkas:'baca berkas bersama',simpan:'berkas pribadi',http_get:'akses API web'};
+const TN={nada:'nada relaksasi',code:'kode',file:'berkas',search:'pencarian web',read:'membaca tautan/berkas',news:'berita',weather:'cuaca',wiki:'referensi',calc:'hitungan',time:'waktu',remind:'pengingat',rate:'kurs',terminal:'terminal',terjemah:'terjemahan',cari_gambar:'cari gambar',berkas:'baca berkas bersama',simpan:'berkas pribadi',http_get:'akses API web'};
 const toolOf=i=>TOOLS[cfg.role&&cfg.role[i]]||TOOLS.umum;
 const lst=a=>a.map(x=>TN[x]||x).join(', ')||'-';
 
@@ -12373,4 +12374,62 @@ window.__xrouter={on,classify,choose,last:()=>last,bad:BAD};
 })();
 </script>
 <!-- ===== AKHIR MODE OFFLINE ===== -->
+
+<!-- ===== NADA RELAKSASI (blok terpisah di akhir file; kode lama tidak diubah; untuk mencopot hapus dari tanda ini sampai "AKHIR NADA RELAKSASI") ===== -->
+<script id="xnada-js">
+/* Alat nada_relaksasi untuk peran Hipnoterapi & Relaksasi.
+   Memutar nada latar lembut lewat Web Audio (tanpa file/unduhan): dengung rendah + denyut pelan seperti napas.
+   Volume kecil, naik-turun halus, berhenti otomatis, tombol Berhenti selalu terlihat. Error di sini tidak memengaruhi fitur lain. */
+(()=>{try{
+if(window._xNada)return;window._xNada=1;
+const XT=window.XT;if(!XT||typeof XT.run!=='function')return;
+const PRESET={
+  tenang:{f:[110,165,220],lfo:.08,vol:.05},
+  tidur:{f:[82.4,123.5,164.8],lfo:.05,vol:.04},
+  fokus:{f:[196,294,392],lfo:.12,vol:.04}
+};
+let ctx=null,nodes=null,timer=null,btn=null;
+const mk=()=>{if(btn)return;btn=document.createElement('button');btn.type='button';btn.textContent='⏹ Berhenti nada relaksasi';
+  btn.style.cssText='position:fixed;left:50%;bottom:84px;transform:translateX(-50%);z-index:99999;padding:10px 18px;border-radius:999px;border:1px solid #3a3a3e;background:#1c1c1e;color:#fff;font:600 13px system-ui,sans-serif;box-shadow:0 6px 20px rgba(0,0,0,.45);cursor:pointer';
+  btn.onclick=()=>stop();document.body.appendChild(btn)};
+function stop(){
+  try{clearTimeout(timer)}catch(e){}timer=null;
+  if(nodes&&ctx){try{const t=ctx.currentTime,n=nodes;n.master.gain.cancelScheduledValues(t);n.master.gain.setValueAtTime(n.master.gain.value,t);n.master.gain.linearRampToValueAtTime(0,t+2);
+    setTimeout(()=>{try{n.osc.forEach(o=>o.stop());n.lfo.stop()}catch(e){}},2200)}catch(e){}}
+  nodes=null;if(btn){btn.remove();btn=null}
+  return true;
+}
+XT.nada_relaksasi=async a=>{
+  a=a||{};
+  if(String(a.aksi||'mulai').toLowerCase()==='berhenti'){const was=!!nodes;stop();return{ok:true,status:was?'dihentikan':'tidak sedang diputar'}}
+  const AC=window.AudioContext||window.webkitAudioContext;
+  if(!AC)throw new Error('Browser ini tidak mendukung pemutaran nada. Lanjutkan sesi tanpa nada.');
+  const nama=PRESET[String(a.jenis||'tenang').toLowerCase()]?String(a.jenis||'tenang').toLowerCase():'tenang',j=PRESET[nama];
+  const menit=Math.max(1,Math.min(60,Number(a.menit)||10));
+  stop();
+  ctx=ctx||new AC();if(ctx.state==='suspended'){try{await ctx.resume()}catch(e){}}
+  const master=ctx.createGain();master.gain.value=0;master.connect(ctx.destination);
+  const osc=j.f.map((f,i)=>{const o=ctx.createOscillator(),g=ctx.createGain();o.type='sine';o.frequency.value=f;g.gain.value=i===0?1:.55/i;o.connect(g);g.connect(master);o.start();return o});
+  const lfo=ctx.createOscillator(),lg=ctx.createGain();lfo.frequency.value=j.lfo;lg.gain.value=j.vol*.35;lfo.connect(lg);lg.connect(master.gain);lfo.start();
+  master.gain.linearRampToValueAtTime(j.vol,ctx.currentTime+4);
+  nodes={osc,lfo,master};mk();
+  timer=setTimeout(stop,menit*60000);
+  return{ok:true,status:'diputar',jenis:nama,menit,catatan:'Volume kecil. Pengguna bisa menekan tombol "Berhenti nada relaksasi" kapan saja. Panggil aksi "berhenti" saat sesi selesai.'};
+};
+const MK='[Alat Nada Relaksasi]';
+const HINT=()=>'\n\n'+MK+' Dipakai hanya bila pengguna meminta atau menyetujui sesi relaksasi/hipnoterapi dengan nada latar. Panggil dengan satu baris <tool>{"name":"nada_relaksasi","args":{...}}</tool>.\n'
+ +'- {"aksi":"mulai","jenis":"tenang|tidur|fokus","menit":10} : putar nada latar lembut (tenang = menenangkan, tidur = sangat rendah, fokus = untuk percaya diri/semangat).\n'
+ +'- {"aksi":"berhenti"} : hentikan nada saat sesi selesai atau pengguna meminta.';
+const prevG=window.galeriSysFor;
+window.galeriSysFor=function(b){
+  let s='';
+  try{s=typeof prevG==='function'?(prevG.apply(this,arguments)||''):''}catch(e){s=''}
+  try{if(b&&!b.image_gen&&typeof b.system==='string'&&b.system.includes('[Info perangkat pengguna]')&&!String(s).includes(MK))s=String(s)+HINT()}catch(e){}
+  return s;
+};
+window.__xNada={stop,tools:['nada_relaksasi']};
+}catch(e){try{console.warn('Nada relaksasi tidak aktif:',e)}catch(_){}}
+})();
+</script>
+<!-- ===== AKHIR NADA RELAKSASI ===== -->
 </body></html>
