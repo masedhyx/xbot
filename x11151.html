@@ -10946,6 +10946,17 @@ window.fetch=function(input,init){
   }),{status:200,headers:{'Content-Type':'application/x-ndjson'}}));
 };
 window.__XFAST={on:isOn,eligible,searchFast};
+/* ===== PERCEPAT (tambahan): (1) preconnect ke server/Serper/Tavily; (2) alat "search" yang dipanggil model memakai Serper/Tavily lebih dulu (±1 detik) alih-alih panggilan model ke server (3-8 detik). Gagal/kosong/Mode Agen/xbot_fast=0 = alur lama persis. ===== */
+try{const pc=u=>{if(!u||document.querySelector('link[rel=preconnect][href="'+u+'"]'))return;const l=document.createElement('link');l.rel='preconnect';l.href=u;l.crossOrigin='anonymous';document.head.appendChild(l)};
+  let w=null;try{w=new URL(SERVER_URL).origin}catch(e){}pc(w);const k0=keysOf();if(k0.serper)pc('https://google.serper.dev');if(k0.tavily)pc('https://api.tavily.com')}catch(e){}
+try{const X=window.XT;if(X&&typeof X.search==='function'){const _old=X.search;
+  X.search=async a=>{
+    try{
+      if(isOn()&&!agentOn()&&a&&a.q){const k=keysOf();
+        if(k.serper||k.tavily){const sr=await searchFast(String(a.q).slice(0,300),k);
+          if(sr&&sr.hasil){const o={q:a.q,sumber:sr.sumber,hasil:sr.hasil};try{Object.defineProperty(o,'_src',{value:(sr.src||[]).map(x=>x&&x.url).filter(u=>typeof u==='string')})}catch(e){}return o}}}
+    }catch(e){}
+    return _old(a)}}}catch(e){}
 }catch(e){try{console.warn('Jalur cepat tidak aktif:',e)}catch(_){}}
 })();
 </script>
@@ -11052,4 +11063,915 @@ window.__x4={on,log:LOG,stat:STAT,cache:C};
 })();
 </script>
 <!-- ===== AKHIR HEMAT v4 ===== -->
+<!-- ===== ANALIS DATA + GRAFIK (blok terpisah di akhir file; kode lama tidak diubah; saklar bawaan MATI; untuk mencopot hapus dari tanda ini sampai "AKHIR ANALIS DATA") ===== -->
+<script id="xana-data-js">
+/* Alat baru untuk chat utama: data_info, data_olah, grafik.
+   - Membaca lampiran CSV/TSV/XLSX langsung di browser (pembaca XLSX ditulis sendiri, tanpa pustaka luar). .xls/.ods memakai SheetJS dari CDN hanya saat dibutuhkan.
+   - Hitung-hitungan dilakukan kode, bukan ditebak model. Grafik digambar di canvas (PNG), bisa diunduh/dibagikan dan tampil di chat.
+   - Mati secara bawaan (Pengaturan > Alat Analisis). Error apa pun di sini tidak memengaruhi fitur lama. */
+(()=>{try{
+if(window._xAnaData)return;window._xAnaData=1;
+const XT=window.XT;if(!XT||typeof XT.run!=='function')return;
+const K='xbot_ana_data';
+const on=()=>{try{return localStorage.getItem(K)==='1'}catch(e){return false}};
+const setOn=v=>{try{localStorage.setItem(K,v?'1':'0')}catch(e){}};
+const gate=()=>{if(!on())throw new Error('Fitur "Analis Data + Grafik" sedang dimatikan. Minta pengguna menyalakannya di Pengaturan (⚙️), bagian "Alat Analisis".')};
+const EXTRA=window.__xanaExtra=window.__xanaExtra||{};   /* tabel virtual dari blok lain (mis. "nota") */
+
+/* ---------- penyimpanan lampiran tabel (hanya membaca; tidak menghentikan pembaca lama) ---------- */
+const FILES=new Map(),TABS=new Map();
+const TABRE=/\.(csv|tsv|xlsx|xlsm|xls|ods)$/i;
+const put=(name,buf)=>{FILES.delete(name);TABS.delete(name);FILES.set(name,buf);let tot=0;for(const b of FILES.values())tot+=b.byteLength;
+  while(FILES.size>6||tot>80*1048576){const k=FILES.keys().next().value;tot-=FILES.get(k).byteLength;FILES.delete(k);TABS.delete(k)}};
+const readBuf=f=>f.arrayBuffer?f.arrayBuffer():new Promise((ok,no)=>{const r=new FileReader();r.onload=()=>ok(r.result);r.onerror=()=>no(new Error('gagal membaca file'));r.readAsArrayBuffer(f)});
+window.addEventListener('change',e=>{try{
+  if(!on())return;const t=e.target;if(!t||t.id!=='fi')return;
+  const f=t.files&&t.files[0];if(!f||!TABRE.test(f.name)||f.size>25*1048576)return;
+  readBuf(f).then(b=>put(f.name,b)).catch(()=>{});
+}catch(x){}},true);
+
+/* ---------- pembantu angka & tanggal ---------- */
+const BLN={jan:1,januari:1,feb:2,februari:2,mar:3,maret:3,apr:4,april:4,mei:5,may:5,jun:6,juni:6,jul:7,juli:7,agu:8,agt:8,agustus:8,aug:8,sep:9,sept:9,september:9,okt:10,oktober:10,oct:10,nov:11,november:11,des:12,desember:12,dec:12};
+const HARI=['Minggu','Senin','Selasa','Rabu','Kamis','Jumat','Sabtu'];
+const num=v=>{
+  if(typeof v==='number')return isFinite(v)?v:null;
+  if(v==null||v instanceof Date||typeof v==='boolean')return null;
+  let s=String(v).trim();if(!s)return null;
+  let neg=false;
+  if(/^\(.*\)$/.test(s)){neg=true;s=s.slice(1,-1).trim()}
+  s=s.replace(/^(rp\.?|idr|usd|rm|us\$|\$|€)\s*/i,'').replace(/\s*(rp|idr)$/i,'').replace(/\s*%$/,'').trim();
+  if(s[0]==='-'){neg=!neg;s=s.slice(1).trim()}else if(s[0]==='+')s=s.slice(1).trim();
+  if(!/^\d[\d.,]*$/.test(s))return null;
+  let r;
+  if(/^\d{1,3}(\.\d{3})+(,\d+)?$/.test(s))r=parseFloat(s.replace(/\./g,'').replace(',','.'));
+  else if(/^\d{1,3}(,\d{3})+(\.\d+)?$/.test(s))r=parseFloat(s.replace(/,/g,''));
+  else if(/^\d+,\d{1,2}$/.test(s))r=parseFloat(s.replace(',','.'));
+  else if(/^\d+(\.\d+)?$/.test(s))r=parseFloat(s);
+  else return null;
+  return isFinite(r)?(neg?-r:r):null;
+};
+const mkD=(y,m,d)=>{if(y<100)y+=2000;if(m<1||m>12||d<1||d>31||y<1900||y>2200)return null;const x=new Date(Date.UTC(y,m-1,d));return x.getUTCMonth()===m-1?x:null};
+const dt=v=>{
+  if(v instanceof Date)return isNaN(v)?null:v;
+  if(v==null||typeof v==='number'||typeof v==='boolean')return null;
+  const s=String(v).trim();if(!s)return null;let m;
+  if((m=s.match(/^(\d{4})[-\/.](\d{1,2})[-\/.](\d{1,2})(?:[T\s].*)?$/)))return mkD(+m[1],+m[2],+m[3]);
+  if((m=s.match(/^(\d{1,2})[-\/.](\d{1,2})[-\/.](\d{2,4})(?:[T\s].*)?$/)))return mkD(+m[3],+m[2],+m[1]);
+  if((m=s.match(/^(\d{1,2})[\s\-]([A-Za-z]{3,9})\.?[\s\-,]+(\d{2,4})$/))){const b=BLN[m[2].toLowerCase()];return b?mkD(+m[3],b,+m[1]):null}
+  return null;
+};
+const iso=d=>d.getUTCFullYear()+'-'+String(d.getUTCMonth()+1).padStart(2,'0')+'-'+String(d.getUTCDate()).padStart(2,'0');
+const r2=v=>typeof v==='number'?Math.round(v*100)/100:(v instanceof Date?iso(v):v);
+
+/* ---------- pembaca CSV ---------- */
+const parseCSV=txt=>{
+  txt=String(txt).replace(/^﻿/,'');
+  const first=txt.split(/\r?\n/,1)[0]||'';
+  let del=',',best=-1;
+  for(const d of [',',';','\t','|']){const c=first.split(d).length-1;if(c>best){best=c;del=d}}
+  const rows=[];let row=[],cur='',q=false;
+  for(let i=0;i<txt.length;i++){
+    const c=txt[i];
+    if(q){if(c==='"'){if(txt[i+1]==='"'){cur+='"';i++}else q=false}else cur+=c}
+    else if(c==='"'&&cur==='')q=true;
+    else if(c===del){row.push(cur);cur=''}
+    else if(c==='\n'||c==='\r'){if(c==='\r'&&txt[i+1]==='\n')i++;row.push(cur);cur='';rows.push(row);row=[]}
+    else cur+=c;
+  }
+  if(cur!==''||row.length){row.push(cur);rows.push(row)}
+  return [{name:'CSV',rows:rows.map(r=>r.map(x=>x===''?null:x))}];
+};
+
+/* ---------- pembaca XLSX tanpa pustaka (zip + deflate bawaan browser) ---------- */
+const inflateRaw=async u8=>{
+  if(typeof DecompressionStream==='undefined')throw new Error('NODS');
+  const ds=new DecompressionStream('deflate-raw'),w=ds.writable.getWriter();w.write(u8);w.close();
+  return new Uint8Array(await new Response(ds.readable).arrayBuffer());
+};
+const unzip=buf=>{
+  const u8=new Uint8Array(buf),dv=new DataView(buf);
+  let e=u8.length-22;while(e>=0&&dv.getUint32(e,true)!==0x06054b50)e--;
+  if(e<0)throw new Error('bukan file Excel (.xlsx) yang valid');
+  const n=dv.getUint16(e+10,true);let p=dv.getUint32(e+16,true);const files={};
+  for(let i=0;i<n;i++){
+    if(dv.getUint32(p,true)!==0x02014b50)break;
+    const meth=dv.getUint16(p+10,true),csz=dv.getUint32(p+20,true),nl=dv.getUint16(p+28,true),el=dv.getUint16(p+30,true),cl=dv.getUint16(p+32,true),lho=dv.getUint32(p+42,true);
+    files[new TextDecoder().decode(u8.subarray(p+46,p+46+nl))]={meth,csz,lho};p+=46+nl+el+cl;
+  }
+  return{files,async read(name){
+    const f=files[name];if(!f)return null;
+    const ln=dv.getUint16(f.lho+26,true),le=dv.getUint16(f.lho+28,true),s=f.lho+30+ln+le;
+    const d=u8.subarray(s,s+f.csz);
+    return new TextDecoder('utf-8').decode(f.meth===0?d:await inflateRaw(d));
+  }};
+};
+const unxml=s=>String(s).replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/&quot;/g,'"').replace(/&apos;/g,"'").replace(/&#(\d+);/g,(m,c)=>String.fromCharCode(+c)).replace(/&#x([0-9a-f]+);/gi,(m,c)=>String.fromCharCode(parseInt(c,16))).replace(/&amp;/g,'&');
+const colIdx=s=>{let n=0;for(const ch of s)n=n*26+ch.charCodeAt(0)-64;return n-1};
+const DATEIDS=new Set([14,15,16,17,18,19,20,21,22,27,28,29,30,31,32,33,34,35,36,45,46,47,50,51,52,53,54,55,56,57,58]);
+const xlsxSheets=async buf=>{
+  const z=unzip(buf);
+  const wb=await z.read('xl/workbook.xml');if(!wb)throw new Error('struktur Excel tidak dikenali');
+  const rel=await z.read('xl/_rels/workbook.xml.rels')||'';
+  const rmap={};for(const m of rel.matchAll(/<Relationship\b[^>]*>/g)){const id=(m[0].match(/\bId="([^"]*)"/)||[])[1],tg=(m[0].match(/\bTarget="([^"]*)"/)||[])[1];if(id&&tg)rmap[id]=tg}
+  const sst=[];const ss=await z.read('xl/sharedStrings.xml');
+  if(ss)for(const m of ss.matchAll(/<si\b[^>]*>([\s\S]*?)<\/si>/g)){const body=m[1].replace(/<rPh\b[\s\S]*?<\/rPh>/g,'');let t='';for(const x of body.matchAll(/<t\b[^>]*>([\s\S]*?)<\/t>/g))t+=x[1];sst.push(unxml(t))}
+  const dateXf=[];const sty=await z.read('xl/styles.xml');
+  if(sty){
+    const cf={};for(const m of sty.matchAll(/<numFmt\b[^>]*>/g)){const id=+((m[0].match(/numFmtId="(\d+)"/)||[])[1]),fc=unxml((m[0].match(/formatCode="([^"]*)"/)||[])[1]||'');cf[id]=fc}
+    const cx=(sty.match(/<cellXfs\b[^>]*>([\s\S]*?)<\/cellXfs>/)||[])[1]||'';
+    for(const m of cx.matchAll(/<xf\b[^>]*?(?:\/>|>)/g)){const id=+((m[0].match(/numFmtId="(\d+)"/)||[])[1]||0);
+      let isD=DATEIDS.has(id);
+      if(!isD&&cf[id]){const f=cf[id].replace(/"[^"]*"/g,'').replace(/\[[^\]]*\]/g,'').replace(/\\./g,'');isD=/[dmyhs]/i.test(f)&&!/^(general|0|#)/i.test(f)}
+      dateXf.push(isD)}
+  }
+  const out=[];
+  for(const m of wb.matchAll(/<sheet\b[^>]*>/g)){
+    const nm=unxml((m[0].match(/\bname="([^"]*)"/)||[])[1]||'Sheet'),rid=(m[0].match(/\br:id="([^"]*)"/)||[])[1];
+    let tg=rmap[rid];if(!tg)continue;tg=tg.replace(/^\//,'');const path=tg.startsWith('xl/')?tg:'xl/'+tg;
+    const xml=await z.read(path);if(!xml)continue;
+    if(xml.length>80e6)throw new Error('sheet "'+nm+'" terlalu besar');
+    const rows=[];let maxc=0;
+    for(const rm of xml.matchAll(/<row\b[^>]*?(?:\/>|>([\s\S]*?)<\/row>)/g)){
+      if(!rm[1])continue;
+      const rn=+((rm[0].match(/\br="(\d+)"/)||[])[1]||0)-1;if(rn<0||rn>1048575)continue;
+      const arr=rows[rn]=rows[rn]||[];
+      for(const cm of rm[1].matchAll(/<c\b([^>]*?)(?:\/>|>([\s\S]*?)<\/c>)/g)){
+        const at=cm[1],body=cm[2]||'';
+        const ref=(at.match(/\br="([A-Z]+)\d+"/)||[])[1];if(!ref)continue;
+        const ci=colIdx(ref),t=(at.match(/\bt="(\w+)"/)||[])[1],s=+((at.match(/\bs="(\d+)"/)||[])[1]||0);
+        let v=null;const vm=body.match(/<v>([\s\S]*?)<\/v>/);
+        if(t==='inlineStr'){let x='';for(const q of body.matchAll(/<t\b[^>]*>([\s\S]*?)<\/t>/g))x+=q[1];v=unxml(x)}
+        else if(vm){
+          const raw=vm[1];
+          if(t==='s')v=sst[+raw]??null;
+          else if(t==='str')v=unxml(raw);
+          else if(t==='b')v=raw==='1';
+          else if(t==='e')v=null;
+          else{const n=parseFloat(raw);if(isFinite(n))v=dateXf[s]&&n>0&&n<2958466?new Date(Math.round((n-25569)*86400000)):n}
+        }
+        if(v===''||v==null)continue;
+        arr[ci]=v;if(ci+1>maxc)maxc=ci+1;
+      }
+    }
+    const R=[];for(let i=0;i<rows.length;i++){const a=rows[i];if(!a)continue;const full=new Array(maxc).fill(null);for(let j=0;j<a.length;j++)if(a[j]!==undefined)full[j]=a[j];R.push(full)}
+    out.push({name:nm,rows:R});
+  }
+  if(!out.length)throw new Error('tidak ada sheet yang bisa dibaca');
+  return out;
+};
+const sheetjs=async(buf)=>{
+  if(!window.XLSX){
+    const urls=['https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js','https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js'];
+    for(const u of urls){try{await new Promise((ok,no)=>{const s=document.createElement('script');s.src=u;s.onload=ok;s.onerror=()=>{s.remove();no()};document.head.appendChild(s)});if(window.XLSX)break}catch(e){}}
+  }
+  if(!window.XLSX)throw new Error('pustaka pembaca Excel tidak bisa dimuat, cek koneksi internet');
+  const wb=XLSX.read(buf,{type:'array',cellDates:true});
+  return wb.SheetNames.map(n=>({name:n,rows:XLSX.utils.sheet_to_json(wb.Sheets[n],{header:1,raw:true,defval:null,blankrows:false}).map(r=>r.map(c=>c instanceof Date?new Date(Date.UTC(c.getFullYear(),c.getMonth(),c.getDate())):c))}));
+};
+
+/* ---------- baris mentah -> tabel bertipe ---------- */
+const tipeKolom=vals=>{
+  let n=0,d=0,t=0;
+  for(const v of vals){if(v==null||v==='')continue;
+    if(v instanceof Date)d++;else if(typeof v==='number')n++;
+    else{const s=String(v).trim();if(!s)continue;if(num(s)!==null)n++;else if(dt(s))d++;else t++}}
+  const tot=n+d+t;if(!tot)return'teks';
+  if(n/tot>=.9)return'angka';if(d/tot>=.9)return'tanggal';return'teks';
+};
+const bangunTabel=(rows,hdrRow)=>{
+  rows=rows.filter(r=>r&&r.some(c=>c!=null&&String(c).trim()!==''));
+  if(!rows.length)throw new Error('tabel kosong');
+  let h=0;
+  if(hdrRow>=1)h=Math.min(hdrRow-1,rows.length-1);
+  else{for(let i=0;i<Math.min(rows.length,15);i++){const k=rows[i].filter(c=>c!=null&&String(c).trim()!=='').length;if(k>=Math.min(2,rows[i].length)){h=i;break}}}
+  const head=rows[h],width=Math.max(...rows.slice(h).map(r=>r.length));
+  const seen=new Set(),cols=[];
+  for(let j=0;j<width;j++){let nm=head[j]!=null&&String(head[j]).trim()!==''?String(head[j]).trim().replace(/\s+/g,' '):'kolom_'+(j+1);const base=nm;let k=2;while(seen.has(nm.toLowerCase()))nm=base+'_'+k++;seen.add(nm.toLowerCase());cols.push(nm)}
+  const body=rows.slice(h+1).map(r=>{const o=new Array(width).fill(null);for(let j=0;j<width;j++)o[j]=r[j]==null||(typeof r[j]==='string'&&r[j].trim()==='')?null:r[j];return o});
+  const types=cols.map((c,j)=>tipeKolom(body.map(r=>r[j])));
+  for(let j=0;j<width;j++){
+    if(types[j]==='angka')for(const r of body)r[j]=num(r[j]);
+    else if(types[j]==='tanggal')for(const r of body)r[j]=r[j]==null?null:(dt(r[j]));
+    else for(const r of body)if(r[j]!=null&&!(r[j] instanceof Date))r[j]=String(r[j]).trim();else if(r[j] instanceof Date)r[j]=iso(r[j]);
+  }
+  return{cols,types,rows:body.filter(r=>r.some(c=>c!=null))};
+};
+let LAST=null;   /* hasil data_olah terakhir (tabel "hasil") */
+const ambil=async(berkas,sheet,hdr)=>{
+  const names=[...FILES.keys()];
+  let b=String(berkas==null?'':berkas).trim(),key=b.toLowerCase();
+  if(key==='hasil'){if(!LAST)throw new Error('Belum ada hasil data_olah sebelumnya');return{nama:'hasil',tab:LAST}}
+  if(EXTRA[key]){const t=EXTRA[key]();if(!t||!t.rows.length)throw new Error('Tabel "'+key+'" masih kosong');return{nama:key,tab:t}}
+  if(!b){if(names.length===1)b=names[0];else if(!names.length)throw new Error('Belum ada file tabel. Minta pengguna melampirkan file CSV/Excel (.xlsx) di chat lewat tombol lampiran.');else throw new Error('Sebutkan nama berkas. Yang tersedia: '+names.join(', '))}
+  const nm=names.find(n=>n===b)||names.find(n=>n.toLowerCase()===b.toLowerCase())||names.find(n=>n.toLowerCase().includes(b.toLowerCase()));
+  if(!nm)throw new Error('Berkas "'+b+'" tidak ditemukan. Tersedia: '+(names.join(', ')||'(kosong)')+(EXTRA.nota?', nota':'')+', hasil');
+  const buf=FILES.get(nm),ext=(nm.match(/\.(\w+)$/)||[])[1].toLowerCase();
+  const ck=nm+'|'+(sheet||'')+'|'+(hdr||0);
+  let sheets=TABS.get(nm+'#raw');
+  if(!sheets){
+    if(ext==='csv'||ext==='tsv')sheets=parseCSV(new TextDecoder('utf-8').decode(buf));
+    else if(ext==='xls'||ext==='ods')sheets=await sheetjs(buf);
+    else{try{sheets=await xlsxSheets(buf)}catch(e){if(e&&e.message==='NODS')sheets=await sheetjs(buf);else throw e}}
+    TABS.set(nm+'#raw',sheets);
+  }
+  let sh=sheets[0];
+  if(sheet){const s=String(sheet).toLowerCase();sh=sheets.find(x=>x.name.toLowerCase()===s)||sheets.find(x=>x.name.toLowerCase().includes(s))||(/^\d+$/.test(s)?sheets[+s-1]:null);if(!sh)throw new Error('Sheet "'+sheet+'" tidak ada. Sheet: '+sheets.map(x=>x.name).join(', '))}
+  let tab=TABS.get(ck);if(!tab){tab=bangunTabel(sh.rows,hdr);tab.sheet=sh.name;tab.sheets=sheets.map(x=>x.name);TABS.set(ck,tab)}
+  return{nama:nm,tab};
+};
+const cari=(tab,nama)=>{
+  const q=String(nama==null?'':nama).trim().toLowerCase();if(!q)throw new Error('nama kolom kosong');
+  let i=tab.cols.findIndex(c=>c.toLowerCase()===q);
+  if(i<0)i=tab.cols.findIndex(c=>c.toLowerCase().replace(/[\s_]+/g,'')===q.replace(/[\s_]+/g,''));
+  if(i<0){const m=tab.cols.map((c,j)=>c.toLowerCase().includes(q)?j:-1).filter(j=>j>=0);if(m.length===1)i=m[0]}
+  if(i<0)throw new Error('Kolom "'+nama+'" tidak ada. Kolom yang tersedia: '+tab.cols.join(', '));
+  return i;
+};
+
+/* ---------- alat: data_info ---------- */
+const median=a=>{const s=[...a].sort((x,y)=>x-y),m=s.length>>1;return s.length%2?s[m]:(s[m-1]+s[m])/2};
+const T_info=async a=>{
+  gate();a=a||{};
+  if(!a.berkas&&!a.file&&!a.nama){
+    const L=[];
+    for(const nm of FILES.keys()){const o={berkas:nm};try{const r=await ambil(nm);o.sheet=r.tab.sheets;o.baris=r.tab.rows.length;o.kolom=r.tab.cols.length}catch(e){o.galat=String(e.message||e).slice(0,120)}L.push(o)}
+    if(EXTRA.nota){try{const t=EXTRA.nota();if(t&&t.rows.length)L.push({berkas:'nota',baris:t.rows.length,kolom:t.cols.length,catatan:'dari OCR nota'})}catch(e){}}
+    if(LAST)L.push({berkas:'hasil',baris:LAST.rows.length,kolom:LAST.cols.length,catatan:'hasil data_olah terakhir'});
+    return{jumlah:L.length,daftar:L,catatan:L.length?'Panggil data_info dengan "berkas" untuk melihat kolom dan ringkasannya.':'Belum ada file tabel. Minta pengguna melampirkan CSV/Excel (.xlsx) di chat.'};
+  }
+  const{nama,tab}=await ambil(a.berkas||a.file||a.nama,a.sheet,a.baris_header);
+  const kol=tab.cols.map((c,j)=>{
+    const v=tab.rows.map(r=>r[j]).filter(x=>x!=null),o={nama:c,tipe:tab.types[j]||'angka',terisi:v.length,kosong:tab.rows.length-v.length};
+    if(o.tipe==='angka'&&v.length){const s=v.reduce((x,y)=>x+y,0);o.min=r2(Math.min(...v));o.maks=r2(Math.max(...v));o.jumlah=r2(s);o.rata=r2(s/v.length);o.median=r2(median(v))}
+    else if(o.tipe==='tanggal'&&v.length){const t=v.map(x=>+x);o.dari=iso(new Date(Math.min(...t)));o.sampai=iso(new Date(Math.max(...t)))}
+    else{const f=new Map();for(const x of v)f.set(x,(f.get(x)||0)+1);o.unik=f.size;o.terbanyak=[...f.entries()].sort((x,y)=>y[1]-x[1]).slice(0,5).map(([k,n])=>k+' ('+n+')')}
+    return o;
+  });
+  return{berkas:nama,sheet:tab.sheet||undefined,daftar_sheet:tab.sheets,baris:tab.rows.length,kolom:kol,contoh:tab.rows.slice(0,5).map(r=>r.map(r2)),catatan:'Angka format Indonesia (1.500.000 / Rp 15.000) dibaca otomatis. Gunakan data_olah untuk menghitung.'};
+};
+
+/* ---------- alat: data_olah ---------- */
+const kunciTgl=(d,p)=>{
+  const y=d.getUTCFullYear(),m=String(d.getUTCMonth()+1).padStart(2,'0');
+  switch(p){case'tahun':return String(y);case'bulan':return y+'-'+m;case'hari':return iso(d);case'hari_minggu':return HARI[d.getUTCDay()];
+    case'kuartal':return y+'-K'+(Math.floor(d.getUTCMonth()/3)+1);
+    case'minggu':{const x=new Date(d);const wd=(x.getUTCDay()+6)%7;x.setUTCDate(x.getUTCDate()-wd);return iso(x)}}
+  return iso(d);
+};
+const PER=/^(tahun|bulan|hari|hari_minggu|kuartal|minggu)$/;
+const FN={jumlah:'jumlah',sum:'jumlah',total:'jumlah',rata:'rata',rata_rata:'rata',avg:'rata',mean:'rata',min:'min',terkecil:'min',max:'maks',maks:'maks',terbesar:'maks',hitung:'hitung',count:'hitung',banyak:'hitung',unik:'unik',distinct:'unik',median:'median'};
+const cocok=(v,op,x,tipe)=>{
+  op=String(op||'=').toLowerCase().trim();
+  if(op==='kosong')return v==null;if(op==='isi'||op==='tidak_kosong')return v!=null;
+  if(v==null)return op==='!='||op==='<>';
+  let val=x;
+  const conv=z=>tipe==='angka'?num(z):tipe==='tanggal'?dt(z):String(z).toLowerCase();
+  const a=tipe==='angka'?v:tipe==='tanggal'?+v:String(v).toLowerCase();
+  const cv=(z)=>{const c=conv(z);return tipe==='tanggal'?(c?+c:null):c};
+  if(op==='dalam'||op==='in'){const L=(Array.isArray(val)?val:String(val).split(',')).map(z=>cv(typeof z==='string'?z.trim():z));return L.includes(a)}
+  if(op==='antara'||op==='between'){const L=Array.isArray(val)?val:String(val).split(/\s*(?:,|;|sampai|s\/d|\.\.|\s[-–—]\s)\s*/);const lo=cv(L[0]),hi=cv(L[1]);return lo!=null&&hi!=null&&a>=lo&&a<=hi}
+  if(op==='mengandung'||op==='contains')return String(v).toLowerCase().includes(String(val).toLowerCase());
+  if(op==='diawali'||op==='startswith')return String(v).toLowerCase().startsWith(String(val).toLowerCase());
+  const b=cv(val);if(b==null)return false;
+  switch(op){case'=':case'==':case'sama':return a===b;case'!=':case'<>':return a!==b;case'>':return a>b;case'>=':return a>=b;case'<':return a<b;case'<=':return a<=b}
+  throw new Error('operator filter "'+op+'" tidak dikenal (pakai: =, !=, >, >=, <, <=, mengandung, diawali, dalam, antara, kosong, isi)');
+};
+const olah=(tab,a)=>{
+  let rows=tab.rows;
+  const fl=Array.isArray(a.filter)?a.filter:(a.filter?[a.filter]:[]);
+  for(const f of fl){
+    const j=cari(tab,f.kolom||f.kol),tipe=tab.types[j]||'angka';
+    rows=rows.filter(r=>cocok(r[j],f.op||f.operator||'=',f.nilai!==undefined?f.nilai:f.value,tipe));
+  }
+  const grp=(Array.isArray(a.kelompok)?a.kelompok:(a.kelompok?[a.kelompok]:[])).map(g=>{
+    const s=String(g),m=s.match(/^(.*):(\w+)$/);let nm=s,per=null;if(m&&PER.test(m[2])){nm=m[1];per=m[2]}
+    const j=cari(tab,nm);if(per&&tab.types[j]!=='tanggal')throw new Error('Kolom "'+tab.cols[j]+'" bukan kolom tanggal, tidak bisa dikelompokkan per '+per);
+    return{j,per,nama:tab.cols[j]+(per?' ('+per+')':'')};
+  });
+  const hs=(Array.isArray(a.hitung)?a.hitung:(a.hitung?[a.hitung]:[])).map(h=>{
+    if(typeof h==='string'){const m=h.match(/^(\w+)\s*\(\s*(.*?)\s*\)$/);h=m?{fungsi:m[1],kolom:m[2]}:{kolom:h,fungsi:'jumlah'}}
+    const fn=FN[String(h.fungsi||h.fn||'jumlah').toLowerCase()];if(!fn)throw new Error('fungsi "'+h.fungsi+'" tidak dikenal (jumlah, rata, min, maks, hitung, unik, median)');
+    const j=(h.kolom==null||h.kolom===''||h.kolom==='*')?-1:cari(tab,h.kolom);
+    if(j<0&&fn!=='hitung')throw new Error('fungsi '+fn+' butuh "kolom"');
+    if(j>=0&&tab.types[j]!=='angka'&&!['hitung','unik'].includes(fn))throw new Error('Kolom "'+tab.cols[j]+'" bukan angka, tidak bisa dihitung dengan '+fn);
+    return{j,fn,nama:h.nama||h.as||(j<0?'jumlah_baris':fn+'_'+tab.cols[j])};
+  });
+  let out,cols;
+  if(!grp.length&&!hs.length){
+    const sel=(Array.isArray(a.kolom_tampil)?a.kolom_tampil:(a.kolom_tampil?[a.kolom_tampil]:[])).map(c=>cari(tab,c));
+    const idx=sel.length?sel:tab.cols.map((c,j)=>j);
+    cols=idx.map(j=>tab.cols[j]);out=rows.map(r=>idx.map(j=>r[j]));
+    out.__types=idx.map(j=>tab.types[j]);
+  }else{
+    const M=new Map();
+    for(const r of rows){
+      const key=grp.map(g=>{const v=r[g.j];return v==null?'(kosong)':(g.per?kunciTgl(v,g.per):(v instanceof Date?iso(v):v))});
+      const ks=JSON.stringify(key);let e=M.get(ks);if(!e){e={key,acc:hs.map(()=>({n:0,s:0,mn:Infinity,mx:-Infinity,v:[],set:new Set()}))};M.set(ks,e)}
+      hs.forEach((h,i)=>{const c=e.acc[i],v=h.j<0?1:r[h.j];
+        if(h.fn==='hitung'){if(h.j<0||v!=null)c.n++;return}
+        if(v==null)return;
+        if(h.fn==='unik'){c.set.add(v instanceof Date?+v:v);return}
+        c.n++;c.s+=v;if(v<c.mn)c.mn=v;if(v>c.mx)c.mx=v;if(h.fn==='median')c.v.push(v)});
+    }
+    cols=[...grp.map(g=>g.nama),...hs.map(h=>h.nama)];
+    out=[...M.values()].map(e=>[...e.key,...hs.map((h,i)=>{const c=e.acc[i];
+      switch(h.fn){case'jumlah':return c.s;case'rata':return c.n?c.s/c.n:null;case'min':return c.n?c.mn:null;case'maks':return c.n?c.mx:null;case'hitung':return c.n;case'unik':return c.set.size;case'median':return c.v.length?median(c.v):null}})]);
+    if(!hs.length)out=out.map(r=>r);
+    if(a.persen&&hs.length){const k=grp.length;const tot=out.reduce((s,r)=>s+(r[k]||0),0);cols.push('persen_'+cols[k]);out=out.map(r=>[...r,tot?Math.round((r[k]||0)/tot*10000)/100:null])}
+    out.__types=cols.map((c,j)=>j<grp.length?'teks':'angka');
+  }
+  /* urut */
+  if(a.urut){
+    const m=String(a.urut).trim().match(/^(.*?)(?:\s+(asc|desc|naik|turun))?$/i);
+    const nm=m[1].trim(),desc=/^(desc|turun)$/i.test(m[2]||'');
+    let j=cols.findIndex(c=>c.toLowerCase()===nm.toLowerCase());
+    if(j<0)j=cols.findIndex(c=>c.toLowerCase().includes(nm.toLowerCase()));
+    if(j<0)throw new Error('Kolom urut "'+nm+'" tidak ada di hasil. Kolom hasil: '+cols.join(', '));
+    const ty=out.__types;
+    out=[...out].sort((x,y)=>{const p=x[j],q=y[j];if(p==null)return 1;if(q==null)return -1;const c=(typeof p==='number'&&typeof q==='number')?p-q:String(p instanceof Date?iso(p):p).localeCompare(String(q instanceof Date?iso(q):q),'id',{numeric:true});return desc?-c:c});
+    out.__types=ty;
+  }
+  const total=out.length,ty=out.__types;
+  const bt=parseInt(a.batas||a.limit,10);
+  if(bt>0&&out.length>bt)out=out.slice(0,bt);
+  out.__types=ty;
+  return{cols,rows:out,types:ty,total,sumber_baris:tab.rows.length,disaring:rows.length};
+};
+const csvEsc=v=>{v=v instanceof Date?iso(v):(v==null?'':String(v));return /[",\n\r;]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v};
+const kirim=(nama,blob)=>{const F=window.XF;if(!F||!F.q)throw new Error('Penampung berkas tidak tersedia');if(F.q.length>=5)throw new Error('Maksimal 5 berkas per jawaban');F.q.push({name:nama,blob,t:Date.now()})};
+const safeName=(n,ext,def)=>{n=String(n||'').trim().replace(/[\\\/:*?"<>|\u0000-\u001f]+/g,'_').replace(/^\.+/,'').slice(0,80)||def;if(!new RegExp('\\.'+ext+'$','i').test(n))n=n.replace(/\.\w{1,5}$/,'')+'.'+ext;return n};
+const T_olah=async a=>{
+  gate();a=a||{};
+  const{nama,tab}=await ambil(a.berkas||a.file||a.nama,a.sheet,a.baris_header);
+  const R=olah(tab,a);
+  LAST={cols:R.cols,types:R.types,rows:R.rows.map(r=>r.slice()),sheet:'hasil',sheets:['hasil']};
+  const MAXS=50,shown=R.rows.slice(0,MAXS);
+  const o={ok:true,sumber:nama+(tab.sheet&&tab.sheets&&tab.sheets.length>1?' / '+tab.sheet:''),baris_sumber:R.sumber_baris,setelah_filter:R.disaring,baris_hasil:R.total,kolom:R.cols,baris:shown.map(r=>r.map(r2))};
+  if(R.rows.length>MAXS)o.catatan='Hanya '+MAXS+' baris pertama ditampilkan ('+R.rows.length+' di hasil). Pakai "urut" dan "batas", atau simpan ke CSV.';
+  else if(R.total>R.rows.length)o.catatan='Dibatasi '+R.rows.length+' dari '+R.total+' baris hasil.';
+  if(a.simpan){
+    const fn=safeName(a.simpan===true?'hasil':a.simpan,'csv','hasil.csv');
+    const csv='﻿'+[R.cols.map(csvEsc).join(','),...R.rows.map(r=>r.map(csvEsc).join(','))].join('\r\n');
+    kirim(fn,new Blob([csv],{type:'text/csv;charset=utf-8'}));
+    o.berkas_csv=fn;o.catatan=(o.catatan?o.catatan+' ':'')+'File CSV sudah tersedia dengan tombol Unduh/Bagikan di chat; jangan tempel ulang seluruh isinya.';
+  }
+  o.petunjuk='Hasil ini tersimpan sebagai tabel "hasil" dan bisa langsung dipakai alat grafik.';
+  return o;
+};
+
+/* ---------- grafik (canvas -> PNG) ---------- */
+const PAL=['#2f6fed','#f59e0b','#10b981','#ef4444','#8b5cf6','#06b6d4','#ec4899','#84cc16','#64748b','#f97316'];
+const FONT='system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif';
+const nf=(v,d)=>v.toLocaleString('id-ID',{maximumFractionDigits:d==null?2:d});
+const kompak=(v,rp)=>{
+  const a=Math.abs(v);let s;
+  if(a>=1e12)s=nf(v/1e12)+' T';else if(a>=1e9)s=nf(v/1e9)+' M';else if(a>=1e6)s=nf(v/1e6)+' jt';else if(a>=1e4&&rp)s=nf(v/1e3)+' rb';else s=nf(v,a<10?2:(a<100?1:0));
+  return(rp?'Rp ':'')+s;
+};
+const ticks=(lo,hi,n)=>{
+  if(lo===hi){hi=lo+1}
+  const raw=(hi-lo)/n,mag=Math.pow(10,Math.floor(Math.log10(raw))),r=raw/mag,step=(r<=1?1:r<=2?2:r<=5?5:10)*mag;
+  const a=Math.floor(lo/step+1e-9)*step,b=Math.ceil(hi/step-1e-9)*step,t=[];
+  for(let v=a;v<=b+step/2;v+=step)t.push(Math.abs(v)<step/1e6?0:+v.toFixed(10));
+  return t;
+};
+const potong=(ctx,s,w)=>{s=String(s);if(ctx.measureText(s).width<=w)return s;while(s.length>1&&ctx.measureText(s+'…').width>w)s=s.slice(0,-1);return s+'…'};
+const gambarGrafik=(o)=>{
+  const{jenis,judul,label,seri,rp,sumbuX,sumbuY}=o;
+  const n=label.length,multi=seri.length>1;
+  const hor=jenis==='batang_horizontal';
+  let W=1200,H=720;
+  if(hor)H=Math.max(520,170+n*(multi?30*seri.length:54));
+  if(jenis==='pie')W=1100;
+  const c=document.createElement('canvas');c.width=W;c.height=H;
+  const x=c.getContext('2d');
+  x.fillStyle='#fff';x.fillRect(0,0,W,H);
+  x.textBaseline='alphabetic';
+  x.fillStyle='#111827';x.font='700 34px '+FONT;x.textAlign='left';
+  x.fillText(potong(x,judul||'Grafik',W-80),40,58);
+  const col=i=>(o.warna&&o.warna[i])||PAL[i%PAL.length];
+  let top=96;
+  if(multi&&jenis!=='pie'){
+    x.font='600 22px '+FONT;let lx=40,ly=100;
+    seri.forEach((s,i)=>{const tw=x.measureText(s.nama).width;if(lx+tw+50>W-30){lx=40;ly+=34}x.fillStyle=col(i);x.fillRect(lx,ly-16,20,20);x.fillStyle='#374151';x.fillText(s.nama,lx+30,ly);lx+=tw+62});
+    top=ly+30;
+  }
+  const font=(w,s)=>w+' '+s+'px '+FONT;
+  if(jenis==='pie'){
+    const vals=seri[0].nilai.map(v=>Math.max(0,v||0));const tot=vals.reduce((a,b)=>a+b,0);
+    if(!tot)throw new Error('semua nilai 0, tidak ada yang bisa digambar sebagai pie');
+    const cx=330,cy=(H+top)/2+10,R=Math.min(250,(H-top-50)/2);let ang=-Math.PI/2;
+    vals.forEach((v,i)=>{const a2=ang+v/tot*Math.PI*2;x.beginPath();x.moveTo(cx,cy);x.arc(cx,cy,R,ang,a2);x.closePath();x.fillStyle=col(i);x.fill();x.strokeStyle='#fff';x.lineWidth=3;x.stroke();
+      if(v/tot>=.06){const m=(ang+a2)/2;x.fillStyle='#fff';x.font=font('700',24);x.textAlign='center';x.fillText(nf(v/tot*100,1)+'%',cx+Math.cos(m)*R*.64,cy+Math.sin(m)*R*.64+8)}
+      ang=a2});
+    if(o.donat){x.beginPath();x.arc(cx,cy,R*.42,0,Math.PI*2);x.fillStyle='#fff';x.fill();x.fillStyle='#111827';x.font=font('700',26);x.textAlign='center';x.fillText(kompak(tot,rp),cx,cy+9)}
+    x.textAlign='left';let ly=top+30;const step=Math.min(46,(H-top-40)/Math.max(1,n));
+    vals.forEach((v,i)=>{x.fillStyle=col(i);x.fillRect(640,ly-18,24,24);x.fillStyle='#1f2937';x.font=font('500',24);x.textAlign='left';x.fillText(potong(x,label[i],210),676,ly);x.fillStyle='#6b7280';x.font=font('400',22);x.textAlign='right';x.fillText(kompak(v,rp)+' · '+nf(v/tot*100,1)+'%',W-24,ly);ly+=step});x.textAlign='left';
+    return c;
+  }
+  if(hor){
+    const left=Math.min(300,Math.max(120,Math.max(...label.map(l=>{x.font=font('500',22);return x.measureText(String(l)).width}))+24)),right=140,bot=70;
+    const all=seri.flatMap(s=>s.nilai.filter(v=>v!=null)),hi=Math.max(0,...all),lo=Math.min(0,...all),tk=ticks(lo,hi,5),mn=tk[0],mx=tk[tk.length-1];
+    const px=v=>left+(v-mn)/(mx-mn||1)*(W-left-right),py0=top+10,ph=H-top-bot-10,grp=ph/n,bh=Math.min(46,grp*.72/seri.length);
+    x.font=font('400',20);x.textAlign='center';
+    tk.forEach(t=>{x.strokeStyle=t===0?'#9ca3af':'#e5e7eb';x.lineWidth=t===0?2:1;x.beginPath();x.moveTo(px(t),py0);x.lineTo(px(t),py0+ph);x.stroke();x.fillStyle='#6b7280';x.fillText(kompak(t,rp),px(t),py0+ph+30)});
+    label.forEach((l,i)=>{const gy=py0+i*grp+grp/2;x.textAlign='right';x.fillStyle='#374151';x.font=font('500',22);x.fillText(potong(x,l,left-20),left-12,gy+7);
+      seri.forEach((s,k)=>{const v=s.nilai[i];if(v==null)return;const y0=gy-(bh*seri.length)/2+k*bh;x.fillStyle=col(k);x.fillRect(Math.min(px(0),px(v)),y0,Math.abs(px(v)-px(0)),bh-4);
+        x.textAlign='left';x.fillStyle='#111827';x.font=font('600',20);x.fillText(kompak(v,rp),Math.max(px(0),px(v))+8,y0+bh/2+6)})});
+    if(sumbuY){x.fillStyle='#6b7280';x.font=font('500',20);x.textAlign='center';x.fillText(sumbuY,(left+W-right)/2,H-12)}
+    return c;
+  }
+  /* batang / garis / tumpuk (sumbu vertikal) */
+  const stack=jenis==='tumpuk';
+  const angled=n>7||label.some(l=>String(l).length>9);
+  x.font=font('500',20);const maxLW=Math.max(...label.map(l=>x.measureText(String(l).slice(0,16)).width));
+  const bot=angled?Math.min(190,maxLW*.72+50):56,left=120,right=40;
+  let all;
+  if(stack){const sums=label.map((_,i)=>seri.reduce((s,q)=>s+Math.max(0,q.nilai[i]||0),0));all=[0,...sums]}else all=[0,...seri.flatMap(s=>s.nilai.filter(v=>v!=null))];
+  const tk=ticks(Math.min(...all),Math.max(...all),6),mn=tk[0],mx=tk[tk.length-1],pw=W-left-right,ph=H-top-bot-20;
+  const py=v=>top+10+ph-(v-mn)/(mx-mn||1)*ph,gw=pw/n;
+  x.font=font('400',20);
+  tk.forEach(t=>{x.strokeStyle=t===0?'#9ca3af':'#e5e7eb';x.lineWidth=t===0?2:1;x.beginPath();x.moveTo(left,py(t));x.lineTo(W-right,py(t));x.stroke();x.fillStyle='#6b7280';x.textAlign='right';x.fillText(kompak(t,rp),left-12,py(t)+7)});
+  const lbl=n*seri.length<=24&&jenis!=='garis'||(jenis==='garis'&&n<=14&&!multi);
+  label.forEach((l,i)=>{
+    const cx=left+gw*i+gw/2;x.fillStyle='#374151';x.font=font('500',20);
+    if(angled){x.save();x.translate(cx+6,py(Math.min(0,mn===0?0:mn))+(mn<0?py(mn)-py(0):0)+26);x.rotate(-Math.PI/5);x.textAlign='right';x.fillText(potong(x,l,200),0,0);x.restore()}
+    else{x.textAlign='center';x.fillText(potong(x,l,gw-6),cx,H-bot+34)}
+  });
+  if(jenis==='garis'){
+    seri.forEach((s,k)=>{x.strokeStyle=col(k);x.lineWidth=5;x.lineJoin='round';x.beginPath();let st=false;
+      s.nilai.forEach((v,i)=>{if(v==null)return;const px=left+gw*i+gw/2;if(!st){x.moveTo(px,py(v));st=true}else x.lineTo(px,py(v))});x.stroke();
+      s.nilai.forEach((v,i)=>{if(v==null)return;const px=left+gw*i+gw/2;x.beginPath();x.arc(px,py(v),7,0,Math.PI*2);x.fillStyle='#fff';x.fill();x.lineWidth=4;x.strokeStyle=col(k);x.stroke();
+        if(lbl){x.fillStyle='#111827';x.font=font('600',20);x.textAlign='center';x.fillText(kompak(v,rp),px,py(v)-16)}})});
+  }else if(stack){
+    label.forEach((l,i)=>{let acc=0;const cx=left+gw*i+gw/2,bw=Math.min(110,gw*.64);
+      seri.forEach((s,k)=>{const v=Math.max(0,s.nilai[i]||0);if(!v)return;x.fillStyle=col(k);x.fillRect(cx-bw/2,py(acc+v),bw,py(acc)-py(acc+v));acc+=v});
+      if(label.length<=14){x.fillStyle='#111827';x.font=font('600',20);x.textAlign='center';x.fillText(kompak(acc,rp),cx,py(acc)-10)}});
+  }else{
+    const bw=Math.min(90,gw*.78/seri.length);
+    label.forEach((l,i)=>{const cx=left+gw*i+gw/2;
+      seri.forEach((s,k)=>{const v=s.nilai[i];if(v==null)return;const bx=cx-(bw*seri.length)/2+k*bw,y0=py(Math.max(0,v)),y1=py(Math.min(0,v));
+        x.fillStyle=col(k);x.fillRect(bx+2,y0,bw-4,Math.max(1,y1-y0));
+        if(lbl){x.fillStyle='#111827';x.font=font('600',Math.min(20,Math.max(15,bw*.34)));x.textAlign='center';x.fillText(kompak(v,rp),bx+bw/2,(v>=0?y0-10:y1+22))}})});
+  }
+  x.fillStyle='#6b7280';x.font=font('500',20);
+  if(sumbuY){x.save();x.translate(26,top+10+ph/2);x.rotate(-Math.PI/2);x.textAlign='center';x.fillText(sumbuY,0,0);x.restore()}
+  if(sumbuX){x.textAlign='center';x.fillText(sumbuX,left+pw/2,H-10)}
+  return c;
+};
+const JENIS={batang:'batang',bar:'batang',kolom:'batang',column:'batang',batang_horizontal:'batang_horizontal',horizontal:'batang_horizontal',bar_horizontal:'batang_horizontal',garis:'garis',line:'garis',tren:'garis',pie:'pie',donat:'donat',donut:'donat',lingkaran:'pie',tumpuk:'tumpuk',stacked:'tumpuk',batang_tumpuk:'tumpuk'};
+const PEND=[];
+const T_grafik=async a=>{
+  gate();a=a||{};
+  let jenis=JENIS[String(a.jenis||a.tipe||a.type||'batang').toLowerCase().replace(/[\s-]+/g,'_')];
+  if(!jenis)throw new Error('jenis grafik tidak dikenal. Pilih: batang, batang_horizontal, garis, pie, donat, tumpuk');
+  const donat=jenis==='donat';if(donat)jenis='pie';
+  let label,seri,sumber='data langsung',xInfo=null;
+  if(Array.isArray(a.label||a.labels)&&(Array.isArray(a.seri)||Array.isArray(a.nilai)||Array.isArray(a.values))){
+    label=(a.label||a.labels).map(v=>v instanceof Date?iso(v):String(v));
+    seri=Array.isArray(a.seri)?a.seri.map((s,i)=>({nama:String(s.nama||s.name||'Seri '+(i+1)),nilai:(s.nilai||s.values||[]).map(v=>num(v))})):[{nama:String(a.nama_seri||'Nilai'),nilai:(a.nilai||a.values).map(v=>num(v))}];
+  }else{
+    const{nama,tab}=await ambil(a.berkas||a.file||a.dari,a.sheet,a.baris_header);
+    sumber=nama;
+    let src;
+    if(a.x&&(a.y||a.hitung)){
+      const ys=(Array.isArray(a.y)?a.y:(a.y?[a.y]:[])).map(String);
+      const FNAMA={jumlah:'',rata:'Rata-rata ',min:'Terkecil ',maks:'Terbesar ',hitung:'Jumlah ',unik:'Unik ',median:'Median '};
+      const hitung=a.hitung||ys.map(k=>{const fn=FN[String(a.agregat||a.fungsi||'jumlah').toLowerCase()]||'jumlah',j=cari(tab,k);return{kolom:k,fungsi:fn,nama:(fn==='hitung'?'Jumlah baris':(FNAMA[fn]||'')+tab.cols[j])}});
+      src=olah(tab,{filter:a.filter,kelompok:[a.x],hitung,urut:a.urut||undefined,batas:a.batas});
+      xInfo=String(a.x).match(/^(.*):(\w+)$/);
+      if(!a.urut){
+        const per=xInfo&&PER.test(xInfo[2])?xInfo[2]:null,xj=cari(tab,per?xInfo[1]:a.x);
+        if(per==='hari_minggu')src.rows.sort((p,q)=>HARI.indexOf(p[0])-HARI.indexOf(q[0]));
+        else if(per||tab.types[xj]==='tanggal')src.rows.sort((p,q)=>String(p[0]).localeCompare(String(q[0])));
+        else if(jenis!=='garis')src.rows.sort((p,q)=>(q[1]==null?-Infinity:q[1])-(p[1]==null?-Infinity:p[1]));
+        if(a.batas>0&&src.rows.length>a.batas)src.rows=src.rows.slice(0,a.batas);
+      }
+    }else if(nama==='hasil'||a.berkas==='hasil'){src={cols:tab.cols,rows:tab.rows,types:tab.types}}
+    else throw new Error('Isi "x" (kolom kategori) dan "y" (kolom angka), atau beri "label" dan "nilai"/"seri" langsung, atau pakai berkas "hasil" setelah data_olah.');
+    const tpe=src.types||[];
+    let yIdx=[];
+    if(src.cols.length>=2){src.cols.forEach((c,j)=>{if(j>0&&(tpe[j]==='angka'||typeof src.rows.find(r=>r[j]!=null)?.[j]==='number'))yIdx.push(j)})}
+    if(!yIdx.length)throw new Error('Tidak ada kolom angka untuk digambar. Kolom: '+src.cols.join(', '));
+    if(a.x&&!a.y&&!a.hitung)yIdx=yIdx.slice(0,4);
+    label=src.rows.map(r=>r[0] instanceof Date?iso(r[0]):String(r[0]==null?'(kosong)':r[0]));
+    seri=yIdx.map(j=>({nama:src.cols[j],nilai:src.rows.map(r=>typeof r[j]==='number'?r[j]:num(r[j]))}));
+  }
+  if(!label.length)throw new Error('tidak ada data untuk digambar');
+  seri.forEach(s=>{while(s.nilai.length<label.length)s.nilai.push(null)});
+  if(label.length>60)throw new Error('terlalu banyak titik ('+label.length+'); kelompokkan atau pakai "batas" (maks 60)');
+  if(jenis==='pie'){
+    seri=[seri[0]];
+    if(label.length>10){const idx=label.map((_,i)=>i).sort((p,q)=>(seri[0].nilai[q]||0)-(seri[0].nilai[p]||0));const keep=idx.slice(0,9),rest=idx.slice(9);
+      const nl=keep.map(i=>label[i]),nv=keep.map(i=>seri[0].nilai[i]);nl.push('Lainnya');nv.push(rest.reduce((s,i)=>s+(seri[0].nilai[i]||0),0));label=nl;seri=[{nama:seri[0].nama,nilai:nv}]}
+  }
+  const rp=/^(rp|rupiah|idr)$/i.test(String(a.satuan||a.unit||''))||(a.satuan==null&&/harga|omzet|omset|untung|laba|rugi|biaya|pendapatan|penjualan|pengeluaran|total_?bayar|nominal|rupiah|rp\b/i.test(seri.map(s=>s.nama).join(' ')));
+  const xd=a.x?(xInfo?(xInfo[2].replace('_',' ')):String(a.x)):'kategori';
+  const judul=a.judul||a.title||(seri.length===1?seri[0].nama+' per '+xd:seri.map(s=>s.nama).join(' & ')+' per '+xd);
+  const mx=seri.map(s=>Math.max(...s.nilai.filter(v=>v!=null).map(Math.abs),0)).filter(v=>v>0),skala=mx.length>1&&Math.max(...mx)/Math.min(...mx)>40;
+  const cv=gambarGrafik({jenis,donat,judul,label,seri,rp,sumbuX:a.sumbu_x,sumbuY:a.sumbu_y,warna:Array.isArray(a.warna)?a.warna:null});
+  const blob=await new Promise((ok,no)=>cv.toBlob(b=>b?ok(b):no(new Error('gagal membuat gambar')),'image/png'));
+  const fn=safeName(a.nama||judul.toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'').slice(0,40)||'grafik','png','grafik.png');
+  kirim(fn,blob);
+  PEND.push({blob,t:Date.now(),judul});
+  return{ok:true,nama:fn,jenis:donat?'donat':jenis,sumber,jumlah_titik:label.length,satuan:rp?'Rp':'-',data:{label:label.slice(0,30),seri:seri.map(s=>({nama:s.nama,nilai:s.nilai.slice(0,30).map(r2)}))},
+    catatan:'Gambar grafik tampil di chat dan punya tombol Unduh/Bagikan. Jelaskan temuan utamanya dengan angka dari "data" di atas; jangan menempelkan ulang seluruh data.'+(skala?' PERINGATAN: skala antar seri sangat berbeda sehingga seri kecil nyaris tak terlihat; sarankan grafik terpisah per ukuran.':'')};
+};
+
+/* tampilkan pratinjau grafik di gelembung jawaban (tombol Unduh/Bagikan tetap dari sistem lama) */
+try{
+  const ms=document.getElementById('ms');
+  if(ms)new MutationObserver(ml=>{for(const m of ml)for(const n of m.addedNodes){
+    if(n.nodeType!==1||!n.classList.contains('bm')||n.classList.contains('xr')||!PEND.length)continue;
+    const now=Date.now(),L=PEND.splice(0).filter(p=>now-p.t<600000);
+    for(const p of L){try{const im=document.createElement('img');im.src=URL.createObjectURL(p.blob);im.alt=p.judul||'grafik';im.style.cssText='display:block;width:100%;max-width:560px;margin:10px 0 2px;border-radius:12px;background:#fff';im.onload=()=>{try{ms.scrollTop=ms.scrollHeight}catch(e){}};n.appendChild(im)}catch(e){}}
+  }}).observe(ms,{childList:true});
+}catch(e){}
+
+/* ---------- pendaftaran alat (hanya menambah; alat lama tidak disentuh) ---------- */
+const REG={data_info:T_info,data_olah:T_olah,grafik:T_grafik};
+for(const k of Object.keys(REG))if(!XT[k])XT[k]=REG[k];
+
+/* ---------- panduan untuk bot (hanya saat saklar menyala) ---------- */
+const MK='[Alat Analisis Data]';
+const HINT=()=>'\n\n'+MK+' Dipakai bila pengguna meminta menganalisis tabel/file CSV-Excel yang dilampirkan, menghitung, merangkum, membandingkan, atau membuat grafik. Panggil dengan satu baris <tool>{"name":"...","args":{...}}</tool>. Semua angka HARUS berasal dari hasil alat, jangan menebak atau menghitung sendiri. Sebut berkas/kolom yang dipakai dan beri kesimpulan singkat yang berguna.\n'
+ +'- data_info {} : daftar tabel yang tersedia (lampiran, "nota", "hasil"). data_info {"berkas":"penjualan.xlsx","sheet":"Sheet1"} : kolom, tipe, statistik ringkas, contoh baris. Mulai dari sini bila belum tahu isi kolomnya.\n'
+ +'- data_olah {"berkas":"penjualan.xlsx","filter":[{"kolom":"kota","op":"=","nilai":"Bandung"}],"kelompok":["tanggal:bulan","produk"],"hitung":[{"kolom":"omzet","fungsi":"jumlah"}],"urut":"jumlah_omzet desc","batas":10,"persen":true,"simpan":"hasil.csv"} : saring, kelompokkan, hitung. op: = != > >= < <= mengandung diawali dalam antara kosong isi. fungsi: jumlah rata min maks hitung unik median. Kelompok tanggal: kolom:tahun|kuartal|bulan|minggu|hari|hari_minggu. Tanpa kelompok/hitung = lihat baris (kolom_tampil, urut, batas). "simpan" mengirim hasil sebagai CSV. Hasil tersimpan sebagai tabel "hasil".\n'
+ +'- grafik {"jenis":"batang|batang_horizontal|garis|pie|donat|tumpuk","berkas":"penjualan.xlsx","x":"tanggal:bulan","y":["omzet"],"agregat":"jumlah","filter":[..],"urut":"..","batas":12,"judul":"..","satuan":"rp"} atau {"jenis":"batang","label":["Jan","Feb"],"seri":[{"nama":"Omzet","nilai":[100,200]}]} atau {"jenis":"pie","berkas":"hasil"} : buat gambar grafik (PNG) yang tampil di chat. Pilih jenis yang cocok: garis untuk tren waktu, batang untuk perbandingan, pie/donat untuk porsi (maks ~8 bagian).';
+const prevG=window.galeriSysFor;
+window.galeriSysFor=function(b){
+  let s='';
+  try{s=typeof prevG==='function'?(prevG.apply(this,arguments)||''):''}catch(e){s=''}
+  try{if(on()&&b&&!b.image_gen&&typeof b.system==='string'&&b.system.includes('[Info perangkat pengguna]')&&!String(s).includes(MK))s=String(s)+HINT()}catch(e){}
+  return s;
+};
+
+/* ---------- saklar di Pengaturan (bagian "Alat Analisis", dipakai bersama blok OCR Nota) ---------- */
+const CSS='#xana-wrap{margin:18px 0 8px;padding:14px 16px;border-radius:16px;background:#161618;border:1px solid #2b2b2e}#xana-wrap>b{display:block;font-size:15px;color:#fff;font-weight:600}#xana-wrap>span{display:block;font-size:12.5px;color:#8e8e93;margin:2px 0 8px;line-height:1.35}.xana-r{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:10px 0;border-top:1px solid #2b2b2e}.xana-r div{min-width:0}.xana-r div b{display:block;font-size:14px;color:#fff;font-weight:600}.xana-r div span{display:block;font-size:12px;color:#8e8e93;margin-top:2px;line-height:1.35}.xana-s{position:relative;width:58px;height:32px;border-radius:16px;background:#2c2c2e;border:0;padding:0;flex:none;transition:background .25s}.xana-s::after{content:"";position:absolute;top:3px;left:3px;width:26px;height:26px;border-radius:50%;background:#fff;transition:transform .25s cubic-bezier(.2,.8,.2,1)}.xana-s.on{background:#30d158}.xana-s.on::after{transform:translateX(26px)}.xana-s:active{opacity:.8}';
+if(!document.getElementById('xana-css')){const st=document.createElement('style');st.id='xana-css';st.textContent=CSS;document.head.appendChild(st)}
+const SWS=window.__xanaSW=window.__xanaSW||[];
+SWS.push({id:'data',nama:'Analis Data + Grafik',ket:'Bot membaca lampiran CSV/Excel, menghitung dengan kode (jumlah, rata-rata, per bulan, per produk), dan membuat grafik. Berjalan di browser, tanpa kuota tambahan.',on,setOn});
+const pasang=()=>{
+  const sm=document.getElementById('sm');if(!sm||sm.hidden)return;
+  let w=sm.querySelector('#xana-wrap');
+  if(!w){w=document.createElement('div');w.id='xana-wrap';w.innerHTML='<b>Alat Analisis</b><span>Semua mati secara bawaan. Setelah dinyalakan pun, bot memakainya hanya kalau kamu memintanya.</span>';sm.appendChild(w)}
+  for(const s of SWS){
+    if(w.querySelector('[data-xana="'+s.id+'"]'))continue;
+    const r=document.createElement('div');r.className='xana-r';r.setAttribute('data-xana',s.id);
+    const d=document.createElement('div'),b=document.createElement('b'),sp=document.createElement('span');b.textContent=s.nama;sp.textContent=s.ket;d.append(b,sp);
+    const btn=document.createElement('button');btn.type='button';btn.className='xana-s'+(s.on()?' on':'');btn.setAttribute('aria-label',s.nama);btn.setAttribute('aria-pressed',s.on()?'true':'false');
+    btn.onclick=()=>{const v=!s.on();s.setOn(v);btn.classList.toggle('on',v);btn.setAttribute('aria-pressed',v?'true':'false')};
+    r.append(d,btn);w.appendChild(r);
+  }
+};
+const smEl=document.getElementById('sm');
+if(smEl)new MutationObserver(pasang).observe(smEl,{attributes:true,attributeFilter:['hidden']});
+setTimeout(pasang,900);setTimeout(pasang,1500);
+window.__xanaData={on,setOn,tools:Object.keys(REG),_t:{num,dt,parseCSV,xlsxSheets,bangunTabel,olah,put,ambil,gambarGrafik}};
+}catch(e){try{console.warn('Analis Data + Grafik tidak aktif:',e)}catch(_){}}
+})();
+</script>
+<!-- ===== AKHIR ANALIS DATA + GRAFIK ===== -->
+<!-- ===== OCR NOTA / STRUK (blok terpisah di akhir file; kode lama tidak diubah; saklar bawaan MATI; untuk mencopot hapus dari tanda ini sampai "AKHIR OCR NOTA") ===== -->
+<script id="xana-ocr-js">
+/* Alat baru untuk chat utama: nota_baca, nota_ubah, nota_daftar.
+   - Foto nota/struk dibaca dengan Tesseract.js (OCR di browser, tanpa kuota API). Pustaka + data bahasa Indonesia dimuat dari CDN
+     saat pertama dipakai (sekitar 10 MB), setelah itu tersimpan di cache browser.
+   - Hasil diurai jadi toko, tanggal, daftar barang, total; dicek jumlah barang vs total agar salah baca ketahuan.
+   - Nota tersimpan di browser (localStorage) dan jadi tabel "nota" untuk alat data_olah / grafik (blok Analis Data).
+   - Mati secara bawaan (Pengaturan > Alat Analisis). Error apa pun di sini tidak memengaruhi fitur lama. */
+(()=>{try{
+if(window._xAnaOcr)return;window._xAnaOcr=1;
+const XT=window.XT;if(!XT||typeof XT.run!=='function')return;
+const K='xbot_ana_ocr',KN='xbot_nota_v1';
+const on=()=>{try{return localStorage.getItem(K)==='1'}catch(e){return false}};
+const setOn=v=>{try{localStorage.setItem(K,v?'1':'0')}catch(e){}};
+const gate=()=>{if(!on())throw new Error('Fitur "OCR Nota/Struk" sedang dimatikan. Minta pengguna menyalakannya di Pengaturan (⚙️), bagian "Alat Analisis".')};
+const say=m=>{try{const p=document.querySelector('#pv');if(p)p.textContent=m}catch(e){}};
+const clearSay=()=>{try{const p=document.querySelector('#pv');if(p&&/^🔍/.test(p.textContent))p.textContent=''}catch(e){}};
+
+/* ---------- foto yang dilampirkan (hanya membaca; tidak menghentikan alur lama) ---------- */
+const IMGS=[];
+window.addEventListener('change',e=>{try{
+  if(!on())return;const t=e.target;if(!t||(t.id!=='fi'&&t.id!=='fc'))return;
+  const f=t.files&&t.files[0];if(!f||!/^image\//.test(f.type)||f.size>15*1048576)return;
+  IMGS.push({name:f.name||('foto-'+new Date().toISOString().slice(11,19).replace(/:/g,'')+'.jpg'),blob:f,t:Date.now()});
+  while(IMGS.length>6)IMGS.shift();
+}catch(x){}},true);
+const dataBlob=async d=>{const r=await fetch(d);return r.blob()};
+const daftarGambar=()=>{
+  const L=IMGS.map(i=>({name:i.name,get:async()=>i.blob}));
+  try{for(const f of(window.__FS||[])){if(f&&f.data&&/^data:image\//.test(f.data)&&!L.some(l=>l.name===f.name))L.push({name:f.name,get:()=>dataBlob(f.data)})}}catch(e){}
+  return L;
+};
+const pilihGambar=ref=>{
+  const L=daftarGambar();
+  if(!L.length)throw new Error('Belum ada foto. Minta pengguna melampirkan foto nota/struk di chat (tombol lampiran atau kamera) dulu.');
+  const r=String(ref==null?'':ref).trim().toLowerCase();
+  if(!r||r==='terakhir'||r==='last')return L[L.length-1];
+  if(/^\d+$/.test(r)){const i=+r;if(i<1||i>L.length)throw new Error('Nomor foto di luar 1-'+L.length+'. Foto tersedia: '+L.map((l,j)=>(j+1)+'. '+l.name).join('; '));return L[i-1]}
+  const h=L.find(l=>l.name.toLowerCase()===r)||L.find(l=>l.name.toLowerCase().includes(r));
+  if(!h)throw new Error('Foto "'+ref+'" tidak ditemukan. Tersedia: '+L.map(l=>l.name).join(', '));
+  return h;
+};
+
+/* ---------- mesin OCR (Tesseract.js, dimuat saat dibutuhkan) ---------- */
+const TJS=['https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js','https://cdnjs.cloudflare.com/ajax/libs/tesseract.js/5.1.1/tesseract.min.js'];
+const LANGP={ind:['https://cdn.jsdelivr.net/npm/@tesseract.js-data/ind/4.0.0_best_int','https://tessdata.projectnaptha.com/4.0.0'],eng:[null]};
+let TP=null,WK=null,WKLANG='',IDLE=null,PROG=null;
+const loadTess=()=>{
+  if(window.Tesseract)return Promise.resolve();
+  return TP||(TP=(async()=>{
+    for(const u of TJS){try{await new Promise((ok,no)=>{const s=document.createElement('script');s.src=u;s.onload=ok;s.onerror=()=>{s.remove();no(new Error('x'))};document.head.appendChild(s)});if(window.Tesseract)return}catch(e){}}
+    TP=null;throw new Error('mesin OCR tidak bisa dimuat. Pemuatan pertama butuh internet; cek koneksi lalu coba lagi.');
+  })());
+};
+const getWorker=async lang=>{
+  await loadTess();
+  if(WK&&WKLANG===lang){clearTimeout(IDLE);return WK}
+  if(WK){try{await WK.terminate()}catch(e){}WK=null}
+  const paths=(LANGP[lang]||LANGP.ind).slice();let err=null;
+  for(const lp of paths){
+    try{
+      const o={logger:m=>{if(PROG&&m&&m.status==='recognizing text')PROG(Math.round((m.progress||0)*100));else if(PROG&&m&&/loading|initializ/.test(m.status||''))PROG(-1)}};
+      if(lp)o.langPath=lp;
+      const w=await Tesseract.createWorker(lang,1,o);
+      try{await w.setParameters({tessedit_pageseg_mode:'6',preserve_interword_spaces:'1'})}catch(e){}
+      WK=w;WKLANG=lang;return w;
+    }catch(e){err=e}
+  }
+  throw new Error('data bahasa OCR tidak bisa dimuat ('+String((err&&err.message)||err).slice(0,100)+'). Pemuatan pertama butuh internet.');
+};
+const lepas=()=>{clearTimeout(IDLE);IDLE=setTimeout(async()=>{if(WK){try{await WK.terminate()}catch(e){}WK=null}},120000)};
+
+/* siapkan foto: ubah ukuran, abu-abu, regangkan kontras (struk thermal sering pudar) */
+const siapkan=async(blob,putar)=>{
+  let bmp;
+  try{bmp=await createImageBitmap(blob)}catch(e){
+    bmp=await new Promise((ok,no)=>{const im=new Image(),u=URL.createObjectURL(blob);im.onload=()=>{ok(im);setTimeout(()=>URL.revokeObjectURL(u),3000)};im.onerror=()=>no(new Error('foto tidak bisa dibuka'));im.src=u});
+  }
+  const w0=bmp.width,h0=bmp.height,long=Math.max(w0,h0);
+  const sc=long<1400?Math.min(2,1600/long):(long>2400?2400/long:1);
+  const rot=((putar||0)%360+360)%360,swap=rot===90||rot===270;
+  const W=Math.round(w0*sc),H=Math.round(h0*sc);
+  const c=document.createElement('canvas');c.width=swap?H:W;c.height=swap?W:H;
+  const x=c.getContext('2d',{willReadFrequently:true});
+  x.fillStyle='#fff';x.fillRect(0,0,c.width,c.height);
+  x.save();x.translate(c.width/2,c.height/2);x.rotate(rot*Math.PI/180);x.drawImage(bmp,-W/2,-H/2,W,H);x.restore();
+  if(bmp.close)try{bmp.close()}catch(e){}
+  const id=x.getImageData(0,0,c.width,c.height),d=id.data,hist=new Uint32Array(256);
+  for(let i=0;i<d.length;i+=4){const g=(d[i]*299+d[i+1]*587+d[i+2]*114)/1000|0;d[i]=d[i+1]=d[i+2]=g;hist[g]++}
+  const tot=c.width*c.height;let acc=0,lo=0,hi=255;
+  for(let i=0;i<256;i++){acc+=hist[i];if(acc>=tot*.02){lo=i;break}}
+  acc=0;for(let i=255;i>=0;i--){acc+=hist[i];if(acc>=tot*.35){hi=i;break}}   /* latar kertas = putih */
+  if(hi-lo<40){lo=Math.max(0,hi-120)}
+  const k=255/Math.max(1,hi-lo);
+  for(let i=0;i<d.length;i+=4){let g=(d[i]-lo)*k;g=g<0?0:g>255?255:g;d[i]=d[i+1]=d[i+2]=g}
+  x.putImageData(id,0,0);
+  return c;
+};
+const bacaOCR=async(blob,lang,putar)=>{
+  const w=await getWorker(lang);
+  const run=async deg=>{const c=await siapkan(blob,deg);const r=await w.recognize(c);return{text:String(r&&r.data&&r.data.text||''),conf:Math.round((r&&r.data&&r.data.confidence)||0),deg}};
+  let best=await run(putar||0);
+  const skor=r=>r.conf*Math.min(1,(r.text.replace(/[^A-Za-z0-9]/g,'').length)/80);
+  if(putar==null||putar===0){
+    if(skor(best)<28){
+      for(const deg of[90,270]){try{const r=await run(deg);if(skor(r)>skor(best)+8)best=r}catch(e){}}
+    }
+  }
+  lepas();
+  return best;
+};
+
+/* ---------- pengurai teks struk ---------- */
+const BLN={jan:1,januari:1,feb:2,februari:2,mar:3,maret:3,apr:4,april:4,mei:5,may:5,jun:6,juni:6,jul:7,juli:7,agu:8,agt:8,agustus:8,aug:8,sep:9,sept:9,september:9,okt:10,oktober:10,oct:10,nov:11,november:11,des:12,desember:12,dec:12};
+const parseAngka=t=>{
+  let s=String(t).trim().replace(/^(rp\.?|idr)\s*/i,'').replace(/[.,]+$/,'');
+  if(!/^\d[\d.,]*$/.test(s))return null;
+  let r;
+  if(/^\d{1,3}(\.\d{3})+(,\d+)?$/.test(s))r=parseFloat(s.replace(/\./g,'').replace(',','.'));
+  else if(/^\d{1,3}(,\d{3})+(\.\d+)?$/.test(s))r=parseFloat(s.replace(/,/g,''));
+  else if(/^\d+,\d{1,2}$/.test(s))r=parseFloat(s.replace(',','.'));
+  else if(/^\d+(\.\d+)?$/.test(s))r=parseFloat(s);
+  else return null;
+  return isFinite(r)?r:null;
+};
+const DATERE=[/\b(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{4}|\d{2})\b/,/\b(\d{4})[\/\-.](\d{1,2})[\/\-.](\d{1,2})\b/,/\b(\d{1,2})[\s\-]([A-Za-z]{3,9})\.?[\s\-,]+(\d{4}|\d{2})\b/];
+const mkIso=(y,m,d)=>{if(y<100)y+=2000;if(m<1||m>12||d<1||d>31||y<2000||y>2100)return null;const t=new Date(Date.UTC(y,m-1,d));return t.getUTCMonth()===m-1?t.toISOString().slice(0,10):null};
+const cariTanggal=text=>{
+  for(const ln of text.split('\n')){
+    let m;
+    if((m=ln.match(DATERE[1]))){const v=mkIso(+m[1],+m[2],+m[3]);if(v)return v}
+    if((m=ln.match(DATERE[0]))){const v=mkIso(+m[3],+m[2],+m[1]);if(v)return v}
+    if((m=ln.match(DATERE[2]))){const b=BLN[m[2].toLowerCase()];if(b){const v=mkIso(+m[3],b,+m[1]);if(v)return v}}
+  }
+  return null;
+};
+const STOP=/(sub\s*-?\s*total|\btotal\b|tunai|\bcash\b|\bbayar\b|dibayar|kembali|change|\bppn\b|\bpajak\b|\btax\b|diskon|\bdisc\b|potongan|kartu|debit|kredit|credit|qris|e-?wallet|terima\s*kasih|thank|kasir|cashier|struk|invoice|faktur|tanggal|\btgl\b|\bjam\b|alamat|\btelp|\btlp\b|npwp|member|\bpoin\b|\bpoint\b|voucher|www\.|http|nama\s*barang|deskripsi|description|uraian|\bqty\b|no\.?\s*(trx|transaksi|nota|struk|meja|antrian)|\bpelanggan\b|\bcustomer\b|\bketerangan\b|ongkir|biaya\s*kirim|service)/i;
+const TOTALRE=/(grand\s*total|total\s*(bayar|belanja|tagihan|harga|akhir|pembayaran|transaksi)?|jumlah\s*(bayar|total|tagihan)|tagihan|amount\s*due|netto)/i;
+const UNIT='kg|kilo|gr|gram|g|ons|ltr|liter|lt|l|pcs|pc|bks|bungkus|pak|pack|dus|box|sak|karung|botol|btl|buah|bh|unit|porsi|ikat|slop|biji|butir|lembar|lbr|set';
+const tokenAngka=line=>{
+  let s=line.replace(/\b\d{1,2}[\/\-.]\d{1,2}[\/\-.]\d{2,4}\b/g,' ').replace(/\b\d{4}[\/\-.]\d{1,2}[\/\-.]\d{1,2}\b/g,' ').replace(/\b\d{1,2}:\d{2}(:\d{2})?\b/g,' ');
+  const out=[],re=/(?:Rp\.?\s*)?\d[\d.,]*/gi;let m;
+  while((m=re.exec(s))){
+    let t=m[0].replace(/[.,]+$/,'');const digits=t.replace(/\D/g,'');
+    if(digits.length>=9&&!/[.,]/.test(t))continue;           /* barcode / telepon */
+    const v=parseAngka(t);if(v==null)continue;
+    const sesudah=s.slice(m.index+m[0].length,m.index+m[0].length+10),ukuran=/^\s?(ml|cl|l|ltr|liter|gr|gram|g|kg|ons|cm|mm|m|pcs|pc|bks|pak|dus|box|botol|btl|buah|watt|w)\b/i.test(sesudah);
+    const uang=!ukuran&&(/rp/i.test(t)||/\d[.,]\d{3}(?!\d)/.test(t)||v>=100);
+    out.push({t,v,i:m.index,e:m.index+m[0].length,uang});
+  }
+  return{s,tok:out};
+};
+const bersih=s=>s.replace(/[|_~`'"“”‘’^<>{}\[\]\\]+/g,' ').replace(/\s{2,}/g,' ').replace(/^[\s\-:;.,*#=]+|[\s\-:;.,*#=]+$/g,'').trim();
+const parseNota=text=>{
+  const lines=String(text).replace(/\r/g,'').split('\n').map(l=>l.replace(/\s+$/,'')).filter(l=>l.trim());
+  const res={toko:null,tanggal:cariTanggal(text),item:[],total:null,tunai:null,kembali:null,diskon:null,ppn:null};
+  /* toko: baris awal yang berupa nama (ada huruf, bukan kata kunci) */
+  for(const l of lines.slice(0,6)){const b=bersih(l);if(b.replace(/[^A-Za-z]/g,'').length>=4&&!STOP.test(b)&&!/\d{5,}/.test(b)&&!DATERE.some(r=>r.test(b))){res.toko=b.slice(0,60);break}}
+  let tot=null,sub=null,pend=null;
+  const lastUang=(ln,from)=>{const{tok}=tokenAngka(ln);const u=tok.filter(t=>t.uang&&t.i>=(from||0));return u.length?u[u.length-1].v:null};
+  lines.forEach((ln,idx)=>{
+    const low=ln.toLowerCase();
+    const nextVal=()=>lastUang(lines[idx+1]||'')&&!/[A-Za-z]{3,}/.test(lines[idx+1]||'')?lastUang(lines[idx+1]):null;
+    if(/sub\s*-?\s*total/i.test(low)){const v=lastUang(ln)??nextVal();if(v!=null)sub=v;return}
+    if(TOTALRE.test(low)&&!/total\s*(item|qty|barang|produk)/i.test(low)){const v=lastUang(ln)??nextVal();if(v!=null){if(/grand/i.test(low)){tot=v;res._grand=true}else if(!res._grand)tot=v}return}
+    if(/\b(tunai|cash|dibayar|bayar)\b/i.test(low)){const v=lastUang(ln)??nextVal();if(v!=null&&res.tunai==null)res.tunai=v;return}
+    if(/kembali|change/i.test(low)){const v=lastUang(ln)??nextVal();if(v!=null&&res.kembali==null)res.kembali=v;return}
+    if(/\b(ppn|pajak|tax)\b/i.test(low)){const v=lastUang(ln);if(v!=null&&res.ppn==null)res.ppn=v;return}
+    if(/diskon|\bdisc\b|potongan/i.test(low)){const v=lastUang(ln);if(v!=null)res.diskon=(res.diskon||0)+v;return}
+    if(STOP.test(ln)){return}
+    const{s,tok}=tokenAngka(ln),uang=tok.filter(t=>t.uang);
+    const huruf=s.replace(/[^A-Za-z]/g,'').length;
+    if(!uang.length){if(huruf>=3&&!DATERE.some(r=>r.test(ln)))pend=bersih(s);return}
+    const jumlah=uang[uang.length-1];
+    let harga=uang.length>=2?uang[uang.length-2]:null;
+    /* teks tanpa angka uang, untuk nama & qty */
+    let rest=s;for(const t of uang.slice().reverse())rest=rest.slice(0,t.i)+' '+rest.slice(t.e);
+    let qty=null,m;
+    let satuan=null;
+    if((m=rest.match(new RegExp('(\\d+(?:[.,]\\d+)?)\\s*('+UNIT+')?\\s*[xX×@*]\\s*','i')))&&!/^[xX×@*]/.test(m[0])){qty=parseAngka(m[1]);satuan=m[2]?m[2].toLowerCase():null;rest=rest.replace(m[0],' ')}
+    else if((m=rest.match(/^\s*(\d{1,3})\s+(?=[A-Za-z])/))){qty=+m[1];rest=rest.replace(m[0],' ')}
+    else if((m=rest.match(/[xX×]\s*(\d{1,3})\b/))){qty=+m[1];rest=rest.replace(m[0],' ')}
+    if(qty==null&&(m=rest.match(/\s(\d{1,3})\s*$/))&&huruf>=3){qty=+m[1];rest=rest.slice(0,m.index)}
+    let nama=bersih(rest).replace(/\s+[@×*xX]\s*$/,'').replace(/^[@×*]\s+/,'');
+    if(nama.replace(/[^A-Za-z]/g,'').length<2){if(pend){nama=pend}else nama=''}
+    pend=null;
+    if(!nama)return;
+    let hg=harga?harga.v:null,jm=jumlah.v;
+    if(hg!=null&&qty==null){const q=jm/hg;if(q>=0.05&&q<=1000&&Math.abs(q*100-Math.round(q*100))<1e-6)qty=Math.round(q*100)/100;else{hg=null}}
+    if(qty==null)qty=1;
+    if(hg==null)hg=Math.round(jm/qty*100)/100;
+    const it={nama:nama.slice(0,60),qty,harga:hg,jumlah:jm};if(satuan)it.satuan=satuan;if(Math.abs(qty*hg-jm)>1.5)it.periksa=true;res.item.push(it);
+  });
+  res.total=tot!=null?tot:sub;res.subtotal=sub;delete res._grand;
+  return res;
+};
+
+/* ---------- penyimpanan nota ---------- */
+const muat=()=>{try{const a=JSON.parse(localStorage.getItem(KN)||'[]');return Array.isArray(a)?a:[]}catch(e){return[]}};
+const simpan=a=>{
+  while(a.length>300)a.shift();
+  for(let i=0;i<4;i++){try{localStorage.setItem(KN,JSON.stringify(a));return true}catch(e){a.splice(0,Math.ceil(a.length/4))}}
+  return false;
+};
+const nextId=a=>(a.reduce((m,n)=>Math.max(m,n.id||0),0)||0)+1;
+const rp=v=>v==null?'-':'Rp '+Math.round(v).toLocaleString('id-ID');
+const jumlahItem=n=>(n.item||[]).reduce((s,i)=>s+(i.jumlah||0),0);
+
+/* tabel "nota" untuk alat data_olah / grafik */
+const EXTRA=window.__xanaExtra=window.__xanaExtra||{};
+EXTRA.nota=()=>{
+  const rows=[];
+  for(const n of muat()){
+    const tg=n.tanggal||n.dicatat||null,d=tg?new Date(tg+'T00:00:00Z'):null;
+    const T=d&&!isNaN(d)?d:null;
+    if(n.item&&n.item.length)for(const i of n.item)rows.push([n.id,T,n.toko||null,i.nama,i.qty,i.harga,i.jumlah]);
+    else if(n.total!=null)rows.push([n.id,T,n.toko||null,'(tanpa rincian)',1,n.total,n.total]);
+  }
+  return{cols:['nota_id','tanggal','toko','barang','qty','harga','jumlah'],types:['teks','tanggal','teks','teks','angka','angka','angka'],rows:rows.map(r=>{r[0]=String(r[0]);return r}),sheet:'nota',sheets:['nota']};
+};
+
+/* ---------- alat ---------- */
+const kirim=(nama,blob)=>{const F=window.XF;if(!F||!F.q)throw new Error('Penampung berkas tidak tersedia');if(F.q.length>=5)throw new Error('Maksimal 5 berkas per jawaban');F.q.push({name:nama,blob,t:Date.now()})};
+const ringkas=n=>({id:n.id,toko:n.toko||null,tanggal:n.tanggal||null,total:n.total==null?null:n.total,jumlah_barang:(n.item||[]).length});
+const T_baca=async a=>{
+  gate();a=a||{};
+  const g=pilihGambar(a.gambar||a.foto||a.berkas);
+  const lang=/^(eng|en)$/i.test(a.bahasa||'')?'eng':'ind';
+  const putar=a.putar==null?null:parseInt(a.putar,10);
+  const t0=Date.now();
+  PROG=p=>say(p<0?'🔍 menyiapkan mesin OCR (pertama kali agak lama)…':'🔍 membaca nota… '+p+'%');
+  say('🔍 menyiapkan foto…');
+  let r;
+  try{r=await bacaOCR(await g.get(),lang,putar)}finally{PROG=null;clearSay()}
+  const text=r.text.trim();
+  if(text.replace(/[^A-Za-z0-9]/g,'').length<12)throw new Error('Hampir tidak ada tulisan yang terbaca (keyakinan '+r.conf+'%). Minta pengguna memotret ulang: lurus, terang, tanpa bayangan, struk memenuhi frame.');
+  const p=parseNota(text);
+  const jm=p.item.reduce((s,i)=>s+i.jumlah,0);
+  const selisih=p.total!=null&&p.item.length?Math.round((jm-p.total)*100)/100:null;
+  const cocok=selisih===null?null:Math.abs(selisih)<=1;
+  const nota={id:0,berkas:g.name,toko:p.toko,tanggal:p.tanggal,total:p.total,tunai:p.tunai,kembali:p.kembali,diskon:p.diskon,ppn:p.ppn,item:p.item,dicatat:new Date().toISOString().slice(0,10),yakin:r.conf,cocok};
+  let saved=false;
+  if(a.simpan!==false){const L=muat();nota.id=nextId(L);L.push(nota);saved=simpan(L)}
+  const o={ok:true,id:saved?nota.id:null,berkas:g.name,keyakinan_ocr:r.conf+'%',toko:p.toko,tanggal:p.tanggal,
+    barang:p.item.map((i,k)=>{const o={no:k+1,nama:i.nama,qty:i.qty,harga:i.harga,jumlah:i.jumlah};if(i.satuan)o.satuan=i.satuan;if(i.periksa)o.periksa=true;return o}),
+    total_terdeteksi:p.total,jumlah_barang_dihitung:p.item.length?jm:null,tunai:p.tunai,kembali:p.kembali,diskon:p.diskon,ppn:p.ppn,
+    cocok:cocok,selisih:selisih,disimpan:saved,waktu_detik:Math.round((Date.now()-t0)/100)/10};
+  const cat=[];
+  if(!p.item.length)cat.push('Tidak ada baris barang yang bisa diurai; bacakan dari "teks_mentah" bila perlu.');
+  if(cocok===false)cat.push('Jumlah barang ('+rp(jm)+') tidak sama dengan total ('+rp(p.total)+'). Bisa karena diskon/PPN/ongkir atau salah baca angka; periksa "teks_mentah" dan perbaiki dengan nota_ubah.');
+  const bad=p.item.map((i,k)=>i.periksa?k+1:0).filter(Boolean);
+  if(bad.length)cat.push('Barang no. '+bad.join(', ')+' tidak konsisten (qty × harga ≠ jumlah), kemungkinan salah baca angka; periksa foto atau minta pengguna memastikan.');
+  if(r.conf<70)cat.push('Keyakinan OCR rendah ('+r.conf+'%): angka bisa keliru, minta pengguna memeriksa.');
+  if(!p.tanggal)cat.push('Tanggal tidak terbaca.');
+  cat.push('OCR bisa salah baca; sampaikan hasil apa adanya dan ajak pengguna mengecek angka penting. Gunakan nota_ubah untuk koreksi.');
+  o.catatan=cat.join(' ');
+  o.teks_mentah=text.length>1800?text.slice(0,1800)+'…':text;
+  return o;
+};
+const T_ubah=async a=>{
+  gate();a=a||{};const L=muat();
+  if(!L.length)throw new Error('Belum ada nota tersimpan');
+  const ref=a.id==null||a.id==='terakhir'?L[L.length-1].id:parseInt(a.id,10);
+  const i=L.findIndex(n=>n.id===ref);if(i<0)throw new Error('Nota id '+a.id+' tidak ada. Id tersedia: '+L.slice(-15).map(n=>n.id).join(', '));
+  if(a.hapus===true||a.hapus==='ya'){const d=L.splice(i,1)[0];simpan(L);return{ok:true,dihapus:ringkas(d)}}
+  const n=L[i];
+  if(a.toko!==undefined)n.toko=a.toko==null?null:String(a.toko).slice(0,60);
+  if(a.tanggal!==undefined){if(a.tanggal===null)n.tanggal=null;else{const t=cariTanggal(String(a.tanggal))||(/^\d{4}-\d{2}-\d{2}$/.test(String(a.tanggal))?String(a.tanggal):null);if(!t)throw new Error('tanggal tidak dikenali (pakai format 2026-11-26)');n.tanggal=t}}
+  if(a.total!==undefined){const v=typeof a.total==='number'?a.total:parseAngka(String(a.total));if(v==null)throw new Error('total bukan angka');n.total=v}
+  if(Array.isArray(a.item||a.barang)){
+    n.item=(a.item||a.barang).slice(0,200).map(x=>{
+      const q=Number(x.qty!=null?x.qty:1)||1,h=x.harga!=null?Number(x.harga):null,j=x.jumlah!=null?Number(x.jumlah):(h!=null?Math.round(h*q*100)/100:null);
+      if(!x.nama||j==null||!isFinite(j))throw new Error('setiap barang butuh "nama" dan "jumlah" (atau "harga")');
+      return{nama:String(x.nama).slice(0,60),qty:q,harga:h!=null?h:Math.round(j/q*100)/100,jumlah:j};
+    });
+  }
+  const jm=jumlahItem(n);n.cocok=n.total!=null&&n.item.length?Math.abs(jm-n.total)<=1:null;
+  const ok=simpan(L);
+  return{ok:ok,nota:{...ringkas(n),barang:n.item.map((x,k)=>({no:k+1,...x})),jumlah_barang_dihitung:jm,cocok:n.cocok}};
+};
+const T_daftar=async a=>{
+  gate();a=a||{};let L=muat();
+  const d1=a.dari?cariTanggal(String(a.dari))||String(a.dari):null,d2=a.sampai?cariTanggal(String(a.sampai))||String(a.sampai):null;
+  if(d1||d2)L=L.filter(n=>{const t=n.tanggal||n.dicatat||'';return(!d1||t>=d1)&&(!d2||t<=d2)});
+  if(a.toko){const q=String(a.toko).toLowerCase();L=L.filter(n=>String(n.toko||'').toLowerCase().includes(q))}
+  const tot=L.reduce((s,n)=>s+(n.total!=null?n.total:jumlahItem(n)),0);
+  const o={jumlah_nota:L.length,total_semua:tot,total_rp:rp(tot),daftar:L.slice(-40).map(n=>({...ringkas(n),cocok:n.cocok}))};
+  if(L.length>40)o.catatan='Hanya 40 nota terakhir yang ditampilkan.';
+  if(a.csv||a.ekspor==='csv'){
+    const esc=v=>{v=v==null?'':String(v);return/[",\n\r]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v};
+    const rows=[['nota_id','tanggal','toko','barang','qty','harga','jumlah']];
+    for(const n of L){if(n.item&&n.item.length)for(const i of n.item)rows.push([n.id,n.tanggal||n.dicatat,n.toko,i.nama,i.qty,i.harga,i.jumlah]);else rows.push([n.id,n.tanggal||n.dicatat,n.toko,'(tanpa rincian)',1,n.total,n.total])}
+    kirim('nota-rekap.csv',new Blob(['﻿'+rows.map(r=>r.map(esc).join(',')).join('\r\n')],{type:'text/csv;charset=utf-8'}));
+    o.berkas_csv='nota-rekap.csv';o.catatan=(o.catatan?o.catatan+' ':'')+'File CSV tersedia dengan tombol Unduh/Bagikan di chat.';
+  }
+  o.petunjuk='Untuk analisis lebih lanjut (per barang, per bulan, grafik) pakai data_olah / grafik dengan berkas "nota" bila alat Analis Data menyala.';
+  return o;
+};
+
+/* ---------- pendaftaran alat ---------- */
+const REG={nota_baca:T_baca,nota_ubah:T_ubah,nota_daftar:T_daftar};
+for(const k of Object.keys(REG))if(!XT[k])XT[k]=REG[k];
+
+const MK='[Alat OCR Nota]';
+const HINT=()=>'\n\n'+MK+' Dipakai bila pengguna melampirkan foto nota/struk/kwitansi dan meminta dibaca, dicatat, dijumlahkan, atau direkap. Panggil dengan satu baris <tool>{"name":"...","args":{...}}</tool>. OCR berjalan di browser (tanpa kuota API) dan bisa salah baca; sampaikan hasil apa adanya, sebut bila ada ketidakcocokan total, dan ajak pengguna memeriksa angka penting. Jangan mengarang barang atau angka yang tidak ada di hasil.\n'
+ +'- nota_baca {"gambar":"terakhir"} : baca foto (terakhir / nomor / nama file) lalu urai jadi toko, tanggal, barang (nama, qty, harga, jumlah), total, dan cek kecocokan. Otomatis disimpan. Opsi: "bahasa":"ind|eng", "putar":90 (bila foto miring), "simpan":false.\n'
+ +'- nota_ubah {"id":"terakhir","toko":"..","tanggal":"2026-11-26","total":150000,"item":[{"nama":"Beras 5kg","qty":2,"harga":65000}]} : koreksi hasil OCR (item menggantikan seluruh daftar), atau {"id":3,"hapus":true}.\n'
+ +'- nota_daftar {"dari":"2026-11-01","sampai":"2026-11-30","toko":"..","csv":true} : rekap nota tersimpan (jumlah nota, total). "csv":true mengirim file CSV.';
+const prevG=window.galeriSysFor;
+window.galeriSysFor=function(b){
+  let s='';
+  try{s=typeof prevG==='function'?(prevG.apply(this,arguments)||''):''}catch(e){s=''}
+  try{if(on()&&b&&!b.image_gen&&typeof b.system==='string'&&b.system.includes('[Info perangkat pengguna]')&&!String(s).includes(MK))s=String(s)+HINT()}catch(e){}
+  return s;
+};
+
+/* ---------- saklar di Pengaturan (bagian "Alat Analisis", dipakai bersama blok Analis Data) ---------- */
+const CSS='#xana-wrap{margin:18px 0 8px;padding:14px 16px;border-radius:16px;background:#161618;border:1px solid #2b2b2e}#xana-wrap>b{display:block;font-size:15px;color:#fff;font-weight:600}#xana-wrap>span{display:block;font-size:12.5px;color:#8e8e93;margin:2px 0 8px;line-height:1.35}.xana-r{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:10px 0;border-top:1px solid #2b2b2e}.xana-r div{min-width:0}.xana-r div b{display:block;font-size:14px;color:#fff;font-weight:600}.xana-r div span{display:block;font-size:12px;color:#8e8e93;margin-top:2px;line-height:1.35}.xana-s{position:relative;width:58px;height:32px;border-radius:16px;background:#2c2c2e;border:0;padding:0;flex:none;transition:background .25s}.xana-s::after{content:"";position:absolute;top:3px;left:3px;width:26px;height:26px;border-radius:50%;background:#fff;transition:transform .25s cubic-bezier(.2,.8,.2,1)}.xana-s.on{background:#30d158}.xana-s.on::after{transform:translateX(26px)}.xana-s:active{opacity:.8}';
+if(!document.getElementById('xana-css')){const st=document.createElement('style');st.id='xana-css';st.textContent=CSS;document.head.appendChild(st)}
+const SWS=window.__xanaSW=window.__xanaSW||[];
+SWS.push({id:'ocr',nama:'OCR Nota/Struk',ket:'Foto nota atau struk dibaca jadi daftar barang dan total, dicek jumlahnya, lalu bisa direkap. Jalan di browser tanpa kuota API; pemakaian pertama mengunduh mesin OCR (±10 MB), selanjutnya dari cache.',on,setOn});
+const pasang=()=>{
+  const sm=document.getElementById('sm');if(!sm||sm.hidden)return;
+  let w=sm.querySelector('#xana-wrap');
+  if(!w){w=document.createElement('div');w.id='xana-wrap';w.innerHTML='<b>Alat Analisis</b><span>Semua mati secara bawaan. Setelah dinyalakan pun, bot memakainya hanya kalau kamu memintanya.</span>';sm.appendChild(w)}
+  for(const s of SWS){
+    if(w.querySelector('[data-xana="'+s.id+'"]'))continue;
+    const r=document.createElement('div');r.className='xana-r';r.setAttribute('data-xana',s.id);
+    const d=document.createElement('div'),b=document.createElement('b'),sp=document.createElement('span');b.textContent=s.nama;sp.textContent=s.ket;d.append(b,sp);
+    const btn=document.createElement('button');btn.type='button';btn.className='xana-s'+(s.on()?' on':'');btn.setAttribute('aria-label',s.nama);btn.setAttribute('aria-pressed',s.on()?'true':'false');
+    btn.onclick=()=>{const v=!s.on();s.setOn(v);btn.classList.toggle('on',v);btn.setAttribute('aria-pressed',v?'true':'false')};
+    r.append(d,btn);w.appendChild(r);
+  }
+};
+const smEl=document.getElementById('sm');
+if(smEl)new MutationObserver(pasang).observe(smEl,{attributes:true,attributeFilter:['hidden']});
+setTimeout(pasang,1000);setTimeout(pasang,1700);
+window.__xanaOcr={on,setOn,tools:Object.keys(REG),_t:{parseNota,cariTanggal,muat,simpan,bacaOCR,siapkan}};
+}catch(e){try{console.warn('OCR Nota tidak aktif:',e)}catch(_){}}
+})();
+</script>
+<!-- ===== AKHIR OCR NOTA / STRUK ===== -->
 </body></html>
