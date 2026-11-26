@@ -11974,7 +11974,7 @@ window.__xanaOcr={on,setOn,tools:Object.keys(REG),_t:{parseNota,cariTanggal,muat
 })();
 </script>
 <!-- ===== AKHIR OCR NOTA / STRUK ===== -->
-<!-- ===== AI DI PERANGKAT (Pengaturan): saklar + hapus latar/edit foto lokal + model AI lokal WebGPU. Semua MATI bawaan. Hapus blok ini untuk membatalkan ===== -->
+<!-- ===== AI DI PERANGKAT (Pengaturan): saklar + hapus latar/edit foto lokal. Semua MATI bawaan. Hapus blok ini untuk membatalkan ===== -->
 <style>
 .ldv-wrap{display:flex;align-items:center;justify-content:space-between;gap:14px;margin:8px 0;padding:14px 16px;border-radius:16px;background:#161618;border:1px solid #2b2b2e}
 .ldv-wrap .hm-tx{flex:1;min-width:0}
@@ -11994,10 +11994,9 @@ window.__xanaOcr={on,setOn,tools:Object.keys(REG),_t:{parseNota,cariTanggal,muat
 <script>
 (()=>{try{
 if(window.__ondev)return;
-const K_FOTO='xbot_ondev_foto',K_LLM='xbot_ondev_llm';
+const K_FOTO='xbot_ondev_foto';
 const TF='https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.1.2';
-const WL='https://cdn.jsdelivr.net/npm/@mlc-ai/web-llm@0.2.78/+esm';
-const BG_ID='briaai/RMBG-1.4',LLM_ID='Qwen2.5-0.5B-Instruct-q4f16_1-MLC';
+const BG_ID='briaai/RMBG-1.4';
 const get=k=>{try{return localStorage.getItem(k)==='1'}catch(e){return false}},set=(k,v)=>{try{localStorage.setItem(k,v?'1':'0')}catch(e){}};
 const E=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 let tt=0;
@@ -12109,104 +12108,17 @@ window.addEventListener('click',e=>{
  }catch(err){}
 },true);
 
-/* ================= 6. MODEL AI DI PERANGKAT (WebGPU) ================= */
-let eng=null,engP=null,idleT=0;
-async function isCached(){try{const W=await import(WL);return await W.hasModelInCache(LLM_ID)}catch(e){return false}}
-function loadLLM(cb){
- if(eng)return Promise.resolve(eng);
- if(engP)return engP;
- engP=(async()=>{
-  if(!navigator.gpu)throw new Error('WebGPU tidak tersedia di perangkat/browser ini (butuh iOS terbaru).');
-  const W=await import(WL);
-  eng=await W.CreateMLCEngine(LLM_ID,{initProgressCallback:r=>{try{cb&&cb(r)}catch(e){}}});
-  return eng;
- })();
- engP.catch(()=>{engP=null});
- return engP;
-}
-async function unloadLLM(){clearTimeout(idleT);const e=eng;eng=null;engP=null;try{if(e)await e.unload()}catch(x){}}
-function msgsFor(b){
- const sys='Kamu asisten pribadi yang ramah. Jawab dalam bahasa Indonesia, singkat dan jelas. Saat ini kamu berjalan offline di perangkat tanpa internet, jadi jangan mengaku bisa mencari di web atau membuka tautan.'+(b.now?' Waktu sekarang: '+b.now+'.':'');
- const out=[{role:'system',content:sys}];
- const src=(Array.isArray(b.messages)?b.messages:[]).filter(m=>m&&(m.role==='user'||m.role==='assistant')).slice(-6);
- for(const m of src){let c=m.content;if(Array.isArray(c))c=c.map(x=>typeof x==='string'?x:(x&&x.text)||'').join('\n');c=String(c==null?'':c).trim();if(!c)continue;if(c.length>1500)c=c.slice(0,1500)+'…';out.push({role:m.role,content:c})}
- while(out.length>1&&out[1].role!=='user')out.splice(1,1);
- return out;
-}
-const H={loadLLM,isCached};
-async function runLocal(b,sg){
- try{
-  if(!navigator.gpu)return{error:'WebGPU tidak tersedia'};
-  if(!eng){
-   const ok=await H.isCached();
-   if(!ok){
-    if(navigator.onLine===false)return{error:'Model lokal belum diunduh'};
-    if(!confirm('Server tidak bisa dihubungi. Unduh model AI lokal (sekitar 1 GB, sekali saja)?'))return{error:'Unduhan dibatalkan'};
-   }
-  }
-  const e=await H.loadLLM(r=>{const p=Math.round(((r&&r.progress)||0)*100);toast('Memuat model lokal '+p+'%',60000)});
-  toastOff();
-  if(sg){if(sg.aborted){try{e.interruptGenerate()}catch(x){}return{text:'(dihentikan)'}}sg.addEventListener('abort',()=>{try{e.interruptGenerate()}catch(x){}},{once:true})}
-  const r=await e.chat.completions.create({messages:msgsFor(b),stream:false,max_tokens:512,temperature:.7});
-  const t=String((r&&r.choices&&r.choices[0]&&r.choices[0].message&&r.choices[0].message.content)||'').replace(/<think>[\s\S]*?<\/think>/gi,'').trim();
-  clearTimeout(idleT);idleT=setTimeout(unloadLLM,180000);
-  return t?{text:'📴 Jawaban dari model lokal di perangkat:\n\n'+t}:{error:'Model lokal tidak memberi jawaban'};
- }catch(err){toastOff();return{error:'Model lokal gagal: '+((err&&err.message)||err)}}
-}
-const NF=window.fetch.bind(window),enc=new TextEncoder();
-const isMain=b=>!!b&&!b.image_gen&&!b.image&&typeof b.system==='string'&&b.system.indexOf('[Info perangkat pengguna]')>=0;
-function pipe(rd,b,sg,first){
- const dec=new TextDecoder();
- const stream=new ReadableStream({async start(c0){
-  const ctl={enqueue:x=>{try{c0.enqueue(x)}catch(e){}},close:()=>{try{c0.close()}catch(e){}},error:x=>{try{c0.error(x)}catch(e){}}};
-  let buf='',held=first||null;
-  const handle=line=>{if(!line.trim())return;let j=null;try{j=JSON.parse(line)}catch(e){}if(j&&j.error&&!j.s){held=line;return}ctl.enqueue(enc.encode(line+'\n'))};
-  if(rd){
-   try{
-    for(;;){const{done,value}=await rd.read();if(done)break;buf+=dec.decode(value,{stream:true});let i;while((i=buf.indexOf('\n'))>=0){handle(buf.slice(0,i));buf=buf.slice(i+1)}}
-    if(buf.trim())handle(buf);
-   }catch(e){if(e&&e.name==='AbortError'){ctl.error(e);return}held=held||JSON.stringify({error:'Koneksi terputus: '+((e&&e.message)||e)})}
-  }
-  if(held){
-   ctl.enqueue(enc.encode(JSON.stringify({s:'think'})+'\n'));
-   const o=await runLocal(b,sg);
-   ctl.enqueue(enc.encode(JSON.stringify(o.text?{text:o.text}:(()=>{try{const h=JSON.parse(held);return h&&h.error&&h.error!=='offline'?h:{error:'Tidak ada koneksi, dan '+(o.error||'model lokal tidak tersedia')}}catch(e){return{error:o.error||'Gagal'}}})())+'\n'));
-  }
-  ctl.close();
- }});
- return new Response(stream,{status:200,headers:{'Content-Type':'application/x-ndjson'}});
-}
-window.fetch=async function(input,init){
- let b=null;
- try{if(get(K_LLM)&&init&&typeof init.body==='string'){const url=typeof input==='string'?input:(input&&input.url)||'';if(/\/chat\/?(\?|$)/.test(url)){const j=JSON.parse(init.body);if(isMain(j))b=j}}}catch(e){}
- if(!b)return NF(input,init);
- const sg=init&&init.signal;
- if(navigator.onLine===false)return pipe(null,b,sg,JSON.stringify({error:'offline'}));
- let r;
- try{r=await NF(input,init)}catch(e){if(e&&e.name==='AbortError')throw e;return pipe(null,b,sg,JSON.stringify({error:'offline'}))}
- if(!r.ok||!r.body){const o=await runLocal(b,sg);return o.text?new Response(JSON.stringify({text:o.text})+'\n',{status:200,headers:{'Content-Type':'application/x-ndjson'}}):r}
- return pipe(r.body.getReader(),b,sg,null);
-};
-
 /* ================= Pengaturan: saklar + tombol siapkan model ================= */
 const ITEMS=[
- {id:'ldv-foto',k:K_FOTO,t:'Edit foto di perangkat',d:'Hapus latar dan edit foto (hitam putih, sepia, cerah, gelap, kontras, putar, balik) langsung di HP tanpa kirim foto keluar. Ketik misalnya "hapus latar" saat foto terlampir. Model sekitar puluhan MB. Mati: foto diproses Gemini seperti biasa.',prep:'Unduh model hapus latar',kind:'foto'},
- {id:'ldv-llm',k:K_LLM,t:'Model AI di perangkat (cadangan offline)',d:'Dipakai hanya saat offline atau server gagal, untuk chat teks biasa. Unduhan sekitar 1 GB, butuh WebGPU (iOS terbaru), jawaban lebih lambat dan kurang pintar, tanpa pencarian web. Mati: perilaku semula.',prep:'Unduh model AI lokal',kind:'llm'}
+ {id:'ldv-foto',k:K_FOTO,t:'Edit foto di perangkat',d:'Hapus latar dan edit foto (hitam putih, sepia, cerah, gelap, kontras, putar, balik) langsung di HP tanpa kirim foto keluar. Ketik misalnya "hapus latar" saat foto terlampir. Model sekitar puluhan MB. Mati: foto diproses Gemini seperti biasa.',prep:'Unduh model hapus latar',kind:'foto'}
 ];
 async function prep(kind,st,btn){
  btn.disabled=true;
  try{
-  if(kind==='foto'){
-   st.textContent='Memuat library...';
-   const o=await loadBg(p=>{st.textContent='Mengunduh... '+p+'%'});
-   try{await o.model.dispose()}catch(e){}
-   bgP=null;
-  }else{
-   if(!navigator.gpu){st.textContent='WebGPU tidak tersedia di perangkat ini.';btn.disabled=false;return}
-   st.textContent='Memuat library...';
-   await loadLLM(r=>{st.textContent=((r&&r.text)?String(r.text).slice(0,60):'Mengunduh')+' '+Math.round(((r&&r.progress)||0)*100)+'%'});
-   await unloadLLM();
-  }
+  st.textContent='Memuat library...';
+  const o=await loadBg(p=>{st.textContent='Mengunduh... '+p+'%'});
+  try{await o.model.dispose()}catch(e){}
+  bgP=null;
   st.textContent='Siap dipakai ✓ (tersimpan di perangkat)';
  }catch(err){st.textContent='Gagal: '+((err&&err.message)||err)}
  btn.disabled=false;
@@ -12222,7 +12134,6 @@ function pasang(){
   const b=d.querySelector('.ldv-btn'),pb=d.querySelector('.ldv-prep'),st=d.querySelector('.ldv-st');
   b.onclick=()=>{
    const v=!get(it.k);
-   if(v&&it.kind==='llm'&&!navigator.gpu){alert('Perangkat atau browser ini belum mendukung WebGPU (butuh iOS terbaru). Saklar tidak dinyalakan.');return}
    set(it.k,v);b.classList.toggle('on',v);b.setAttribute('aria-pressed',v?'true':'false');
   };
   pb.onclick=()=>prep(it.kind,st,pb);
@@ -12235,8 +12146,139 @@ function pasang(){
 const sm=document.getElementById('sm');
 if(sm){new MutationObserver(pasang).observe(sm,{attributes:true,attributeFilter:['hidden'],childList:true})}
 setTimeout(pasang,1100);
-window.__ondev={foto:()=>get(K_FOTO),llm:()=>get(K_LLM),_t:{parse,applyOps,runLocal,msgsFor,H}};
+window.__ondev={foto:()=>get(K_FOTO),_t:{parse,applyOps}};
 }catch(e){try{console.warn('AI di perangkat tidak aktif:',e)}catch(_){}}})();
 </script>
 <!-- ===== AKHIR AI DI PERANGKAT ===== -->
+<!-- ===== ROUTER MODEL OTOMATIS (blok terpisah di akhir file; kode lama tidak diubah; saklar bawaan MATI; untuk mencopot hapus dari tanda ini sampai "AKHIR ROUTER MODEL") ===== -->
+<style id="xrouter-css">
+#xr-wrap{margin:8px 0;padding:14px 16px;border-radius:16px;background:#161618;border:1px solid #2b2b2e}
+#xr-wrap .xr-top{display:flex;align-items:center;justify-content:space-between;gap:14px}
+#xr-wrap b{display:block;font-size:15px;color:#fff;font-weight:600}
+#xr-wrap span{display:block;font-size:12.5px;color:#8e8e93;margin-top:2px;line-height:1.35}
+#xr-wrap i{display:block;font-style:normal;font-size:12px;color:#30d158;margin-top:6px}
+#xr-wrap label{display:block;font-size:12.5px;color:#d1d1d6;margin-top:10px}
+#xr-wrap select{width:100%;margin-top:4px}
+#xr-btn{position:relative;width:58px;height:32px;border-radius:16px;background:#2c2c2e;border:0;padding:0;flex:none;transition:background .25s}
+#xr-btn::after{content:"";position:absolute;top:3px;left:3px;width:26px;height:26px;border-radius:50%;background:#fff;transition:transform .25s cubic-bezier(.2,.8,.2,1)}
+#xr-btn.on{background:#30d158}
+#xr-btn.on::after{transform:translateX(26px)}
+</style>
+<script id="xrouter-js">
+/* Pertanyaan ringan -> model murah/cepat; kode, analisis, dokumen -> model kuat. Hanya chat utama.
+   Klasifikasi di browser (tanpa panggilan tambahan). Ragu = model berat. Pengaturan model pengguna tidak diubah.
+   Tidak ikut campur: foto, buat gambar, obrolan bot di panel, mode OpenRouter "only/all", dan saat saklar mati. */
+(()=>{try{
+if(window._xRouter)return;window._xRouter=1;
+const K='xbot_router',KL='xbot_router_light',KH='xbot_router_heavy';
+const LS={g:k=>{try{return localStorage.getItem(k)}catch(e){return null}},s:(k,v)=>{try{v?localStorage.setItem(k,v):localStorage.removeItem(k)}catch(e){}}};
+const on=()=>LS.g(K)==='1';
+const LIGHT={gemini:['gemini:gemini-3.5-flash-lite','gemini:gemini-3.1-flash-lite','gemini:gemini-2.5-flash-lite'],groq:['groq:openai/gpt-oss-20b']};
+const STRONG={gemini:['gemini:gemini-3.8-flash','gemini:gemini-3.6-flash','gemini:gemini-2.5-flash'],groq:['groq:openai/gpt-oss-120b']};
+const ISLIGHT=/flash-lite|gpt-oss-20b/i;
+const BAD=new Map();let last=null;
+
+/* ---------- penilai berat/ringan ---------- */
+const HEAVY=/```|\[File "|\b(kode|koding|coding|code|ngoding|script|skrip|program|pemrograman|python|javascript|typescript|js|html|css|php|java|kotlin|sql|query|database|api|json|regex|bug|debug|error|eror|fungsi|function|algoritma|aplikasi|website|web ?app|artefak|artifact|server|deploy|git(hub)?)\b|analisis|analisa|menganalisis|analy[sz]|bandingkan|perbandingan|evaluasi|riset|penelitian|strategi|rencana|rancang|desain|arsitektur|dokumen|document|docx|\bword\b|excel|xlsx|pptx|\bpdf\b|\bcsv\b|presentasi|slide|laporan|proposal|makalah|skripsi|tesis|jurnal|esai|essay|artikel|\bsurat\b|\bcv\b|resume|kontrak|tabel|grafik|chart|diagram|\bdata\b|statistik|hitung|matematika|rumus|persamaan|integral|turunan|buktikan|jelaskan|penjelasan|secara (rinci|detail|lengkap|mendalam)|detail|mendalam|langkah|tutorial|ajari|rangkum|ringkas|terjemahkan|translate|tuliskan|buatkan|\bbuat(lah|in)?\b|bikin|susun|perbaiki|benerin|revisi|optimalkan|review|periksa|cek ulang|kenapa|mengapa|bagaimana|gimana cara|\bwhy\b|how to/i;
+const FRESH=/terbaru|terkini|\bberita\b|hari ini|latest|\bnews\b|klasemen|\bskor\b|harga/i;
+const CHITCHAT=/^\s*(hai|halo|hallo|helo|hi|hello|hey|p|ping|tes|test|pagi|siang|sore|malam|selamat \w+|assalamu.?alaikum|apa kabar|makasih|terima kasih|thanks|thank you|thx|ok|oke|okay|sip|siap|mantap|keren|bagus|wkwk+|haha+|hehe+|iya|ya|gak|nggak|tidak)([\s,.!?]+(kak|bang|bro|min|ya|deh|banget|bot|semua))*[\s.!?\p{Extended_Pictographic}️]*$/iu;
+const FOLLOW=/^\s*(lanjut|lanjutkan|terus|teruskan|continue|lagi|coba lagi|ulangi|masih|belum|tetap|sama|yang (tadi|itu|atas|nomor)|kalau|kalo|bisa|tolong|iya|ya|oke|ok|gas|ganti|ubah|tambah|hapus|nomor|no\.?\s*\d|[1-9]\b)/i;
+const txt=m=>{const c=m&&m.content;return typeof c==='string'?c:Array.isArray(c)?c.map(x=>(x&&x.text)||'').join(' '):''};
+const isHeavyText=u=>u.length>220||u.split('\n').length>4||HEAVY.test(u)||FRESH.test(u);
+function classify(msgs){
+  const users=(msgs||[]).filter(m=>m&&m.role==='user').map(txt).filter(s=>s&&s.indexOf('[HASIL ALAT')!==0);
+  const u=(users[users.length-1]||'').trim();
+  if(!u)return'berat';
+  if(CHITCHAT.test(u))return'ringan';
+  if(LS.g('xbot_agent9')==='1'||isHeavyText(u))return'berat';
+  /* lanjutan pendek dari topik berat tetap memakai model berat */
+  if(u.length<=80&&FOLLOW.test(u)){
+    const prev=users.slice(-4,-1),as=(msgs||[]).filter(m=>m&&m.role==='assistant').slice(-1).map(txt).join('');
+    if(prev.some(isHeavyText)||/```|<tool>/.test(as)||as.length>900)return'berat';
+  }
+  return'ringan';
+}
+
+/* ---------- pemilih model ---------- */
+const list=()=>{try{const m=(typeof MODELS!=='undefined'&&Array.isArray(MODELS)&&MODELS.length)?MODELS:FALLBACK_MODELS;return m.filter(x=>x&&typeof x.id==='string'&&x.id.indexOf(':')>0)}catch(e){return[]}};
+const live=m=>(BAD.get(m)||0)<Date.now();
+function choose(kind,orig){
+  const manual=LS.g(kind==='ringan'?KL:KH);
+  if(manual)return live(manual)?manual:orig;
+  const pv=String(orig).split(':')[0],ids=list().map(x=>x.id);
+  const first=a=>(a||[]).find(m=>ids.includes(m)&&live(m));
+  if(kind==='ringan')return ISLIGHT.test(orig)?orig:(first(LIGHT[pv])||orig);
+  return ISLIGHT.test(orig)?(first(STRONG[pv])||orig):orig;
+}
+
+/* ---------- penyambung: hanya mengganti body.model pada permintaan chat utama ---------- */
+const orMode=()=>{try{return(typeof cfg!=='undefined'&&cfg&&cfg.orMode)||'off'}catch(e){return'off'}};
+const SALAH=/\b(400|401|403|404)\b|model[^.]{0,80}(not|tidak|unknown|invalid|unsupported|decommission|deprecat)|not.?found|not supported|api.?key|unauthori[sz]ed|permission|key kosong/i;
+const prev=window.fetch;
+window.fetch=function(input,init){
+  const self=this,args=arguments;
+  let b,routed,orig,kind;
+  try{
+    if(!on()||!init||typeof init.body!=='string')return prev.apply(self,args);
+    const url=typeof input==='string'?input:(input&&input.url)||'';
+    if(!/\/chat(\?|$)/.test(url)||init.body.indexOf('[Info perangkat pengguna]')<0||orMode()!=='off')return prev.apply(self,args);
+    b=JSON.parse(init.body);
+    if(!b||b.image||b.image_gen||typeof b.system!=='string'||!b.system.includes('[Info perangkat pengguna]')||typeof b.model!=='string')return prev.apply(self,args);
+    orig=b.model;kind=classify(b.messages);routed=choose(kind,orig);
+    last={kind,model:routed,orig};info();
+    if(routed===orig)return prev.apply(self,args);
+  }catch(e){return prev.apply(self,args)}
+  const send=m=>prev.call(self,input,Object.assign({},init,{body:JSON.stringify(Object.assign({},b,{model:m}))}));
+  /* Cadangan: bila model pilihan router ditolak (model/key bermasalah), ulangi sekali dengan model pengguna */
+  return send(routed).then(res=>{
+    if(!res||!res.body)return res;
+    const sig=init.signal;
+    const out=new ReadableStream({async start(c){
+      const enc=new TextEncoder();
+      const pump=async(r,guard)=>{
+        const rd=r.body.getReader(),dc=new TextDecoder();let buf='';
+        const line=l=>{if(!l.trim())return false;if(guard){let j=null;try{j=JSON.parse(l)}catch(e){}
+          if(j&&!j.s&&j.error&&SALAH.test(String(j.error))&&!(sig&&sig.aborted))return true}
+          c.enqueue(enc.encode(l+'\n'));return false};
+        for(;;){const{done,value}=await rd.read();
+          buf+=done?dc.decode():dc.decode(value,{stream:true});let i;
+          while((i=buf.indexOf('\n'))>=0){const l=buf.slice(0,i);buf=buf.slice(i+1);if(line(l))return true}
+          if(done)return line(buf)}
+      };
+      try{
+        if(await pump(res,true)){BAD.set(routed,Date.now()+300000);last={kind,model:orig,orig,back:routed};info();await pump(await send(orig),false)}
+        c.close();
+      }catch(e){c.error(e)}
+    }});
+    return new Response(out,{status:res.status,statusText:res.statusText,headers:res.headers});
+  });
+};
+
+/* ---------- saklar di Pengaturan ---------- */
+const short=m=>String(m).replace(/^[^:]*:/,'');
+const infoTxt=()=>!last?'':'Pesan terakhir: '+last.kind+' → '+short(last.model)+(last.back?' (cadangan, '+short(last.back)+' ditolak)':'');
+function info(){try{const e=document.getElementById('xr-info');if(e)e.textContent=infoTxt()}catch(x){}}
+const esc2=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+function pasang(){
+  const sm=document.getElementById('sm');
+  if(!sm||sm.hidden||sm.querySelector('#xr-wrap'))return;
+  const sel=(id,k,t)=>{const v=LS.g(k)||'';return'<label>'+t+'<select id="'+id+'"><option value="">Otomatis</option>'+list().map(m=>'<option value="'+esc2(m.id)+'"'+(m.id===v?' selected':'')+'>'+esc2(m.id.split(':')[0]+' · '+(m.label||short(m.id)))+'</option>').join('')+'</select></label>'};
+  const d=document.createElement('div');d.id='xr-wrap';
+  d.innerHTML='<div class="xr-top"><div><b>Router model otomatis</b><span>Aktif: pertanyaan ringan ke model murah dan cepat; kode, analisis, dan dokumen ke model kuat. Foto, buat gambar, dan obrolan bot tidak terpengaruh. Mati: selalu memakai model pilihanmu.</span></div><button id="xr-btn" type="button" aria-label="Router model otomatis" aria-pressed="'+on()+'" class="'+(on()?'on':'')+'"></button></div>'
+    +sel('xr-l',KL,'Model ringan')+sel('xr-h',KH,'Model berat')+'<i id="xr-info">'+esc2(infoTxt())+'</i>';
+  const ref=sm.querySelector('#x4-wrap')||sm.querySelector('#hemat-wrap');
+  if(ref&&ref.parentNode===sm)sm.insertBefore(d,ref.nextSibling);else sm.appendChild(d);
+  const bt=d.querySelector('#xr-btn');
+  bt.onclick=()=>{const v=!on();LS.s(K,v?'1':'0');bt.classList.toggle('on',v);bt.setAttribute('aria-pressed',String(v))};
+  d.querySelector('#xr-l').onchange=e=>{LS.s(KL,e.target.value);BAD.clear()};
+  d.querySelector('#xr-h').onchange=e=>{LS.s(KH,e.target.value);BAD.clear()};
+}
+const sm=document.getElementById('sm');
+if(sm){new MutationObserver(pasang).observe(sm,{attributes:true,attributeFilter:['hidden'],childList:true})}
+setTimeout(pasang,1200);
+window.__xrouter={on,classify,choose,last:()=>last,bad:BAD};
+}catch(e){try{console.warn('Router model tidak aktif:',e)}catch(_){}}
+})();
+</script>
+<!-- ===== AKHIR ROUTER MODEL ===== -->
 </body></html>
