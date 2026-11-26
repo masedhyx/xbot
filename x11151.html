@@ -1,5 +1,26 @@
 ﻿<!doctype html>
-<html lang="id"><head><meta charset="utf-8">
+<html lang="id"><head>
+<script>
+/* PENGHEMAT TIMER: jeda semua setInterval saat aplikasi di latar belakang, kecuali saat kamera/mikrofon sedang dipakai. Lanjut otomatis saat dibuka lagi. Hapus blok ini untuk membatalkan. */
+(function(){
+  var SI=window.setInterval.bind(window), CI=window.clearInterval.bind(window);
+  var map=new Map(), nid=1e9, live=0;
+  var gum=navigator.mediaDevices&&navigator.mediaDevices.getUserMedia;
+  var streams=new Set();
+  if(gum){navigator.mediaDevices.getUserMedia=function(c){return gum.call(navigator.mediaDevices,c).then(function(s){streams.add(s);return s})}}
+  function mediaLive(){for(var s of streams){if(s.getTracks().some(function(t){return t.readyState==='live'}))return true;}streams.clear();return false}
+  window.setInterval=function(fn,ms){var a=Array.prototype.slice.call(arguments,2),id=nid++,e={fn:fn,ms:ms,a:a,real:null};map.set(id,e);if(!document.hidden)e.real=SI.apply(null,[fn,ms].concat(a));return id};
+  window.clearInterval=function(id){var e=map.get(id);if(!e)return CI(id);if(e.real)CI(e.real);map.delete(id)};
+  document.addEventListener('visibilitychange',function(){
+    var hid=document.hidden&&!mediaLive();
+    map.forEach(function(e){
+      if(hid){if(e.real){CI(e.real);e.real=null}}
+      else if(!e.real){e.real=SI.apply(null,[e.fn,e.ms].concat(e.a))}
+    });
+  });
+})();
+</script>
+<meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,minimum-scale=1,user-scalable=no,viewport-fit=cover">
 <meta name="theme-color" content="#000000"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="EdhyX">
 <title>EdhyX</title>
@@ -1308,7 +1329,7 @@ async function dayRoll(){
 const GAP={'4.5-8':[4500,8000],'15-25':[15000,25000],'30-60':[30000,60000]};
 const sched=fast=>{clearTimeout(tmr);const g=GAP[P.gap]||GAP['4.5-8'],v=(VIBE[P.vibe]||VIBE.seru).gap;let d=rnd(g[0],g[1])*v;const q=Math.random();if(fast)d=rnd(900,1600);else if(q<.18)d=Math.max(1800,d*.35);else if(q>.92)d*=2.2;tmr=setTimeout(turn,d)};
 async function turn(){
- const g=gen;if(!isO()||busy||TASK)return;const uq=UQ;if(!uq&&FOC)return;
+ const g=gen;if(!isO()||busy||TASK||document.hidden)return;const uq=UQ;if(!uq&&FOC)return;
  if(!uq&&(P.on===false||(P.max&&sent>=P.max)))return;busy=1;
  try{
   await dayRoll();feedRefresh();const{f,t,intent}=plan(),p=amb(f,t,intent),lm=lastMsg();wakeBot(f);
@@ -1453,7 +1474,7 @@ $('#sm').addEventListener('click',e=>{const v=e.target.closest('[data-mv]'),d=e.
 const inject=()=>{document.querySelectorAll('#bl .bi').forEach(b=>{if(!b.querySelector('.cb'))b.insertAdjacentHTML('beforeend','<i class="cb"><em class="ct"></em></i>')});ids().forEach(show)};
 const _rb=renderBots;renderBots=function(){_rb.apply(this,arguments);inject()};
 {let sv={};try{sv=JSON.parse(localStorage.getItem('xbotlast')||'{}')}catch(e){}const q=TP.slice(0,10).sort(()=>Math.random()-.5);ids().forEach((i,j)=>{const z=sv[i];if(z&&z.t){st(i).t=z.t;st(i).tc=(z.tc>=0&&cfg.bots[z.tc])?z.tc:-1;return}const[k,f]=q[j%q.length];st(i).t=clip(k[0].toUpperCase()+k.slice(1)+': '+f)})}inject();
-const sync=()=>{const po=document.body.classList.contains('o'),o=po||winOn();
+const sync=()=>{const po=document.body.classList.contains('o')&&!document.hidden,o=po||winOn();
  if(o){clearTimeout(KT);KEEP=0;AUTO=po?0:1;if(!on){on=1;if(AUTO){GR=({jarang:1,sedang:2,sering:3})[P.ping]||2;GRU=[]}feedRefresh(1);sent=0;gen++;busy=0;clearTimeout(tmr);tmr=setTimeout(turn,1000)}}
  else if(on){
   if(!AUTO){if(!KEEP){KEEP=Date.now()+KEEPMS;clearTimeout(KT);KT=setTimeout(sync,KEEPMS+300);return}
@@ -6303,6 +6324,7 @@ scan();
 .xtl .xy{margin-top:9px;padding-top:9px;border-top:1px solid #2a2c31;font-size:13.5px}
 .xtl .xf{font-size:11px;color:#8b96a7;margin-top:7px}
 @media (prefers-reduced-motion:reduce){.xtl,.xtl .xs i{animation:none}}
+.xtl .xs i{animation:none!important}
 </style>
 <script id="xtl-js">
 (function(){
@@ -6321,8 +6343,8 @@ function tick(){cards=cards.filter(function(c){return c.el.isConnected});cards.f
 function stop(){if(ws){try{ws.onclose=null;ws.close()}catch(e){}ws=null}clearInterval(poll);poll=null;clearTimeout(wsTimer);wsTry=0;gotWs=false;src=''}
 function status(){var fresh=Date.now()-Math.max.apply(null,KEYS.map(function(k){return D[k].up||0}))<8000;return fresh?'live':(src?'off':'conn')}
 function paint(c){var k=c.k,d=D[k],el=c.el,s=status();
- el.classList.toggle('off',s!=='live');el.classList.toggle('err',false);
- el.querySelector('.xs b').textContent=s==='live'?'LIVE':s==='off'?'Terputus, mencoba lagi':'Menyambung…';
+ el.classList.toggle('off',!d.up);el.classList.toggle('err',false);
+ el.querySelector('.xs b').textContent=d.up?'Manual':'Belum diperbarui';
  el.querySelector('.xc').textContent=new Date().toLocaleTimeString('id-ID',{timeZone:'Asia/Jakarta',hour12:false}).replace(/\./g,':')+' WIB';
  if(!d.p){el.querySelector('.xy').textContent='Menunggu data pertama…';return}
  var px=el.querySelector('.xp'),g=el.querySelector('.xg');px.textContent='$'+fmt(d.p);px.className='xp '+(d.dir>0?'u':d.dir<0?'d':'');
@@ -6343,22 +6365,24 @@ function fb(){if(poll||!cards.length)return;var go=async function(){if(gotWs&&Da
   try{var r=await fetch('https://data-api.binance.vision/api/v3/ticker/24hr?symbols='+encodeURIComponent(JSON.stringify(KEYS.map(function(k){return COIN[k].s}))));var a=await r.json();a.forEach(function(j){var k=KEYS.filter(function(x){return COIN[x].s===j.symbol})[0];if(k)setP(k,+j.lastPrice,+j.priceChangePercent,+j.highPrice,+j.lowPrice)});src='Binance (REST)';return}catch(e){}
   try{var r2=await fetch('https://api.coingecko.com/api/v3/simple/price?ids='+KEYS.map(function(k){return COIN[k].g}).join(',')+'&vs_currencies=usd&include_24hr_change=true');var o=await r2.json();KEYS.forEach(function(k){var x=o[COIN[k].g];if(x)setP(k,x.usd,x.usd_24h_change,D[k].hi||x.usd,D[k].lo||x.usd)});src='CoinGecko'}catch(e){}};
  go();poll=setInterval(go,4000)}
+function once(){return (async function(){try{var r=await fetch('https://data-api.binance.vision/api/v3/ticker/24hr?symbols='+encodeURIComponent(JSON.stringify(KEYS.map(function(k){return COIN[k].s}))));var a=await r.json();a.forEach(function(j){var k=KEYS.filter(function(x){return COIN[x].s===j.symbol})[0];if(k)setP(k,+j.lastPrice,+j.priceChangePercent,+j.highPrice,+j.lowPrice)});src='Binance (REST)';return}catch(e){}try{var r2=await fetch('https://api.coingecko.com/api/v3/simple/price?ids='+KEYS.map(function(k){return COIN[k].g}).join(',')+'&vs_currencies=usd&include_24hr_change=true');var o=await r2.json();KEYS.forEach(function(k){var x=o[COIN[k].g];if(x)setP(k,x.usd,x.usd_24h_change,D[k].hi||x.usd,D[k].lo||x.usd)});src='CoinGecko'}catch(e){}})()}
+function refresh(c,btn){btn.disabled=true;btn.textContent='…';loadHist(c.k);once().then(function(){paint(c)}).then(function(){btn.disabled=false;btn.textContent='Perbarui'})}
 function loadHist(k){fetch('https://data-api.binance.vision/api/v3/klines?symbol='+COIN[k].s+'&interval=1m&limit='+N).then(function(r){return r.json()}).then(function(a){if(a&&a.length&&!D[k].h.length){D[k].h=a.map(function(x){return +x[4]})}}).catch(function(){})}
 function mk(first){var el=document.createElement('div');el.className='xtl';el.setAttribute('aria-live','polite');
- el.innerHTML='<div class="xh"><span class="xs"><i></i><b>Menyambung…</b></span><span><span class="xc"></span><button class="xx" type="button" aria-label="Tutup">✕</button></span></div><div class="xt"></div><div class="xr"><div class="xp">-</div><div class="xg"></div></div><div class="xv"><svg viewBox="0 0 300 88" preserveAspectRatio="none" aria-label="Grafik harga"></svg></div><div class="xm"><div>Tertinggi 24 jam<b class="xH">-</b></div><div>Terendah 24 jam<b class="xL">-</b></div></div><div class="xy">Menunggu data pertama…</div><div class="xf"></div>';
+ el.innerHTML='<div class="xh"><span class="xs"><i></i><b>Menyambung…</b></span><span><span class="xc"></span><button class="xrf" type="button" style="font:600 11px system-ui,sans-serif;color:#fff;background:#1f2937;border:0;border-radius:999px;padding:4px 10px;margin-right:6px">Perbarui</button><button class="xx" type="button" aria-label="Tutup">✕</button></span></div><div class="xt"></div><div class="xr"><div class="xp">-</div><div class="xg"></div></div><div class="xv"><svg viewBox="0 0 300 88" preserveAspectRatio="none" aria-label="Grafik harga"></svg></div><div class="xm"><div>Tertinggi 24 jam<b class="xH">-</b></div><div>Terendah 24 jam<b class="xL">-</b></div></div><div class="xy">Menunggu data pertama…</div><div class="xf"></div>';
  var c={el:el,k:first},tb=el.querySelector('.xt');
  KEYS.forEach(function(k){var b=document.createElement('button');b.type='button';b.innerHTML=ICO[k]+'<span>'+k+'</span>';b.style.setProperty('--cc',COIN[k].c);b.setAttribute('aria-pressed',k===c.k);
   b.onclick=function(){c.k=k;[].forEach.call(tb.children,function(x){x.setAttribute('aria-pressed',x.textContent===k)});paint(c)};tb.appendChild(b)});
- el.querySelector('.xx').onclick=function(){el.remove();tick()};return c}
-function show(after,first){var c=mk(first);after.parentNode.insertBefore(c.el,after.nextSibling);cards.push(c);paint(c);loadHist(first);openWS();fb2();
+ el.querySelector('.xx').onclick=function(){el.remove();tick()};el.querySelector('.xrf').onclick=function(){refresh(c,this)};return c}
+function show(after,first){var c=mk(first);after.parentNode.insertBefore(c.el,after.nextSibling);cards.push(c);paint(c);/* tidak ada pengambilan data otomatis; pakai tombol Perbarui */
  try{var near=ms.scrollHeight-ms.scrollTop-ms.clientHeight<400;if(near)ms.scrollTop=ms.scrollHeight}catch(e){}}
 function fb2(){if(!poll&&!gotWs)setTimeout(function(){if(!gotWs)fb()},5000)}
 var TR=/(pantau|monitor|memantau|memonitor|live|langsung|real\s?-?time|harga|chart|grafik|cek|lihat|liat|trading|update)/i,CO=/\b(btc|bitcoin|eth|ethereum|sol|solana|kripto|crypto)\b/i;
 ['pointerdown','keydown','touchstart'].forEach(function(e){document.addEventListener(e,function(){lastAct=Date.now()},true)});
 new MutationObserver(function(list){list.forEach(function(m){m.addedNodes.forEach(function(n){
  if(n.nodeType!==1||!n.classList.contains('um')||Date.now()-lastAct>6000)return;var t=n.textContent||'';if(t.length>200||!TR.test(t)||!CO.test(t))return;
- var f=/\beth|ethereum/i.test(t)?'ETH':/\bsol|solana/i.test(t)?'SOL':'BTC';try{show(n,f)}catch(e){}})})}).observe(ms,{childList:true});
-setInterval(function(){try{tick()}catch(e){}},1000);
+ var f=/\beth|ethereum/i.test(t)?'ETH':/\bsol|solana/i.test(t)?'SOL':'BTC';/* auto-buka dimatikan: kartu hanya dibuka manual */})})}).observe(ms,{childList:true});
+
 window.xtlShow=function(k){var last=ms.lastElementChild;if(last)show(last,COIN[k]?k:'BTC')};
 function ctx(){if(!cards.length)return'';var lm=(typeof hist!=='undefined'&&hist.length)?hist[hist.length-1]:null,tx=lm&&typeof lm.content==='string'?lm.content:'';if(!tx||!CO.test(tx))return'';
  var now=Date.now(),ps=[];KEYS.forEach(function(k){var d=D[k];if(!d.p||now-(d.up||0)>30000)return;var w=d.h.slice(-10),m=w.length>1?(w[w.length-1]-w[0])/w[0]*100:0;
@@ -12281,4 +12305,72 @@ window.__xrouter={on,classify,choose,last:()=>last,bad:BAD};
 })();
 </script>
 <!-- ===== AKHIR ROUTER MODEL ===== -->
+
+<!-- ===== MODE OFFLINE (LLM LOKAL). Saklar ada di Pengaturan. Hapus blok ini untuk membatalkan ===== -->
+<style>
+#offline-wrap{display:flex;align-items:center;justify-content:space-between;gap:14px;margin:8px 0;padding:14px 16px;border-radius:16px;background:#161618;border:1px solid #2b2b2e}
+#offline-wrap .of-tx b{display:block;font-size:15px;color:#fff;font-weight:600}
+#offline-wrap .of-tx span{display:block;font-size:12.5px;color:#8e8e93;margin-top:2px;line-height:1.35}
+#offline-btn{position:relative;width:58px;height:32px;border-radius:16px;background:#2c2c2e;border:0;padding:0;flex:none;transition:background .25s}
+#offline-btn::after{content:"";position:absolute;top:3px;left:3px;width:26px;height:26px;border-radius:50%;background:#fff;transition:transform .25s cubic-bezier(.2,.8,.2,1)}
+#offline-btn.on{background:#30d158}
+#offline-btn.on::after{transform:translateX(26px)}
+</style>
+<script>
+(function(){
+  const KEY='edhyx_local_llm', MODEL='Qwen2.5-0.5B-Instruct-q4f16_1-MLC', LIB='https://cdn.jsdelivr.net/npm/@mlc-ai/web-llm@0.2.79/+esm';
+  let engine=null, loading=null, btn=null, st=null;
+  const isOn=()=>{try{return localStorage.getItem(KEY)==='1'}catch(e){return false}};
+  const paint=(t)=>{if(!btn)return;const on=isOn();btn.classList.toggle('on',on);btn.setAttribute('aria-pressed',on?'true':'false');if(st)st.textContent=t||(on?(engine?'Aktif, model siap':'Aktif, model dimuat saat dipakai'):'Mati');};
+  const getEngine=()=>{
+    if(engine) return Promise.resolve(engine);
+    if(!loading) loading=import(LIB).then(w=>w.CreateMLCEngine(MODEL,{initProgressCallback:r=>paint('Mengunduh model '+Math.round((r.progress||0)*100)+'%')})).then(e=>{engine=e;paint();return e}).catch(err=>{loading=null;throw err});
+    return loading;
+  };
+  const txt=c=>typeof c==='string'?c:Array.isArray(c)?c.filter(p=>p&&p.type==='text').map(p=>p.text).join('\n'):'';
+  const onClick=()=>{
+    if(isOn()){
+      try{localStorage.setItem(KEY,'0')}catch(e){}
+      if(engine){try{engine.unload()}catch(e){}engine=null}
+      loading=null; paint();
+    }else{
+      try{localStorage.setItem(KEY,'1')}catch(e){}
+      paint('Memuat model…');
+      getEngine().then(()=>paint()).catch(err=>{try{localStorage.setItem(KEY,'0')}catch(e){}paint('Gagal dimulai');alert('Mode offline tidak bisa dimulai: '+(err&&err.message||err))});
+    }
+  };
+  function pasang(){
+    const sm=document.getElementById('sm');
+    if(!sm||sm.hidden||sm.querySelector('#offline-wrap'))return;
+    const d=document.createElement('div');d.id='offline-wrap';
+    d.innerHTML='<div class="of-tx"><b>Mode offline (AI di HP)</b><span id="offline-st"></span></div><button id="offline-btn" type="button" aria-label="Mode offline"></button>';
+    const ref=sm.querySelector('#hemat-wrap');
+    if(ref)ref.insertAdjacentElement('afterend',d);else sm.appendChild(d);
+    btn=d.querySelector('#offline-btn');st=d.querySelector('#offline-st');
+    btn.onclick=onClick;paint();
+  }
+  const sm0=document.getElementById('sm');
+  if(sm0)new MutationObserver(pasang).observe(sm0,{attributes:true,attributeFilter:['hidden'],childList:true});
+  setTimeout(pasang,1000);
+  document.addEventListener('visibilitychange',function(){if(document.hidden&&engine){try{engine.unload()}catch(e){}engine=null;loading=null;paint()}});
+  const prev=window.fetch;
+  window.fetch=async function(input,init={}){
+    const url=typeof input==='string'?input:(input&&input.url)||'';
+    if(!isOn()||!/\/chat$/.test(url)||!init||!init.body) return prev(input,init);
+    let body; try{body=JSON.parse(init.body)}catch(e){return prev(input,init)}
+    if(body.image||body.image_gen) return prev(input,init);
+    const out=t=>new Response(JSON.stringify(t)+'\n',{status:200,headers:{'Content-Type':'application/x-ndjson'}});
+    try{
+      const e=await getEngine();
+      const msgs=[{role:'system',content:String(body.system||'').slice(0,3000)}]
+        .concat((body.messages||[]).slice(-8).map(m=>({role:m.role==='assistant'?'assistant':'user',content:txt(m.content).slice(0,1500)})));
+      const r=await e.chat.completions.create({messages:msgs,temperature:0.7,max_tokens:400});
+      return out({text:(r.choices&&r.choices[0]&&r.choices[0].message.content)||''});
+    }catch(err){
+      return out({error:'Mode offline gagal: '+(err&&err.message||err)});
+    }
+  };
+})();
+</script>
+<!-- ===== AKHIR MODE OFFLINE ===== -->
 </body></html>
