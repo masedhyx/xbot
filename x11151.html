@@ -552,12 +552,12 @@ renderBots();welcome();
 .gxc.fd pre{max-height:318px;overflow:hidden}
 .gxm2{display:block;width:100%;padding:9px;font-size:14px;color:#3a96ff;border-top:1px solid #262626}
 .gxc.fs{position:fixed;inset:0;z-index:30;margin:0;border-radius:0;overflow:auto;background:#0d0d0d}.gxc.fs .gxh{position:sticky;top:0;background:#0d0d0d;padding-top:calc(env(safe-area-inset-top,0px) + 9px)}.gxc.fs pre{max-height:none;overflow:auto}
-.tg{color:#4db2ff}.ta{color:#8fd8ff}.ts{color:#8ae65c}.tk{color:#ff6ad5}.tn{color:#ffa94d}.tf{color:#ffd866}.tc{color:#8b949e}.tt{color:#5ed3c8}.te{color:#ff6b6b}
+.tg{color:#4db2ff}.ta{color:#8fd8ff}.ts{color:#8ae65c}.tk{color:#ff6ad5}.tn{color:#ffa94d}.tf{color:#ffd866}.tc{color:#8b949e}
 </style>
 <script>
 (()=>{
 const E=s=>s.replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
-const LN={html:'HTML',css:'CSS',js:'JavaScript',json:'JSON',py:'Python',ts:'TypeScript',java:'Java',c:'C',cpp:'C++',cs:'C#',go:'Go',rust:'Rust',php:'PHP',ruby:'Ruby',swift:'Swift',kotlin:'Kotlin',dart:'Dart',sql:'SQL',bash:'Bash',yaml:'YAML',ini:'INI',lua:'Lua',diff:'Diff',docker:'Dockerfile'};
+const LN={html:'HTML',css:'CSS',js:'JavaScript',json:'JSON',py:'Python'};
 const KJ='const|let|var|function|return|if|else|for|while|new|class|import|export|from|async|await|try|catch|throw|switch|case|break|continue|true|false|null|undefined|this|typeof',KP='def|class|return|if|elif|else|for|while|import|from|as|try|except|finally|with|lambda|None|True|False|and|or|not|in|is|pass|yield|raise';
 const SQ='"(?:\\\\.|[^"\\\\\\n])*"|\'(?:\\\\.|[^\'\\\\\\n])*\'';
 const RX={
@@ -567,37 +567,9 @@ const RX={
  py:[[/#[^\n]*/,'tc'],[new RegExp('"""[\\s\\S]*?"""|\'\'\'[\\s\\S]*?\'\'\'|'+SQ),'ts'],[new RegExp('\\b(?:'+KP+')\\b'),'tk'],[/\b\d+\.?\d*\b/,'tn'],[/[A-Za-z_][\w]*(?=\()/,'tf']],
  json:[[new RegExp('(?:'+SQ+')(?=\\s*:)'),'ta'],[new RegExp(SQ),'ts'],[/\b(?:true|false|null)\b/,'tk'],[/-?\d+\.?\d*(?:[eE][+-]?\d+)?/,'tn']]
 };
-
-/* ---- pewarnaan bahasa tambahan: C-like, shell, SQL, YAML, dll. Bahasa tak dikenal memakai pewarnaan umum ---- */
-const WD=s=>new RegExp('\\b(?:'+s.trim().replace(/\s+/g,'|')+')\\b');
-const STR=new RegExp(SQ+'|`(?:\\\\.|[^`\\\\])*`'),NUM=/\b(?:0[xX][0-9a-fA-F]+|\d+\.?\d*(?:[eE][+-]?\d+)?)\b/,CALL=/[A-Za-z_$][\w$]*(?=\()/,TYP=/\b[A-Z][A-Za-z0-9_]*\b/;
-const CS=/\/\/[^\n]*|\/\*[\s\S]*?\*\//,CH=/#[^\n]*/,CD=/--[^\n]*|\/\*[\s\S]*?\*\//;
-const mk=(kw,cm,x,f)=>{const T=[[cm,'tc'],[STR,'ts']].concat(x||[],[[WD(kw),'tk'],[TYP,'tt'],[NUM,'tn'],[CALL,'tf']]);if(f)T.f=f;return T};
-const CK='auto break case char const continue default do double else enum extern float for goto if inline int long register return short signed sizeof static struct switch typedef union unsigned void volatile while NULL true false bool';
-RX.ts=mk(KJ+' interface type enum implements extends readonly public private protected static abstract as any string number boolean void never unknown declare namespace keyof of in instanceof delete default do super yield get set',CS);
-RX.java=mk('abstract assert boolean break byte case catch char class const continue default do double else enum extends final finally float for if implements import instanceof int interface long native new null package private protected public return short static super switch synchronized this throw throws transient true false try void volatile while var record',CS);
-RX.c=mk(CK,CS,[[/#\s*(?:include|define|ifdef|ifndef|endif|if|else|elif|pragma|undef)\b/,'tk']]);
-RX.cpp=mk(CK+' class namespace template typename public private protected virtual override new delete using this nullptr try catch throw constexpr explicit operator friend mutable final',CS,[[/#\s*(?:include|define|ifdef|ifndef|endif|if|else|elif|pragma|undef)\b/,'tk']]);
-RX.cs=mk('abstract as base bool break byte case catch char class const continue decimal default delegate do double else enum event explicit extern false finally fixed float for foreach if implicit in int interface internal is lock long namespace new null object operator out override params private protected public readonly ref return sbyte sealed short sizeof static string struct switch this throw true try typeof uint ulong unsafe ushort using var virtual void volatile while async await get set record',CS);
-RX.go=mk('break case chan const continue default defer else fallthrough for func go goto if import interface map package range return select struct switch type var true false nil iota string int int64 float64 bool error byte rune',CS);
-RX.rust=mk('as async await break const continue crate dyn else enum extern false fn for if impl in let loop match mod move mut pub ref return self Self static struct super trait true type unsafe use where while Some None Ok Err Box Vec String i32 i64 u32 u64 f64 bool usize str',CS,[[/'[a-z_]+\b(?!')/,'ta']]);
-RX.php=mk('abstract and array as break callable case catch class clone const continue declare default do echo else elseif empty extends final finally fn for foreach function global if implements include include_once instanceof interface isset list namespace new null or print private protected public require require_once return static switch throw trait try unset use var while true false',/\/\/[^\n]*|#[^\n]*|\/\*[\s\S]*?\*\//,[[/<\?php|<\?=|\?>/,'tk'],[/\$[A-Za-z_]\w*/,'ta']]);
-RX.ruby=mk('alias and begin break case class def do else elsif end ensure false for if in module next nil not or redo rescue retry return self super then true undef unless until when while yield puts require attr_accessor attr_reader lambda proc',CH,[[/:[A-Za-z_]\w*/,'ta'],[/@{1,2}[A-Za-z_]\w*/,'ta']]);
-RX.swift=mk('class deinit enum extension func import init let protocol return self struct subscript super switch case default if else for in while repeat break continue guard defer do try catch throw throws var where true false nil Any override private public internal static final lazy weak async await',CS);
-RX.kotlin=mk('as break class continue do else false for fun if in interface is null object package return super this throw true try typealias val var when while data sealed open override private public internal protected companion suspend import const lateinit by init',CS);
-RX.dart=mk('abstract as async await break case catch class const continue default do else enum extends false final finally for if implements import in is late new null on required return static super switch this throw true try var void while with yield',CS);
-RX.lua=mk('and break do else elseif end false for function goto if in local nil not or repeat return then true until while',/--\[\[[\s\S]*?\]\]|--[^\n]*/);
-RX.sql=[[CD,'tc'],[STR,'ts'],[WD('select from where insert into values update set delete create table drop alter add index join left right inner outer full cross on group by order having limit offset as and or not null is in like between distinct union all primary key foreign references default unique count sum avg min max case when then else end exists asc desc begin commit rollback view database int integer varchar text boolean date timestamp serial returning truncate'),'tk'],[NUM,'tn'],[CALL,'tf']];RX.sql.f='i';
-RX.bash=[[CH,'tc'],[STR,'ts'],[/\$\{[^}\n]*\}|\$\(|\$[A-Za-z_]\w*|\$[0-9@#?!*]/,'ta'],[/\s--?[A-Za-z][\w-]*/,'tn'],[WD('if then else elif fi for while until do done case esac function in return exit export local readonly unset source alias true false'),'tk'],[WD('echo cd ls cat grep sed awk curl wget git npm npx pnpm yarn pip pip3 python python3 node sudo apt apt-get brew mkdir rm cp mv touch chmod chown tar unzip ssh scp docker kubectl make find xargs head tail sort uniq wc kill ps'),'tf'],[NUM,'tn']];
-RX.yaml=[[CH,'tc'],[/[A-Za-z_][\w.-]*(?=\s*:(?:\s|$))/,'ta'],[STR,'ts'],[/\b(?:true|false|null|yes|no|on|off|True|False|Null)\b/,'tk'],[NUM,'tn'],[/[&*][A-Za-z_][\w-]*/,'tf']];
-RX.ini=[[/[;#][^\n]*/,'tc'],[/\[[^\]\n]+\]/,'tg'],[STR,'ts'],[/[A-Za-z_][\w.-]*(?=\s*=)/,'ta'],[/\b(?:true|false)\b/i,'tk'],[NUM,'tn']];
-RX.diff=[[/^@@[^\n]*/,'tg'],[/^\+[^\n]*/,'ts'],[/^-[^\n]*/,'te']];RX.diff.f='m';
-RX.docker=[[CH,'tc'],[STR,'ts'],[WD('FROM RUN CMD LABEL EXPOSE ENV ADD COPY ENTRYPOINT VOLUME USER WORKDIR ARG ONBUILD HEALTHCHECK SHELL AS'),'tk'],[/\$\{?[A-Za-z_]\w*\}?/,'ta'],[NUM,'tn']];
-RX.gen=mk('if else elif elsif for foreach while do switch case break continue return function func fn def class struct enum interface import export from package use using namespace new delete try catch except finally throw raise public private protected static final const let var val int long float double bool boolean string char void null nil none true false this self super async await yield in is as not and or',/\/\/[^\n]*|\/\*[\s\S]*?\*\/|#[^\n]*/);
-const PL=new Set(['','text','txt','plain','plaintext','output','log','console','markdown','md','csv','tsv']);
-const hl=(c,l)=>{const T=RX[l]||(PL.has(l)?null:RX.gen);if(!T)return E(c);const re=new RegExp(T.map(t=>'('+t[0].source+')').join('|'),'g'+(T.f||''));let o='',i=0,m;while((m=re.exec(c))){if(!m[0]){re.lastIndex++;continue}o+=E(c.slice(i,m.index));const k=m.slice(1).findIndex(x=>x!==undefined);o+='<span class="'+T[k][1]+'">'+E(m[0])+'</span>';i=m.index+m[0].length}return o+E(c.slice(i))};
-const det=c=>/^\s*<\?php/.test(c)?'php':/#\s*include\s*[<"]/.test(c)?'c':/^\s*package main|\bfunc\s+\w+\s*\(/m.test(c)?'go':/\bfn\s+\w+\s*\(|\blet mut\b/.test(c)?'rust':/\bpublic\s+(?:static\s+)?(?:class|void)\b|^\s*import\s+java\./m.test(c)?'java':/^\s*(?:select\b[\s\S]*\bfrom|insert\s+into|update\s+\w+\s+set|delete\s+from|create\s+table)\b/i.test(c)?'sql':/^#!.*\b(?:ba|z)?sh\b|^\s*(?:\$\s+\S|(?:sudo|apt|apt-get|npm|npx|pip3?|git|docker|cd|curl|wget|chmod|mkdir)\s+\S)/m.test(c)?'bash':/^(?:diff --git|@@ .* @@)/m.test(c)?'diff':/^\s*<(?:!doctype|html|head|body|div|svg|\w+[\s>])/i.test(c)?'html':/^\s*[{[]/.test(c)&&/"\s*:/.test(c)?'json':/^\s*(?:def |import \w+|from \w+ import|class \w+.*:)/m.test(c)?'py':/\b(?:const|let|function)\b|=>/.test(c)?'js':/[.#]?[\w-]+\s*\{[^}]*:/.test(c)?'css':'';
-const AL={javascript:'js',jsx:'js',mjs:'js',cjs:'js',node:'js',ts:'ts',tsx:'ts',typescript:'ts',python:'py',python3:'py',py3:'py',htm:'html',xml:'html',svg:'html',vue:'html',svelte:'html',jsonc:'json',json5:'json',java:'java',kt:'kotlin',kts:'kotlin',c:'c',h:'c',cc:'cpp',cxx:'cpp',hpp:'cpp','c++':'cpp',cpp:'cpp',cs:'cs',csharp:'cs',golang:'go',go:'go',rs:'rust',rust:'rust',php:'php',rb:'ruby',ruby:'ruby',swift:'swift',kotlin:'kotlin',dart:'dart',lua:'lua',sql:'sql',mysql:'sql',postgres:'sql',postgresql:'sql',sqlite:'sql',bash:'bash',sh:'bash',shell:'bash',zsh:'bash',terminal:'bash',cmd:'bash',powershell:'bash',ps1:'bash',yaml:'yaml',yml:'yaml',toml:'ini',ini:'ini',env:'ini',conf:'ini',diff:'diff',patch:'diff',dockerfile:'docker',docker:'docker'};
+const hl=(c,l)=>{const T=RX[l];if(!T)return E(c);const re=new RegExp(T.map(t=>'('+t[0].source+')').join('|'),'g');let o='',i=0,m;while((m=re.exec(c))){if(!m[0]){re.lastIndex++;continue}o+=E(c.slice(i,m.index));const k=m.slice(1).findIndex(x=>x!==undefined);o+='<span class="'+T[k][1]+'">'+E(m[0])+'</span>';i=m.index+m[0].length}return o+E(c.slice(i))};
+const det=c=>/^\s*<(?:!doctype|html|head|body|div|svg|\w+[\s>])/i.test(c)?'html':/^\s*[{[]/.test(c)&&/"\s*:/.test(c)?'json':/^\s*(?:def |import \w+|from \w+ import|class \w+.*:)/m.test(c)?'py':/\b(?:const|let|function)\b|=>/.test(c)?'js':/[.#]?[\w-]+\s*\{[^}]*:/.test(c)?'css':'';
+const AL={javascript:'js',jsx:'js',ts:'js',typescript:'js',python:'py',htm:'html',xml:'html',svg:'html'};
 const SW=new Set('Berikut Ini Itu Ada Anda Saya Aku Kamu Kita Kami Mereka Dia Jika Kalau Namun Tetapi Tapi Karena Sebab Untuk Dengan Pada Dari Yang Dan Atau Juga Selain Setelah Sebelum Saat Ketika Dalam Hari Bulan Tahun Sabtu Minggu Senin Selasa Rabu Kamis Jumat Januari Februari Maret April Mei Juni Juli Agustus September Oktober November Desember Mau Bisa Apakah Bagaimana Kenapa Mengapa Siapa Apa Kapan Dimana Silakan Terima Maaf Oke Tidak Belum Sudah Sedang Akan Semua Setiap Beberapa Banyak Lebih Paling Sangat Cukup Hanya Masih Pernah Selalu Sering Kode Contoh Tips Langkah Cara Hasil Info Jawaban Pertanyaan Hai Halo Sumber Berita Dunia Kalau Misalnya Contohnya Selamat Terima Kasih'.split(' '));
 const AC=new Set('HTML CSS JSON API URL HTTP HTTPS PDF GPS USB SQL RAM CPU GPU WIB WITA WIT FAQ DNS SMS TTS LLM XML SVG PNG JPG GIF MP3 MP4 APK IOS KBps ISO'.split(' '));
 const HRX=/([Pp]enting|[Cc]atatan|[Pp]erhatian|[Pp]eringatan|[Aa]was|[Hh]ati-hati|[Jj]angan|[Ww]ajib|[Bb]ahaya|[Ww]aspada)|((?:Kementerian|Badan|Dinas|Universitas|Institut|Polda|Polres|Polri|Kejaksaan|Mahkamah|Bank|Partai|Komisi|Dewan|Pemerintah|Pemprov|Pemkab|Pemkot|Lembaga|Satgas)(?:\s+[A-Z][\w-]*)+)|(\b[A-Z]{3,8}\b)|(\b[A-Z][a-z]{2,}(?:\s+[A-Z][a-z]+){0,3}\b)/g;
@@ -648,7 +620,7 @@ const drawDg=root=>{root.querySelectorAll('.dg[data-src]').forEach(c=>{let src;t
     svg.innerHTML=h};
   paint();requestAnimationFrame(paint);setTimeout(paint,350);if(document.fonts&&document.fonts.ready)document.fonts.ready.then(paint)})};
 /* kartu kode */
-const card=(pre,raw,lang)=>{const c=raw.replace(/\n$/,'');let l=(lang||'').toLowerCase();l=AL[l]||l;if(!LN[l]&&!l)l=det(c)||l;const n=c.split('\n').length,d=document.createElement('div');d.className='gxc'+(n>15?' fd':'');
+const card=(pre,raw,lang)=>{const c=raw.replace(/\n$/,'');let l=(lang||'').toLowerCase();l=AL[l]||l;if(!LN[l])l=det(c)||l;const n=c.split('\n').length,d=document.createElement('div');d.className='gxc'+(n>15?' fd':'');
  d.innerHTML='<div class="gxh"><span>'+(LN[l]||(l?l.toUpperCase():'Kode'))+'</span><button data-k="c" aria-label="Salin"></button><button data-k="x" aria-label="Perbesar"></button></div><pre>'+(c.length>20000?E(c):hl(c,l))+'</pre>'+(n>15?'<button class="gxm2" data-k="m">Perluas</button>':'');d._c=c;pre.replaceWith(d)};
 /* teks: link dan kata penting */
 const SK=/^(PRE|CODE|A|BUTTON|SCRIPT|STYLE)$/;
@@ -12991,86 +12963,6 @@ window.__URLS={on,setOn,rencana,tools:['buka_app']};
 </script>
 <!-- ===== AKHIR BUKA APLIKASI (URL SCHEME) ===== -->
 
-<!-- ===== PIP YOUTUBE / YT MUSIC: tombol PiP di video YouTube chat + pilihan di pemutar musik. Ekstensi terpisah; kode lama tidak diubah kecuali pipBuka dan aksi "pip"/"buka" milik pemutar musik. ===== -->
-<script>
-(()=>{try{
-if(window.__xpip)return;
-const ID=/^https:\/\/www\.youtube(?:-nocookie)?\.com\/embed\/([\w-]{11})/;
-const TM=new WeakMap();
-const css=document.createElement('style');
-css.textContent='.xpb{display:flex;gap:2px;margin:2px 0 0}.xpb button{width:30px;height:30px;border:0;background:transparent;padding:0;cursor:pointer;display:flex;align-items:center;justify-content:center;-webkit-tap-highlight-color:transparent}.xpb button::after{content:"";width:10px;height:10px;border-radius:50%;background:var(--c);box-shadow:0 0 6px var(--c);transition:transform .12s}.xpb button:active::after{transform:scale(.7)}'
-+'#xpt{position:fixed;left:50%;bottom:120px;transform:translateX(-50%);max-width:86vw;background:#1c1c1e;color:#fff;border:1px solid #2b2b2e;border-radius:14px;padding:10px 16px;font:13px/1.35 -apple-system,system-ui,sans-serif;z-index:100002;box-shadow:0 8px 24px #000a;text-align:center}'
-+'#xps{position:fixed;inset:0;z-index:100001;background:#0009;display:flex;align-items:flex-end;justify-content:center}#xps>div{width:min(100%,420px);background:#1c1c1e;border-radius:18px 18px 0 0;padding:16px 16px calc(env(safe-area-inset-bottom,0px) + 16px);display:flex;flex-direction:column;gap:10px;color:#fff;font:14px/1.4 -apple-system,system-ui,sans-serif}#xps b{font-size:15px}#xps span{color:#8e8e93;font-size:12.5px}#xps button{min-height:46px;border:0;border-radius:12px;background:#2c2c2e;color:#fff;font:600 15px -apple-system,system-ui,sans-serif;cursor:pointer}#xps button.p{background:#0a84ff}';
-document.head.appendChild(css);
-
-function toast(m){
- try{const o=document.getElementById('xpt');if(o)o.remove();
- const t=document.createElement('div');t.id='xpt';t.textContent=m;document.body.appendChild(t);setTimeout(()=>{try{t.remove()}catch(e){}},7000)}catch(e){}
-}
-function urlOf(id,mus,sec){
- const u=(mus?'https://music.youtube.com/watch?v=':'https://www.youtube.com/watch?v=')+id;
- return sec>1?u+'&t='+Math.floor(sec)+'s':u;
-}
-function bukaUrl(url,nama){
- let w=null;
- try{w=window.open(url,'_blank');if(w)w.opener=null}catch(e){}
- if(!w){
-  try{const a=document.createElement('a');a.href=url;a.target='_blank';a.rel='noopener noreferrer';a.style.display='none';document.body.appendChild(a);a.click();setTimeout(()=>a.remove(),500)}catch(e){}
- }
- toast('Di '+nama+': ketuk layar penuh, lalu ikon PiP. Video lanjut dari posisi terakhir.');
-}
-function open(id,mus,sec){bukaUrl(urlOf(id,mus,sec),mus?'YT Music':'YouTube')}
-
-/* ---- video YouTube di chat: pantau posisi lewat API iframe ---- */
-function prep(f){
- if(f.dataset.xpip)return;
- const m=ID.exec(f.getAttribute('src')||'');if(!m||f.closest('#xmu'))return;
- f.dataset.xpip=m[1];
- try{const u=new URL(f.src);if(!u.searchParams.has('enablejsapi')){u.searchParams.set('enablejsapi','1');f.src=u.toString()}}catch(e){}
- const bar=document.createElement('div');bar.className='xpb';
- const mk=(label,mus,c)=>{const b=document.createElement('button');b.type='button';b.setAttribute('aria-label',label);b.title=label;b.style.setProperty('--c',c);b.onclick=()=>{
-   const s=(TM.get(f)||{}).t||0;
-   try{f.contentWindow.postMessage(JSON.stringify({event:'command',func:'pauseVideo',args:''}),'*')}catch(e){}
-   open(f.dataset.xpip,mus,s)};return b};
- bar.append(mk('PiP di YouTube',false,'#ff3b30'),mk('PiP di YT Music',true,'#30d158'));
- f.after(bar);
-}
-function listen(f){try{f.contentWindow.postMessage(JSON.stringify({event:'listening',id:1,channel:'widget'}),'*')}catch(e){}}
-document.addEventListener('load',e=>{const f=e.target;if(f&&f.tagName==='IFRAME'&&f.dataset&&f.dataset.xpip){listen(f);setTimeout(()=>listen(f),1500)}},true);
-window.addEventListener('message',e=>{
- if(!/(^|\.)youtube(-nocookie)?\.com$/.test(String(e.origin).replace(/^https?:\/\//,'')))return;
- let d=e.data;if(typeof d==='string'){try{d=JSON.parse(d)}catch(x){return}}
- if(!d||typeof d!=='object')return;
- if(d.event==='onReady'){document.querySelectorAll('iframe[data-xpip]').forEach(f=>{if(f.contentWindow===e.source)listen(f)});return}
- if(d.event==='infoDelivery'&&d.info&&typeof d.info.currentTime==='number'){
-  document.querySelectorAll('iframe[data-xpip]').forEach(f=>{if(f.contentWindow===e.source)TM.set(f,{t:d.info.currentTime})});
- }
-});
-let busy=0;
-function scan(){busy=0;document.querySelectorAll('iframe[src*="youtube"]').forEach(prep)}
-new MutationObserver(()=>{if(!busy){busy=1;requestAnimationFrame(scan)}}).observe(document.body,{childList:true,subtree:true});
-scan();
-
-/* ---- pilihan tujuan (dipakai pemutar musik) ---- */
-function pick(id,sec,judul){
- const old=document.getElementById('xps');if(old)old.remove();
- const o=document.createElement('div');o.id='xps';
- const p=document.createElement('div');
- const h=document.createElement('b');h.textContent='Picture-in-Picture';
- const s=document.createElement('span');s.textContent=(judul?judul+'. ':'')+'iPhone hanya mengizinkan PiP dari halaman YouTube sendiri. Lagu akan dijeda di sini dan dilanjutkan di sana dari posisi terakhir.';
- const b1=document.createElement('button');b1.type='button';b1.className='p';b1.textContent='Buka di YouTube (video + PiP)';
- const b2=document.createElement('button');b2.type='button';b2.textContent='Buka di YT Music';
- const b3=document.createElement('button');b3.type='button';b3.textContent='Batal';
- const go=mus=>{o.remove();open(id,mus,sec)};
- b1.onclick=()=>go(false);b2.onclick=()=>go(true);b3.onclick=()=>o.remove();
- o.onclick=e=>{if(e.target===o)o.remove()};
- p.append(h,s,b1,b2,b3);o.appendChild(p);document.body.appendChild(o);
-}
-window.__xpip={open,pick,urlOf,toast};
-}catch(e){try{console.warn('PiP tidak aktif:',e)}catch(_){}}})();
-</script>
-<!-- ===== AKHIR PIP YOUTUBE ===== -->
-
 <!-- ===== PEMUTAR MUSIK YOUTUBE: kartu pemutar, antrean, putar otomatis lagu berikutnya, alat "musik" untuk bot. Ekstensi terpisah di akhir file; kode lama tidak diubah. Saklar di Pengaturan (kunci localStorage xbot_musik, bawaan MENYALA). Pemutar resmi YouTube (IFrame API), tetap terlihat; berhenti saat aplikasi ke latar belakang (aturan YouTube/iOS). ===== -->
 <script>
 (()=>{try{
@@ -13163,9 +13055,7 @@ function render(){
 }
 function pipBuka(){
  const t=S.q[S.i];if(!t){pesan('Belum ada lagu. Minta lewat chat, misalnya: putarkan lagu ...');return}
- let sec=0;try{sec=S.p&&S.p.getCurrentTime?S.p.getCurrentTime():0}catch(e){}
  try{if(S.p&&S.p.pauseVideo)S.p.pauseVideo()}catch(e){}
- if(window.__xpip){window.__xpip.pick(t.id,sec,t.title||t.q||'');return}
  const a=document.createElement('a');a.href='https://www.youtube.com/watch?v='+t.id;a.target='_blank';a.rel='noopener';a.style.display='none';
  document.body.appendChild(a);a.click();setTimeout(()=>a.remove(),500);
  pesan('Di YouTube: ketuk layar penuh, lalu ikon PiP.');
@@ -13204,7 +13094,7 @@ async function muat(id){
   await new Promise((res,rej)=>{
    const to=setTimeout(()=>rej(new Error('Pemutar tidak siap')),12000);
    const pv={playsinline:1,rel:0,modestbranding:1,autoplay:1};
-   S.p=new window.YT.Player('xmu-yt',{width:'100%',height:'100%',videoId:id,playerVars:(window.__xMbgPv?window.__xMbgPv(pv):pv),events:{onReady:()=>{clearTimeout(to);res()},onStateChange:onState,onError:onErr,onAutoplayBlocked:()=>{if(!document.hidden)catatan('iPhone butuh satu ketukan: ketuk ▶ pada video untuk mulai. Setelah itu lagu berikutnya jalan otomatis.')}}});
+   S.p=new window.YT.Player('xmu-yt',{width:'100%',height:'100%',videoId:id,playerVars:pv,events:{onReady:()=>{clearTimeout(to);res()},onStateChange:onState,onError:onErr,onAutoplayBlocked:()=>{if(!document.hidden)catatan('iPhone butuh satu ketukan: ketuk ▶ pada video untuk mulai. Setelah itu lagu berikutnya jalan otomatis.')}}});
   });
  }else{try{S.p.loadVideoById(id)}catch(e){}}
  setTimeout(()=>{if(my===S.tok&&!S.playing&&!document.hidden&&S.card)catatan('iPhone butuh satu ketukan: ketuk ▶ pada video untuk mulai. Setelah itu lagu berikutnya jalan otomatis.')},2600);
@@ -13268,13 +13158,11 @@ XT.musik=async(a={})=>{
  if(ak==='berhenti'||ak==='stop'||ak==='tutup'){tutup();return{ok:true,catatan:'Pemutar ditutup.'}}
  if(ak==='acak'){S.shuffle=a.nilai==null?!S.shuffle:!!a.nilai;render();return{ok:true,acak:S.shuffle}}
  if(ak==='ulang'){const m=String(a.mode||'').toLowerCase();S.rep=m==='satu'?2:(m==='semua'?1:(m==='mati'?0:(S.rep+1)%3));render();return{ok:true,ulang:['mati','semua','satu'][S.rep]}}
- if(ak==='buka'||ak==='buka_yt'||ak==='ytmusic'||ak==='youtube'||ak==='pip'){
+ if(ak==='buka'||ak==='buka_yt'||ak==='ytmusic'||ak==='youtube'){
   const t=S.q[S.i];if(!t)throw new Error('Belum ada lagu yang diputar. Putar lagu dulu.');
-  const tj=String(a.tujuan||((ak==='youtube'||ak==='pip')?'youtube':'ytmusic')).toLowerCase().replace(/[\s_-]/g,'');
+  const tj=String(a.tujuan||(ak==='youtube'?'youtube':'ytmusic')).toLowerCase().replace(/[\s_-]/g,'');
   const mus=tj!=='youtube'&&tj!=='yt';
-  let sec=0;try{sec=S.p&&S.p.getCurrentTime?S.p.getCurrentTime():0}catch(e){}
-  if(ak==='pip'){try{S.p.pauseVideo()}catch(e){}}
-  const url=(mus?'https://music.youtube.com/watch?v=':'https://www.youtube.com/watch?v=')+t.id+(sec>1?'&t='+Math.floor(sec)+'s':'');
+  const url=(mus?'https://music.youtube.com/watch?v=':'https://www.youtube.com/watch?v=')+t.id;
   const nama=mus?'YT Music':'YouTube';
   let w=null;try{w=window.open(url,'_blank');if(w)w.opener=null}catch(e){}
   if(!w){
@@ -13285,23 +13173,22 @@ XT.musik=async(a={})=>{
    document.body.appendChild(g);setTimeout(()=>{try{g.remove()}catch(e){}},20000);
    return{ok:true,dibuka:nama,catatan:'Browser menahan pembukaan otomatis, jadi tombol "Ketuk untuk buka di '+nama+'" muncul di layar. Minta pengguna mengetuknya sekali.'};
   }
-  return{ok:true,dibuka:nama,catatan:'Dibuka di '+nama+(ak==='pip'?'. Beri tahu pengguna: di halaman itu ketuk layar penuh, lalu ikon PiP (dua kotak) di pojok atas; lagu lanjut dari posisi terakhir.':'.')};
+  return{ok:true,dibuka:nama,catatan:'Dibuka di '+nama+'.'};
  }
  if(ak==='status'){return{ok:true,ada:!!S.card,memutar:S.playing,urutan:S.i+1,total:S.q.length,judul:(S.q[S.i]&&(S.q[S.i].title||S.q[S.i].q))||null,antrean:S.q.map(x=>x.title||x.q||x.id)}}
- throw new Error('Aksi tidak dikenal. Pilihan: putar, tambah, lanjut, sebelumnya, jeda, lanjutkan, berhenti, acak, ulang, buka, pip, status');
+ throw new Error('Aksi tidak dikenal. Pilihan: putar, tambah, lanjut, sebelumnya, jeda, lanjutkan, berhenti, acak, ulang, buka, status');
 };
 
 /* ---------- petunjuk untuk bot (hanya bila saklar menyala DAN pesan terakhir relevan) ---------- */
 const MK='[Pemutar musik]';
 const KW=/\b(putar(kan)?|memutar|lagu|lagunya|musik|playlist|dengar(kan)?|nyanyi|soundtrack|ost|album|dj|nonton klip|klip)\b/i;
-const KC=/\b(buka(kan)?\s+(di\s+)?(yt|youtube|ytmusic)|pip|picture.in.picture|layar melayang|lanjut|next|skip|lewati|berikutnya|sebelumnya|jeda|pause|stop|berhenti|hentikan|ganti lagu|acak|shuffle|ulang(i)?|repeat|tutup pemutar)\b/i;
+const KC=/\b(buka(kan)?\s+(di\s+)?(yt|youtube|ytmusic)|lanjut|next|skip|lewati|berikutnya|sebelumnya|jeda|pause|stop|berhenti|hentikan|ganti lagu|acak|shuffle|ulang(i)?|repeat|tutup pemutar)\b/i;
 const HINT=MK+' Kamu punya pemutar musik di dalam aplikasi. Kalau pengguna minta memutar lagu, musik, atau playlist, JANGAN pakai tag [video:]/[audio:]/[lagu:] dan JANGAN pakai alat buka_app. Panggil satu baris <tool>{"name":"musik","args":{...}}</tool> tanpa teks lain. Kartu pemutar muncul di layar dan lagu berikutnya otomatis.\n'
 +'- musik {"aksi":"putar","lagu":["Judul - Artis","Judul lain - Artis lain"]} : untuk suasana atau permintaan umum ("lagu santai buat kerja"), pilih sendiri 5-10 lagu nyata yang cocok dan tulis dalam format "Judul - Artis"; antrean lama diganti.\n'
 +'- musik {"aksi":"putar","q":"judul lagu artis","jumlah":1} : untuk satu lagu atau artis tertentu (jumlah = banyak hasil yang diantrekan, maksimal 15).\n'
 +'- musik {"aksi":"tambah","lagu":["..."]} : tambah ke antrean yang sedang jalan\n'
 +'- musik {"aksi":"lanjut|sebelumnya|jeda|lanjutkan|berhenti|status"} | {"aksi":"acak","nilai":true} | {"aksi":"ulang","mode":"mati|semua|satu"}\n'
 +'- musik {"aksi":"buka","tujuan":"ytmusic"} atau {"aksi":"buka","tujuan":"youtube"} : kalau pengguna minta membuka lagu yang sedang diputar di YT Music / YouTube. Langsung panggil, jangan tanya ulang.\n'
-+'- musik {"aksi":"pip"} (atau {"aksi":"pip","tujuan":"ytmusic"}) : kalau pengguna minta PiP / Picture-in-Picture / video melayang saat keluar aplikasi. Lagu dijeda dan dibuka di YouTube pada posisi terakhir; jelaskan singkat bahwa pengguna lalu mengetuk layar penuh dan ikon PiP, karena iPhone hanya mengizinkan PiP dari halaman YouTube sendiri.\n'
 +'Jangan mengarang lagu yang tidak kamu yakini ada. Setelah alat berhasil, jawab satu atau dua kalimat: sebut lagu pertama dan jumlah lagu. Ingatkan sekali bahwa di iPhone perlu mengetuk ▶ pada video satu kali, dan musik berhenti jika aplikasi ditutup atau layar terkunci; untuk lanjut di latar belakang pengguna cukup minta "buka di YT Music" (butuh YouTube Premium).';
 const prevG=window.galeriSysFor;
 window.galeriSysFor=function(b){
@@ -13358,305 +13245,5 @@ window.__MUSIK={S,cari,kumpul,ctl,go,tutup,on,setOn,tools:['musik']};
 })();
 </script>
 <!-- ===== AKHIR PEMUTAR MUSIK YOUTUBE ===== -->
-
-<!-- ===== PICTURE-IN-PICTURE (ekstensi terpisah di akhir file; kode lama tidak diubah; saklar bawaan MENYALA) ===== -->
-<script>
-/* Tombol PiP di pojok kiri atas setiap <video> di chat, pemutar media bot, penampil lampiran, dan sumber video tambahan.
-   Tanpa timer dan tanpa polling: hanya listener 'loadedmetadata'/'play' yang menambahkan tombol sekali per video.
-   Saklar di paling bawah Pengaturan (kunci localStorage xbot_pip, bawaan menyala). Saat mati, tombol disembunyikan.
-   Video YouTube (iframe): memakai Document Picture-in-Picture, hanya Chrome/Edge desktop; di HP tidak tersedia (batasan browser). */
-(()=>{try{
-if(window._xPip)return;window._xPip=1;
-const KEY='xbot_pip';
-const on=()=>{try{return localStorage.getItem(KEY)!=='0'}catch(e){return true}};
-const setOn=v=>{try{localStorage.setItem(KEY,v?'1':'0')}catch(e){}};
-const SEL='.mp video,.lmv video,.fvb video,.xvs video,#vcu video';
-const std=()=>!!document.pictureInPictureEnabled;
-const wk=v=>typeof v.webkitSupportsPresentationMode==='function'&&v.webkitSupportsPresentationMode('picture-in-picture');
-const can=v=>{try{return !!v&&v.tagName==='VIDEO'&&!v.disablePictureInPicture&&((std()&&typeof v.requestPictureInPicture==='function')||wk(v))}catch(e){return false}};
-const active=v=>{try{return document.pictureInPictureElement===v||v.webkitPresentationMode==='picture-in-picture'}catch(e){return false}};
-const IC='<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2.5" y="4.5" width="19" height="15" rx="3"/><rect x="12" y="11.5" width="7" height="5" rx="1.2" fill="currentColor" stroke="none"/></svg>';
-
-const toggle=async v=>{
- try{
-  if(active(v)){
-   if(document.pictureInPictureElement)await document.exitPictureInPicture();
-   else v.webkitSetPresentationMode('inline');
-   return;
-  }
-  if(document.pictureInPictureElement&&std())await document.exitPictureInPicture().catch(()=>{});
-  if(v.readyState<1)await new Promise((ok,no)=>{v.addEventListener('loadedmetadata',ok,{once:true});v.addEventListener('error',no,{once:true});v.load&&v.load()});
-  if(std()&&typeof v.requestPictureInPicture==='function')await v.requestPictureInPicture();
-  else v.webkitSetPresentationMode('picture-in-picture');
- }catch(e){flash(v,e&&e.name==='NotAllowedError'?'PiP ditolak browser':'PiP tidak tersedia untuk video ini')}
-};
-const flash=(v,t)=>{
- const b=v._xpb;if(!b)return;const o=b.title;b.title=t;b.classList.add('err');
- setTimeout(()=>{b.title=o;b.classList.remove('err')},1600);
-};
-
-const st=document.createElement('style');
-st.textContent='.xpw{position:relative}'
-+'.xpb{position:absolute;top:8px;left:8px;z-index:3;width:32px;height:32px;display:flex;align-items:center;justify-content:center;padding:0;border:0;border-radius:10px;color:#fff;background:rgba(0,0,0,.55);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);cursor:pointer;opacity:.85;transition:opacity .2s,background .2s;-webkit-tap-highlight-color:transparent}'
-+'.xpb:active{opacity:1;background:rgba(0,0,0,.8)}.xpb.on{background:#0a84ff}.xpb.err{background:#ff453a}'
-+'body.xpip-off .xpb{display:none!important}'
-+'#xpipsw{margin:18px 0 8px;padding:14px 16px;border-radius:16px;background:#161618;border:1px solid #2b2b2e}#xpipsw .xpr{display:flex;align-items:center;justify-content:space-between;gap:14px}#xpipsw .xpr div{min-width:0}#xpipsw .xpr b{display:block;font-size:15px;color:#fff;font-weight:600}#xpipsw .xpr span{display:block;font-size:12.5px;color:#8e8e93;margin-top:3px;line-height:1.35}'
-+'.xpsw{position:relative;width:58px;height:32px;border-radius:16px;background:#2c2c2e;border:0;padding:0;flex:none;transition:background .25s}.xpsw::after{content:"";position:absolute;top:3px;left:3px;width:26px;height:26px;border-radius:50%;background:#fff;transition:transform .25s cubic-bezier(.2,.8,.2,1)}.xpsw.on{background:#30d158}.xpsw.on::after{transform:translateX(26px)}.xpsw:active{opacity:.8}';
-document.head.appendChild(st);
-const applyOff=()=>document.body.classList.toggle('xpip-off',!on());
-applyOff();
-
-const sync=v=>{if(v._xpb)v._xpb.classList.toggle('on',active(v))};
-const attach=v=>{
- try{
-  if(!v||v._xpb||!v.matches||!v.matches(SEL)||!can(v))return;
-  const p=v.parentElement;if(!p)return;
-  const b=document.createElement('button');b.type='button';b.className='xpb';b.title='Picture-in-Picture';b.setAttribute('aria-label','Picture-in-Picture');b.innerHTML=IC;
-  /* hentikan agar klik tidak ikut memicu pemutaran/penangan lain di sekitarnya */
-  const stop=e=>e.stopPropagation();
-  b.addEventListener('click',e=>{e.stopPropagation();e.preventDefault();toggle(v)});
-  b.addEventListener('touchend',stop,{passive:true});b.addEventListener('pointerdown',stop);
-  if(getComputedStyle(p).position==='static')p.classList.add('xpw');
-  p.appendChild(b);v._xpb=b;
-  v.addEventListener('enterpictureinpicture',()=>sync(v));v.addEventListener('leavepictureinpicture',()=>sync(v));
-  v.addEventListener('webkitpresentationmodechanged',()=>sync(v));
-  v.addEventListener('emptied',()=>{try{b.remove();v._xpb=null}catch(e){}},{once:true});
- }catch(e){}
-};
-/* video dibuat/diisi ulang oleh kode lain: cukup dengar kejadian bawaan (tanpa polling) */
-['loadedmetadata','play','playing'].forEach(ev=>document.addEventListener(ev,e=>{if(on()&&e.target&&e.target.tagName==='VIDEO')attach(e.target)},true));
-
-/* PiP otomatis saat pindah aplikasi/tab ketika video sedang diputar (Chrome 134+ lewat Media Session; Safari lewat atribut) */
-let cur=null;
-document.addEventListener('playing',e=>{
- const v=e.target;if(!v||v.tagName!=='VIDEO'||!v.matches||!v.matches(SEL)||!on())return;
- cur=v;
- try{if('autoPictureInPicture' in v)v.autoPictureInPicture=true}catch(_){}
-},true);
-document.addEventListener('ended',e=>{if(e.target===cur)cur=null},true);
-try{
- if('mediaSession' in navigator)navigator.mediaSession.setActionHandler('enterpictureinpicture',()=>{
-  if(!on()||!cur||!cur.isConnected||cur.paused||!can(cur)||active(cur))return;
-  try{cur.requestPictureInPicture&&cur.requestPictureInPicture().catch(()=>{})}catch(e){}
- });
-}catch(e){}
-
-/* ---------- saklar di Pengaturan ---------- */
-const pasang=()=>{
- const sm=document.getElementById('sm');
- if(!sm||sm.hidden)return;
- if(sm.querySelector('#xpipsw'))return;
- const w=document.createElement('div');w.id='xpipsw';
- const r=document.createElement('div');r.className='xpr';
- const d=document.createElement('div');
- const t=document.createElement('b');t.textContent='Picture-in-Picture';
- const s=document.createElement('span');s.textContent='Tombol PiP di setiap video agar tetap tampil melayang saat Anda berpindah aplikasi. Video YouTube hanya didukung di Chrome/Edge desktop (membuka jendela melayang dan lanjut dari detik yang sama).';
- d.append(t,s);
- const btn=document.createElement('button');btn.type='button';btn.className='xpsw'+(on()?' on':'');btn.setAttribute('aria-label','Picture-in-Picture');btn.setAttribute('aria-pressed',on()?'true':'false');
- btn.onclick=()=>{const v=!on();setOn(v);btn.classList.toggle('on',v);btn.setAttribute('aria-pressed',v?'true':'false');applyOff();
-  if(v)document.querySelectorAll(SEL).forEach(attach);
-  else if(document.pictureInPictureElement)document.exitPictureInPicture().catch(()=>{})};
- r.append(d,btn);w.appendChild(r);sm.appendChild(w);
-};
-const smEl=document.getElementById('sm');
-if(smEl)new MutationObserver(pasang).observe(smEl,{attributes:true,attributeFilter:['hidden']});
-
-
-/* ---------- lanjut di latar belakang (video file) ---------- */
-try{
- let hidAt=0,mine=0;
- const title=v=>{try{const c=v.closest('.mp,.lmv,.fvb');const e=c&&c.querySelector('b,.lmn');return((e&&e.textContent)||'').replace(/^🎵\s*/,'').trim().slice(0,80)||'Video'}catch(_){return 'Video'}};
- document.addEventListener('playing',e=>{
-  const v=e.target;if(!on()||!v||v.tagName!=='VIDEO'||!v.matches||!v.matches(SEL))return;
-  try{
-   if('mediaSession' in navigator&&typeof MediaMetadata!=='undefined'){
-    navigator.mediaSession.metadata=new MediaMetadata({title:title(v),artist:'EdhyX'});
-    navigator.mediaSession.setActionHandler('play',()=>{if(cur)cur.play().catch(()=>{})});
-    navigator.mediaSession.setActionHandler('pause',()=>{if(cur){mine=1;cur.pause()}});
-   }
-  }catch(_){}
- },true);
- document.addEventListener('visibilitychange',()=>{if(document.hidden)hidAt=Date.now()});
- /* browser menjeda video saat app pindah ke latar: coba lanjutkan (bukan jeda dari pengguna) */
- document.addEventListener('pause',e=>{
-  const v=e.target;if(!on()||!v||v!==cur||v.ended)return;
-  if(mine){mine=0;return}
-  if(document.hidden&&Date.now()-hidAt<2500)v.play().catch(()=>{});
- },true);
- /* kembali ke app: bila video terjeda sistem, biarkan pengguna menekan play (tidak memaksa) */
-}catch(e){}
-/* ---------- YouTube (iframe): Document PiP, hanya Chrome/Edge desktop ---------- */
-try{
-if(window.documentPictureInPicture){
- const YSEL='.mp iframe,.lmv iframe,.fvb iframe';
- const isYT=f=>f&&f.tagName==='IFRAME'&&/^https:\/\/www\.youtube\.com\/embed\/[\w-]{6,}/.test(f.getAttribute('src')||'')&&f.matches(YSEL);
- const withApi=(src,t,auto)=>{try{const u=new URL(src);u.searchParams.set('enablejsapi','1');if(/^https?:$/.test(location.protocol))u.searchParams.set('origin',location.origin);if(t>0)u.searchParams.set('start',String(Math.floor(t)));if(auto)u.searchParams.set('autoplay','1');return u.toString()}catch(e){return src}};
- const times=new WeakMap();
- const onMsg=e=>{try{
-  if(!/^https:\/\/www\.youtube\.com$/.test(e.origin)||typeof e.data!=='string')return;
-  const d=JSON.parse(e.data);const t=d&&d.info&&d.info.currentTime;
-  if(d.event==='infoDelivery'&&typeof t==='number')times.set(e.source,t);
- }catch(_){}};
- window.addEventListener('message',onMsg);
- const listen=f=>{try{f.contentWindow&&f.contentWindow.postMessage(JSON.stringify({event:'listening',id:1,channel:'widget'}),'*')}catch(_){}};
- const prep=f=>{/* tambahkan enablejsapi sekali, saat iframe baru muncul (belum sempat dimuat penuh) */
-  if(f._xyt||!isYT(f))return;f._xyt=1;
-  const src=f.getAttribute('src');
-  if(!/enablejsapi=1/.test(src))f.setAttribute('src',withApi(src,0,false));
-  f.addEventListener('load',()=>listen(f));
-  addBtn(f);
- };
- const addBtn=f=>{
-  const p=f.parentElement;if(!p||f._xpb)return;
-  const b=document.createElement('button');b.type='button';b.className='xpb';b.title='Picture-in-Picture (jendela melayang)';b.setAttribute('aria-label','Picture-in-Picture');b.innerHTML=IC;
-  b.addEventListener('click',e=>{e.stopPropagation();e.preventDefault();ytPip(f,b)});
-  b.addEventListener('pointerdown',e=>e.stopPropagation());
-  if(getComputedStyle(p).position==='static')p.classList.add('xpw');
-  p.appendChild(b);f._xpb=b;
- };
- let win=null;
- const ytPip=async(f,b)=>{
-  try{
-   if(win){win.close();return}
-   const base=(f.getAttribute('src')||'').replace(/[?#].*$/,'');
-   const t0=times.get(f.contentWindow)||0;
-   const w=await documentPictureInPicture.requestWindow({width:480,height:270});
-   win=w;b.classList.add('on');
-   const d=w.document;d.title='EdhyX';
-   const sty=d.createElement('style');sty.textContent='html,body{margin:0;height:100%;background:#000}iframe{width:100%;height:100%;border:0;display:block}';d.head.appendChild(sty);
-   const nf=d.createElement('iframe');nf.allow='autoplay; encrypted-media; picture-in-picture; fullscreen';nf.setAttribute('allowfullscreen','');nf.referrerPolicy='strict-origin-when-cross-origin';
-   nf.src=withApi(base,t0,true);d.body.appendChild(nf);
-   nf.addEventListener('load',()=>listen(nf));
-   w.addEventListener('message',onMsg);
-   f.setAttribute('src','about:blank');/* hentikan suara di chat selama PiP */
-   w.addEventListener('pagehide',()=>{
-    const t=(nf.contentWindow&&times.get(nf.contentWindow))||t0;
-    win=null;b.classList.remove('on');
-    if(f.isConnected)f.setAttribute('src',withApi(base,t,false));
-   },{once:true});
-  }catch(e){win=null;flash(f,e&&e.name==='NotAllowedError'?'PiP ditolak browser':'PiP tidak tersedia')}
- };
- /* iframe YouTube baru muncul: hanya periksa node yang ditambahkan (tanpa polling) */
- const scan=n=>{if(n.nodeType!==1)return;if(n.tagName==='IFRAME')prep(n);else if(n.querySelector)n.querySelectorAll('iframe').forEach(prep)};
- new MutationObserver(ms=>{if(!on())return;for(const m of ms)m.addedNodes.forEach(scan)}).observe(document.body,{childList:true,subtree:true});
- document.querySelectorAll(YSEL).forEach(prep);
-}
-}catch(e){}
-window.__PIP={on,setOn,toggle,attach,can};
-}catch(e){try{console.warn('Picture-in-Picture tidak aktif:',e)}catch(_){}}
-})();
-</script>
-<!-- ===== AKHIR PICTURE-IN-PICTURE ===== -->
-
-<!-- ===== MUSIK LATAR BELAKANG (iPhone) (ekstensi terpisah; kode lama tidak diubah) ===== -->
-<script>
-/* Safari iPhone menjeda iframe YouTube saat app ditinggalkan. Di sini: (1) saat app disembunyikan dan lagu sedang jalan,
-   coba playVideo() beberapa kali (tanpa interval, hanya 4 timeout pendek); (2) tombol play/pause layar kunci & Pusat Kontrol
-   mengendalikan pemutar YouTube. Upaya terbaik: iOS bisa tetap menolak. Kode lama pemutar tidak diubah. */
-(()=>{try{
-if(window._xMbg)return;window._xMbg=1;
-const S=()=>window.__MUSIK&&window.__MUSIK.S;
-const pl=()=>{const s=S();return s&&s.p};
-const act=n=>{try{const p=pl();p&&typeof p[n]==='function'&&p[n]()}catch(e){}};
-let want=false,tm=[];
-const clr=()=>{tm.forEach(clearTimeout);tm=[]};
-document.addEventListener('visibilitychange',()=>{
- const s=S();
- if(document.hidden){
-  want=!!(s&&s.playing&&s.card);
-  if(!want)return;
-  try{if('mediaSession' in navigator){
-   navigator.mediaSession.playbackState='playing';
-   navigator.mediaSession.setActionHandler('play',()=>{want=true;act('playVideo');try{navigator.mediaSession.playbackState='playing'}catch(_){}});
-   navigator.mediaSession.setActionHandler('pause',()=>{want=false;clr();act('pauseVideo');try{navigator.mediaSession.playbackState='paused'}catch(_){}});
-  }}catch(e){}
-  clr();[0,200,600,1500].forEach(ms=>tm.push(setTimeout(()=>{if(want&&document.hidden)act('playVideo')},ms)));
- }else clr();
-});
-/* ---- mode pemutar bawaan iPhone: playsinline=0 -> video diputar di pemutar layar penuh iOS (seperti youtube.com), yang bisa PiP dan lanjut di latar ---- */
-const IOS=/iPhone|iPad|iPod/.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
-const KEY='xbot_mbg';
-const mon=()=>{try{const v=localStorage.getItem(KEY);return v===null?IOS:v==='1'}catch(e){return IOS}};
-const setMon=v=>{try{localStorage.setItem(KEY,v?'1':'0')}catch(e){}};
-window.__xMbgPv=pv=>mon()?Object.assign({},pv,{playsinline:0}):pv;
-const pasangM=()=>{
- const sm=document.getElementById('sm');
- if(!sm||sm.hidden||sm.querySelector('#xmbgsw'))return;
- const w=document.createElement('div');w.id='xmbgsw';w.style.cssText='margin:18px 0 8px;padding:14px 16px;border-radius:16px;background:#161618;border:1px solid #2b2b2e';
- const r=document.createElement('div');r.style.cssText='display:flex;align-items:center;justify-content:space-between;gap:14px';
- const d=document.createElement('div');d.style.minWidth='0';
- const t=document.createElement('b');t.style.cssText='display:block;font-size:15px;color:#fff;font-weight:600';t.textContent='Musik: pemutar bawaan iPhone';
- const sp=document.createElement('span');sp.style.cssText='display:block;font-size:12.5px;color:#8e8e93;margin-top:3px;line-height:1.35';sp.textContent='Lagu YouTube diputar di pemutar layar penuh iOS, sehingga bisa PiP dan lanjut saat Anda ke layar utama. Berlaku untuk lagu berikutnya (muat ulang halaman bila perlu).';
- d.append(t,sp);
- const b=document.createElement('button');b.type='button';b.className='xpsw'+(mon()?' on':'');b.setAttribute('aria-label','Musik pemutar bawaan iPhone');b.setAttribute('aria-pressed',mon()?'true':'false');
- b.onclick=()=>{const v=!mon();setMon(v);b.classList.toggle('on',v);b.setAttribute('aria-pressed',v?'true':'false')};
- r.append(d,b);w.appendChild(r);sm.appendChild(w);
-};
-const smE=document.getElementById('sm');
-if(smE)new MutationObserver(pasangM).observe(smE,{attributes:true,attributeFilter:['hidden']});
-/* bila YouTube menjeda dirinya sendiri sesudah app tersembunyi, coba lagi sekali */
-document.addEventListener('pagehide',()=>{if(want)act('playVideo')});
-}catch(e){try{console.warn('Musik latar belakang tidak aktif:',e)}catch(_){}}
-})();
-</script>
-<!-- ===== AKHIR MUSIK LATAR BELAKANG ===== -->
-
-<!-- ===== NAMA BAHASA BERWARNA: tiap nama bahasa pemrograman di jawaban bot punya warna sendiri, meski hanya disebut satu (ekstensi terpisah; hapus blok ini sampai AKHIR untuk membatalkan) ===== -->
-<script>
-/* Hanya teks biasa di jawaban: blok ``` , tautan, dan kode inline yang isinya lebih dari satu nama tidak disentuh. Jalan setelah jawaban selesai (atribut data-t), sama seperti penyorot kode.
-   Tabel L: [id, nama tampil, warna, aturan]. Aturan: i = tanpa peduli huruf besar/kecil; s = harus persis huruf besarnya; c = persis + hanya diwarnai bila konteksnya jelas
-   (setelah kata "bahasa" atau bersebelahan dengan nama bahasa lain dalam daftar), supaya "C", "R", "Go" biasa tidak ikut berwarna. */
-(()=>{try{
-if(window._xLang)return;window._xLang=1;
-const L=[
-['python','Python','#ff3b3b','i'],['rust','Rust','#ff6a3d','s'],['swift','Swift','#ff8a1f','s'],['html','HTML','#ffb21a','i'],
-['js','JavaScript','#ffe81a','i'],['kotlin','Kotlin','#d2f21c','i'],['cs','C#','#8bea3f','i'],['cpp','C++','#2fe05a','i'],
-['c','C','#19e08f','c'],['go','Go','#1de9c8','c'],['bash','Bash','#8ff0f5','i'],['shell','Shell','#8ff0f5','s'],
-['java','Java','#19b8ff','i'],['ps','PowerShell','#2d8cff','i'],['ts','TypeScript','#5470ff','i'],['dart','Dart','#7a6bff','s'],
-['php','PHP','#a06bff','i'],['css','CSS','#c15cff','i'],['sql','SQL','#e052f0','i'],['r','R','#ff4fd0','c'],
-['ruby','Ruby','#ff4f9a','s'],['scala','Scala','#ff5575','s'],['matlab','MATLAB','#ff9e80','i'],['lua','Lua','#8fa3ff','s'],
-['perl','Perl','#6bd6b5','s'],['haskell','Haskell','#d59bff','i'],['elixir','Elixir','#b98cf0','s'],['cobol','COBOL','#c9a66b','i'],
-['fortran','Fortran','#9fb4c7','i'],['json','JSON','#e6c36a','i'],['yaml','YAML','#ff9bd0','i'],['docker','Dockerfile','#38b6c9','i'],
-['md','Markdown','#aab0b8','i'],['julia','Julia','#cb6ce6','s'],['golang','Golang','#1de9c8','i']
-];
-const AL={phyton:'python',pyhton:'python',golang:'go'};
-const CI={},CS={};
-L.forEach(d=>{const k=d[0],r=d[3];d.id=k;if(r==='i')CI[d[1].toLowerCase()]=d;else CS[d[1]]=d});
-CI.dockerfile=L.find(d=>d.id==='docker');CI.golang=L.find(d=>d.id==='go');CI.phyton=CI.pyhton=CI.python;
-let css='.xl{font-weight:600}';
-L.forEach(d=>{css+='.xl-'+d.id+'{color:'+d[2]+'!important}'});
-css+='.xl-java{text-shadow:0 0 8px rgba(25,184,255,.55)}';
-const st=document.createElement('style');st.textContent=css;document.head.appendChild(st);
-const T=/[A-Za-z][A-Za-z0-9]*(?:\+\+|#)?/g;
-const norm=w=>{const b=/^python\d+$/i.test(w)?'python':w;return b};
-const find=w=>{w=norm(w);return CS[w]||CI[w.toLowerCase()]||null};
-const known=w=>!!find(w);
-const SKIP='pre,a,button,script,style,textarea,svg,.gxc,.xcomp,.xl';
-const WORD='[A-Za-z][A-Za-z0-9]*(?:\\+\\+|#)?';
-const PV=new RegExp('('+WORD+')\\s*(?:,|dan|atau|&|/|\\bor\\b|\\band\\b)\\s*$','i'),NX=new RegExp('^\\s*(?:,|dan|atau|&|/)\\s*('+WORD+')','i'),LG=/\b(?:bahasa|language|lang|pakai|gunakan|menggunakan)\s*$/i;
-const ctx=(t,i,n)=>{const a=t.slice(0,i),b=t.slice(i+n);if(LG.test(a))return true;const p=a.match(PV);if(p&&known(p[1]))return true;const q=b.match(NX);return !!(q&&known(q[1]))};
-const scan=t=>{const out=[];T.lastIndex=0;let m;
- while((m=T.exec(t))){const w=m[0],i=m.index,d=find(w);if(!d)continue;
-  const pc=t[i-1]||'',nc=t[i+w.length]||'',n2=t[i+w.length+1]||'';
-  if(/[-.@_$\\]/.test(pc)&&!(pc==='-'&&false))continue;
-  if(nc==='.'&&/[A-Za-z]/.test(n2))continue;
-  if(d.id==='java'&&/^\s*script/i.test(t.slice(i+w.length)))continue;
-  if(d[3]==='c'&&!ctx(t,i,w.length))continue;
-  out.push([i,i+w.length,d.id])}
- return out};
-const wrap=root=>{
- const w=document.createTreeWalker(root,NodeFilter.SHOW_TEXT),a=[];let n;
- while((n=w.nextNode())){const v=n.nodeValue;if(!v||v.length<1)continue;const p=n.parentElement;if(!p||p.closest(SKIP))continue;
-  if(p.closest('code')){const s=v.trim(),d=/^[A-Za-z][A-Za-z0-9+#]*$/.test(s)?find(s):null;if(!d||d[3]==='c')continue}
-  const mk=scan(v);if(mk.length)a.push([n,mk])}
- a.forEach(([n,mk])=>{const t=n.nodeValue,f=document.createDocumentFragment();let i=0;
-  mk.forEach(([x,y,id])=>{if(x>i)f.append(t.slice(i,x));const e=document.createElement('span');e.className='xl xl-'+id;e.textContent=t.slice(x,y);f.append(e);i=y});
-  if(i<t.length)f.append(t.slice(i));n.replaceWith(f)})};
-const go=b=>{try{wrap(b)}catch(e){}};
-const ms=document.getElementById('ms');
-if(ms)new MutationObserver(list=>{for(const m of list){const b=m.target;if(b&&b.dataset&&b.dataset.t&&b.closest&&b.closest('#ms')){requestAnimationFrame(()=>go(b));setTimeout(()=>go(b),400)}}}).observe(ms,{subtree:true,attributes:true,attributeFilter:['data-t']});
-}catch(e){try{console.warn('Warna nama bahasa tidak aktif:',e)}catch(_){}}})();
-</script>
-<!-- ===== AKHIR NAMA BAHASA BERWARNA ===== -->
 
 </body></html>
