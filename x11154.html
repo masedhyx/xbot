@@ -12753,4 +12753,437 @@ if(box){
 }catch(e){try{console.warn('Baca tautan / qr tidak aktif:',e)}catch(_){}}})();
 </script>
 <!-- ===== AKHIR TAMBAHAN BACA TAUTAN OTOMATIS + /qr ===== -->
+<!-- ===== BUKA APLIKASI (URL SCHEME): WhatsApp, SMS, telepon, email, peta, YouTube, Spotify, Pintasan iPhone, Setelan Android. Ekstensi terpisah di akhir file; kode lama tidak diubah. Saklar di Pengaturan (kunci localStorage xbot_urls, bawaan MENYALA). Setiap aksi minta persetujuan pengguna dan dibuka lewat ketukan tombol "Buka". ===== -->
+<script>
+(()=>{try{
+if(window._xUrls)return;window._xUrls=1;
+const XT=window.XT;if(!XT)return;
+const KEY='xbot_urls';
+const on=()=>{try{return localStorage.getItem(KEY)!=='0'}catch(e){return true}};
+const setOn=v=>{try{localStorage.setItem(KEY,v?'1':'0')}catch(e){}};
+const IOS=/iPhone|iPad|iPod/i.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
+const ANDROID=/Android/i.test(navigator.userAgent);
+const enc=encodeURIComponent;
+const clip=(s,n)=>String(s==null?'':s).slice(0,n||1500);
+
+/* ---------- pembantu ---------- */
+/* nomor: buang spasi, tanda, dan awalan 0 / +62 -> format internasional tanpa plus untuk WhatsApp */
+const digits=n=>{let d=String(n==null?'':n).replace(/[^\d+]/g,'');const plus=d[0]==='+';d=d.replace(/\D/g,'');if(!d)throw new Error('Nomor kosong atau tidak valid');if(!plus){if(d.startsWith('0'))d='62'+d.slice(1);else if(d.startsWith('8'))d='62'+d}return d};
+const telNum=n=>'+'+digits(n);
+const need=(v,nm)=>{if(v==null||String(v).trim()==='')throw new Error('Argumen "'+nm+'" wajib diisi');return String(v).trim()};
+
+/* skema yang diizinkan untuk jenis "url"; yang lain ditolak (javascript:, data:, file:, blob:, dan sejenisnya) */
+const OKSCHEME=/^(https?|mailto|tel|sms|geo|whatsapp|tg|spotify|youtube|vnd\.youtube|shortcuts|maps|comgooglemaps|instagram|fb|twitter|snssdk1233|intent):/i;
+const SETELAN={wifi:'android.settings.WIFI_SETTINGS',bluetooth:'android.settings.BLUETOOTH_SETTINGS',layar:'android.settings.DISPLAY_SETTINGS',suara:'android.settings.SOUND_SETTINGS',baterai:'android.settings.BATTERY_SAVER_SETTINGS',lokasi:'android.settings.LOCATION_SOURCE_SETTINGS',data:'android.settings.DATA_ROAMING_SETTINGS',nfc:'android.settings.NFC_SETTINGS',aplikasi:'android.settings.APPLICATION_SETTINGS',notifikasi:'android.settings.APP_NOTIFICATION_SETTINGS',jaringan:'android.settings.WIRELESS_SETTINGS',pesawat:'android.settings.AIRPLANE_MODE_SETTINGS',penyimpanan:'android.settings.INTERNAL_STORAGE_SETTINGS',tanggal:'android.settings.DATE_SETTINGS',bahasa:'android.settings.LOCALE_SETTINGS',aksesibilitas:'android.settings.ACCESSIBILITY_SETTINGS',umum:'android.settings.SETTINGS'};
+const CARI={
+ youtube:{nama:'YouTube',url:q=>'https://www.youtube.com/results?search_query='+enc(q)},
+ ytmusic:{nama:'YouTube Music',url:q=>'https://music.youtube.com/search?q='+enc(q)},
+ spotify:{nama:'Spotify',url:q=>'https://open.spotify.com/search/'+enc(q)},
+ peta:{nama:'Google Maps',url:q=>'https://www.google.com/maps/search/?api=1&query='+enc(q)},
+ google:{nama:'Google',url:q=>'https://www.google.com/search?q='+enc(q)},
+ tokopedia:{nama:'Tokopedia',url:q=>'https://www.tokopedia.com/search?q='+enc(q)},
+ shopee:{nama:'Shopee',url:q=>'https://shopee.co.id/search?keyword='+enc(q)},
+ tiktok:{nama:'TikTok',url:q=>'https://www.tiktok.com/search?q='+enc(q)},
+ instagram:{nama:'Instagram',url:q=>'https://www.instagram.com/explore/search/keyword/?q='+enc(q)},
+ wikipedia:{nama:'Wikipedia',url:q=>'https://id.wikipedia.org/w/index.php?search='+enc(q)}
+};
+
+/* ---------- bangun rencana aksi: {judul, rincian[], url, web} ---------- */
+function rencana(a){
+ const j=String(a.jenis||'').toLowerCase().trim();
+ if(j==='wa'||j==='whatsapp'){
+  const n=a.nomor?digits(a.nomor):'';const t=clip(a.teks);
+  if(!n&&!t)throw new Error('Isi minimal "nomor" atau "teks"');
+  return{judul:'Buka WhatsApp',rincian:[n?'Ke: +'+n:'Pilih kontak sendiri',t?'Pesan: '+t:'Tanpa pesan'],url:'https://wa.me/'+n+(t?'?text='+enc(t):''),web:1,catatan:'Anda yang menekan Kirim di WhatsApp.'};
+ }
+ if(j==='sms'){
+  const n=telNum(need(a.nomor,'nomor')),t=clip(a.teks);
+  const url='sms:'+n+(t?(IOS?'&body=':'?body=')+enc(t):'');
+  return{judul:'Siapkan SMS',rincian:['Ke: '+n,t?'Pesan: '+t:'Tanpa pesan'],url,catatan:'Anda yang menekan Kirim di aplikasi pesan.'};
+ }
+ if(j==='telp'||j==='telepon'||j==='tel'){
+  const n=telNum(need(a.nomor,'nomor'));
+  return{judul:'Siapkan panggilan',rincian:['Ke: '+n],url:'tel:'+n,catatan:'Anda yang menekan tombol Panggil.'};
+ }
+ if(j==='email'||j==='mailto'){
+  const ke=need(a.ke,'ke');if(!/^[^\s@,;]+@[^\s@,;]+\.[^\s@,;]+$/.test(ke))throw new Error('Alamat email tidak valid');
+  const q=[];if(a.subjek)q.push('subject='+enc(clip(a.subjek,200)));if(a.isi)q.push('body='+enc(clip(a.isi,3000)));
+  return{judul:'Siapkan email',rincian:['Ke: '+ke,a.subjek?'Subjek: '+clip(a.subjek,200):'Tanpa subjek',a.isi?'Isi: '+clip(a.isi,400):'Tanpa isi'],url:'mailto:'+ke+(q.length?'?'+q.join('&'):''),catatan:'Anda yang menekan Kirim di aplikasi email.'};
+ }
+ if(j==='telegram'||j==='tg'){
+  const u=String(a.user||'').replace(/^@/,'').trim(),t=clip(a.teks);
+  if(!u&&!t)throw new Error('Isi minimal "user" atau "teks"');
+  if(u&&!/^[A-Za-z0-9_]{3,40}$/.test(u))throw new Error('Nama pengguna Telegram tidak valid');
+  const url=u?'https://t.me/'+u+(t?'?text='+enc(t):''):'https://t.me/share/url?url='+enc(' ')+'&text='+enc(t);
+  return{judul:'Buka Telegram',rincian:[u?'Ke: @'+u:'Pilih kontak sendiri',t?'Pesan: '+t:'Tanpa pesan'],url,web:1,catatan:'Anda yang menekan Kirim di Telegram.'};
+ }
+ if(j==='navigasi'||j==='rute'){
+  const d=need(a.tujuan,'tujuan');const m={jalan:'driving',mobil:'driving',motor:'two-wheeler',jalan_kaki:'walking',sepeda:'bicycling',transit:'transit'}[String(a.mode||'jalan').toLowerCase()]||'driving';
+  return{judul:'Buka navigasi',rincian:['Tujuan: '+clip(d,200),'Mode: '+m],url:'https://www.google.com/maps/dir/?api=1&destination='+enc(clip(d,200))+'&travelmode='+m,web:1};
+ }
+ if(j==='youtube'&&a.id){
+  const id=String(a.id).trim();if(!/^[A-Za-z0-9_-]{11}$/.test(id))throw new Error('ID video YouTube harus 11 karakter');
+  return{judul:'Buka video YouTube',rincian:['ID video: '+id],url:'https://www.youtube.com/watch?v='+id,web:1};
+ }
+ if(j==='cari'||CARI[j]){
+  const s=CARI[j==='cari'?String(a.di||'').toLowerCase():j];
+  if(!s)throw new Error('Tujuan pencarian tidak dikenal. Pilihan "di": '+Object.keys(CARI).join(', '));
+  const q=clip(need(a.q,'q'),300);
+  return{judul:'Cari di '+s.nama,rincian:['Kata kunci: '+q],url:s.url(q),web:1};
+ }
+ if(j==='shortcut'||j==='pintasan'){
+  if(!IOS)throw new Error('Pintasan (Shortcuts) hanya ada di iPhone/iPad. Di Android pakai jenis "setelan" atau aplikasi Tasker/MacroDroid.');
+  const n=clip(need(a.nama,'nama'),100),i=a.input!=null?clip(a.input,1000):'';
+  return{judul:'Jalankan Pintasan iPhone',rincian:['Nama pintasan: '+n,i?'Masukan: '+i:'Tanpa masukan'],url:'shortcuts://run-shortcut?name='+enc(n)+(i?'&input=text&text='+enc(i):''),catatan:'Pintasan harus sudah Anda buat di aplikasi Pintasan dengan nama yang sama.'};
+ }
+ if(j==='setelan'||j==='pengaturan'){
+  const h=String(a.halaman||'umum').toLowerCase().replace(/[\s-]/g,'_');const act=SETELAN[h];
+  if(!ANDROID)throw new Error('Membuka halaman setelan hanya didukung di Android Chrome. Di iPhone pakai jenis "shortcut" dengan Pintasan buatan Anda.');
+  if(!act)throw new Error('Halaman tidak dikenal. Pilihan: '+Object.keys(SETELAN).join(', '));
+  return{judul:'Buka setelan: '+h,rincian:['Halaman setelan sistem Android'],url:'intent:#Intent;action='+act+';end',catatan:'Anda yang mengubah sakelar. Aplikasi web tidak bisa mengubahnya sendiri.'};
+ }
+ if(j==='url'||j==='app'){
+  const u=need(a.url,'url');
+  if(/[\u0000-\u001f\s]/.test(u.replace(/%20/g,'')))throw new Error('URL tidak boleh berisi spasi atau karakter kontrol; pakai %20');
+  if(!OKSCHEME.test(u))throw new Error('Skema URL tidak diizinkan. Yang boleh: https, mailto, tel, sms, geo, whatsapp, tg, spotify, youtube, shortcuts, instagram, intent.');
+  if(/^intent:/i.test(u)&&!ANDROID)throw new Error('intent: hanya untuk Android');
+  if(/^intent:/i.test(u)&&/S\.browser_fallback_url=(?!https?%3A)/i.test(u))throw new Error('Fallback intent tidak diizinkan');
+  return{judul:'Buka tautan',rincian:[clip(u,300)],url:u,web:/^https?:/i.test(u)};
+ }
+ throw new Error('Jenis tidak dikenal. Pilihan: wa, sms, telp, email, telegram, navigasi, youtube, ytmusic, spotify, peta, google, tokopedia, shopee, tiktok, instagram, wikipedia, cari, shortcut, setelan, url');
+}
+
+/* ---------- kartu persetujuan; tautan dibuka LANGSUNG di dalam ketukan tombol "Buka" (syarat browser) ---------- */
+function buka(url,web){
+ if(web){const w=window.open(url,'_blank','noopener');if(w||w===null)return}
+ const a=document.createElement('a');a.href=url;a.target='_self';a.rel='noopener';a.style.display='none';document.body.appendChild(a);a.click();setTimeout(()=>a.remove(),500);
+}
+const pesan=m=>{try{if(typeof toast==='function'){toast(m);return}}catch(e){}try{const t=document.createElement('div');t.textContent=m;t.style.cssText='position:fixed;left:50%;bottom:90px;transform:translateX(-50%);background:#1c1c1e;color:#fff;padding:10px 18px;border-radius:20px;font:14px system-ui;z-index:100001;max-width:86vw';document.body.appendChild(t);setTimeout(()=>t.remove(),3500)}catch(e){}};
+const tanya=r=>new Promise(res=>{
+ const d=document.createElement('div');
+ d.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:100000;display:flex;align-items:center;justify-content:center;padding:20px';
+ const box=document.createElement('div');
+ box.style.cssText='background:#1c1c1e;color:#fff;border:1px solid #333;border-radius:18px;padding:18px;max-width:360px;width:100%;font:15px/1.45 system-ui,sans-serif;box-shadow:0 10px 36px #000a;max-height:80vh;overflow:auto';
+ const h=document.createElement('div');h.style.cssText='font-weight:600;font-size:16px;margin-bottom:8px';h.textContent=r.judul+'?';
+ const ul=document.createElement('div');ul.style.cssText='opacity:.9;margin-bottom:10px;word-break:break-word;white-space:pre-wrap';ul.textContent=r.rincian.join('\n');
+ box.append(h,ul);
+ if(r.catatan){const c=document.createElement('div');c.style.cssText='opacity:.6;font-size:12.5px;margin-bottom:12px';c.textContent=r.catatan;box.appendChild(c)}
+ const row=document.createElement('div');row.style.cssText='display:flex;gap:10px;margin-top:6px';
+ const bt=(t,p)=>{const b=document.createElement('button');b.type='button';b.textContent=t;b.style.cssText='flex:1;padding:12px;border-radius:12px;border:0;font:600 15px system-ui;'+(p?'background:#0a84ff;color:#fff':'background:#3a3a3c;color:#fff');return b};
+ const bn=bt('Batal',0),by=bt('Buka',1);row.append(bn,by);box.appendChild(row);d.appendChild(box);
+ let done=false,tm=0;
+ const fin=v=>{if(done)return;done=true;clearTimeout(tm);d.remove();res(v)};
+ bn.onclick=()=>fin(false);
+ by.onclick=()=>{
+  if(done)return;
+  let still=true;const vis=()=>{if(document.hidden)still=false};document.addEventListener('visibilitychange',vis);
+  try{buka(r.url,r.web)}catch(e){pesan('Gagal membuka: '+(e&&e.message||e))}
+  setTimeout(()=>{document.removeEventListener('visibilitychange',vis);if(still&&!/^https?:/i.test(r.url))pesan('Aplikasi tidak terbuka. Mungkin belum terpasang atau tidak didukung di HP ini.')},2200);
+  fin(true);
+ };
+ d.addEventListener('click',e=>{if(e.target===d)fin(false)});
+ tm=setTimeout(()=>fin(false),120000);
+ document.body.appendChild(d);
+ try{if(document.hidden&&typeof sysNotif==='function')sysNotif('XBOT',r.judul)}catch(e){}
+});
+
+/* ---------- alat ---------- */
+XT.buka_app=async(a={})=>{
+ if(!on())throw new Error('Fitur "Buka Aplikasi (URL Scheme)" sedang dimatikan. Minta pengguna menyalakannya di Pengaturan (⚙️), bagian "Buka Aplikasi".');
+ const r=rencana(a);
+ const ok=await tanya(r);
+ if(!ok)return{dibatalkan:true,catatan:'Pengguna membatalkan. Jangan coba lagi tanpa diminta.'};
+ return{ok:true,dibuka:r.judul,catatan:'Aplikasi tujuan dibuka. '+(r.catatan||'')+' Kamu tidak bisa memastikan pesan terkirim; tanyakan ke pengguna jika perlu.'};
+};
+
+/* ---------- petunjuk untuk bot (hanya bila saklar menyala DAN pesan terakhir relevan) ---------- */
+const MK='[Buka aplikasi]';
+const KW=/\b(wa|whatsapp|sms|telp|telepon|nelpon|menelpon|hubungi|kirim(kan)? pesan|chat ke|email|surel|telegram|buka(kan)?|nyalakan|navigasi|rute|peta|maps|spotify|youtube|ytmusic|yt music|tiktok|instagram|shortcut|pintasan|setelan|pengaturan|wifi|bluetooth|kecerahan|tokopedia|shopee|cari(kan)? di|panggil|call)\b/i;
+const HINT=MK+' Kalau pengguna minta membuka aplikasi, mengirim pesan, menelepon, mencari di aplikasi lain, navigasi, atau membuka setelan HP, JANGAN hanya menjawab teks. Panggil satu baris <tool>{"name":"buka_app","args":{...}}</tool> tanpa teks lain. Aplikasi akan meminta persetujuan pengguna, dan pengguna sendiri yang menekan Kirim/Panggil; kamu tidak bisa mengirim otomatis dan tidak bisa mengetahui apakah pesan terkirim. Jangan memanggil alat ini atas inisiatif sendiri. Untuk memutar lagu DI DALAM aplikasi pakai alat musik, bukan alat ini; alat ini hanya untuk membuka aplikasi lain.\n'
++'Argumen "jenis":\n'
++'- wa {"nomor":"0812xxxx","teks":".."} : buka WhatsApp dengan pesan terisi (nomor boleh dikosongkan)\n'
++'- sms {"nomor":"..","teks":".."} | telp {"nomor":".."} | email {"ke":"a@b.com","subjek":"..","isi":".."} | telegram {"user":"nama","teks":".."}\n'
++'- navigasi {"tujuan":"..","mode":"jalan|motor|jalan_kaki|sepeda|transit"} | peta {"q":"kopi dekat sini"}\n'
++'- youtube {"q":".."} atau {"id":"11 karakter"} | ytmusic {"q":".."} | spotify {"q":".."} | tiktok, instagram, tokopedia, shopee, google, wikipedia {"q":".."}\n'
++'- shortcut {"nama":"Mode Fokus","input":".."} : jalankan Pintasan iPhone buatan pengguna (hanya iPhone)\n'
++'- setelan {"halaman":"wifi|bluetooth|layar|suara|baterai|lokasi|data|nfc|notifikasi|pesawat|umum"} : buka halaman setelan (hanya Android; pengguna yang mengubah sakelarnya)\n'
++'- url {"url":"https://.."} : tautan atau skema lain yang diizinkan\n'
++'Contoh: <tool>{"name":"buka_app","args":{"jenis":"wa","nomor":"081234567890","teks":"Halo, besok jadi ya?"}}</tool>\n'
++'Setelah alat berhasil, jawab singkat dan ingatkan pengguna menekan Kirim sendiri bila perlu.';
+const prevG=window.galeriSysFor;
+window.galeriSysFor=function(b){
+ let s='';
+ try{s=typeof prevG==='function'?(prevG.apply(this,arguments)||''):''}catch(e){s=''}
+ try{
+  if(on()&&b&&!b.image_gen&&typeof b.system==='string'&&b.system.includes('[Info perangkat pengguna]')&&!String(s).includes(MK)){
+   const ms=Array.isArray(b.messages)?b.messages:[];let u='';
+   for(let i=ms.length-1;i>=0;i--)if(ms[i]&&ms[i].role==='user'){const c=ms[i].content;u=typeof c==='string'?c:Array.isArray(c)?c.map(x=>(x&&x.text)||'').join(' '):'';break}
+   if(KW.test(u))s=String(s)+'\n\n'+HINT;
+  }
+ }catch(e){}
+ return s;
+};
+
+/* ---------- saklar di Pengaturan ---------- */
+const st=document.createElement('style');
+st.textContent='#xurl-wrap{margin:18px 0 8px;padding:14px 16px;border-radius:16px;background:#161618;border:1px solid #2b2b2e}#xurl-wrap>b{display:block;font-size:15px;color:#fff;font-weight:600}#xurl-wrap>span{display:block;font-size:12.5px;color:#8e8e93;margin:2px 0 8px;line-height:1.35}.xurl-r{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:10px 0;border-top:1px solid #2b2b2e}.xurl-r b{display:block;font-size:14px;color:#fff;font-weight:500}.xurl-r span{display:block;font-size:12px;color:#8e8e93;margin-top:2px;line-height:1.35}.xurl-s{flex:none;width:46px;height:28px;border-radius:14px;border:0;background:#3a3a3c;position:relative;cursor:pointer;padding:0}.xurl-s::after{content:"";position:absolute;top:3px;left:3px;width:22px;height:22px;border-radius:50%;background:#fff;transition:transform .18s}.xurl-s.on{background:#30d158}.xurl-s.on::after{transform:translateX(18px)}';
+document.head.appendChild(st);
+const pasang=()=>{
+ const sm=document.getElementById('sm');
+ if(!sm||sm.hidden||sm.querySelector('#xurl-wrap'))return;
+ const w=document.createElement('div');w.id='xurl-wrap';
+ const t=document.createElement('b');t.textContent='Buka Aplikasi (URL Scheme)';
+ const s=document.createElement('span');s.textContent='Bot bisa menyiapkan WhatsApp, SMS, telepon, email, peta, YouTube, Spotify, Pintasan iPhone, dan halaman setelan Android. Setiap aksi minta persetujuan dulu, dan Anda sendiri yang menekan Kirim atau Panggil.';
+ w.append(t,s);
+ const r=document.createElement('div');r.className='xurl-r';
+ const d=document.createElement('div');const b=document.createElement('b');b.textContent='Aktifkan alat buka_app';const sp=document.createElement('span');sp.textContent='Mati: bot tidak diberi tahu alat ini.';d.append(b,sp);
+ const btn=document.createElement('button');btn.type='button';btn.className='xurl-s'+(on()?' on':'');btn.setAttribute('aria-label','Buka Aplikasi (URL Scheme)');btn.setAttribute('aria-pressed',on()?'true':'false');
+ btn.onclick=()=>{const v=!on();setOn(v);btn.classList.toggle('on',v);btn.setAttribute('aria-pressed',v?'true':'false')};
+ r.append(d,btn);w.appendChild(r);sm.appendChild(w);
+};
+const smEl=document.getElementById('sm');
+if(smEl)new MutationObserver(pasang).observe(smEl,{attributes:true,attributeFilter:['hidden']});
+setTimeout(pasang,800);
+window.__URLS={on,setOn,rencana,tools:['buka_app']};
+}catch(e){try{console.warn('Buka Aplikasi (URL Scheme) tidak aktif:',e)}catch(_){}}
+})();
+</script>
+<!-- ===== AKHIR BUKA APLIKASI (URL SCHEME) ===== -->
+
+<!-- ===== PEMUTAR MUSIK YOUTUBE: kartu pemutar, antrean, putar otomatis lagu berikutnya, alat "musik" untuk bot. Ekstensi terpisah di akhir file; kode lama tidak diubah. Saklar di Pengaturan (kunci localStorage xbot_musik, bawaan MENYALA). Pemutar resmi YouTube (IFrame API), tetap terlihat; berhenti saat aplikasi ke latar belakang (aturan YouTube/iOS). ===== -->
+<script>
+(()=>{try{
+if(window._xMusik)return;window._xMusik=1;
+const XT=window.XT;if(!XT)return;
+const KEY='xbot_musik',MAXQ=15;
+const on=()=>{try{return localStorage.getItem(KEY)!=='0'}catch(e){return true}};
+const setOn=v=>{try{localStorage.setItem(KEY,v?'1':'0')}catch(e){}};
+const enc=encodeURIComponent;
+const SRV=()=>{try{return typeof SERVER_URL==='string'?SERVER_URL.replace(/\/$/,''):''}catch(e){return ''}};
+const idOK=s=>/^[\w-]{11}$/.test(String(s||''));
+const S={q:[],i:-1,p:null,playing:false,shuffle:false,rep:0,card:null,fails:0,tok:0,err:''};
+
+/* ---------- pesan singkat ---------- */
+const pesan=m=>{try{if(typeof toast==='function'){toast(m);return}}catch(e){}try{const t=document.createElement('div');t.textContent=m;t.style.cssText='position:fixed;left:50%;bottom:90px;transform:translateX(-50%);background:#1c1c1e;color:#fff;padding:10px 18px;border-radius:20px;font:14px system-ui;z-index:100001;max-width:86vw';document.body.appendChild(t);setTimeout(()=>t.remove(),3500)}catch(e){}};
+
+/* ---------- pencarian (tanpa API key): server EdhyX dulu, lalu halaman hasil YouTube lewat proxy ---------- */
+async function fj(u,ms){const c=new AbortController(),t=setTimeout(()=>c.abort(),ms||8000);try{const r=await fetch(u,{signal:c.signal});if(!r.ok)throw new Error('HTTP '+r.status);return r}finally{clearTimeout(t)}}
+async function cari(q,n){
+ n=Math.max(1,Math.min(MAXQ,parseInt(n,10)||1));const out=[],seen=new Set();
+ const add=(id,title)=>{if(idOK(id)&&!seen.has(id)){seen.add(id);out.push({id:id,title:title?String(title):''})}};
+ try{const s=SRV();if(s){const j=await(await fj(s+'/yt-search?q='+enc(q),9000)).json();const a=Array.isArray(j)?j:(j&&j.items)||[];a.forEach(x=>{if(typeof x==='string')add(x);else if(x)add(x.id||x.videoId,x.title)})}}catch(e){}
+ if(out.length<n){try{const t=await(await fj('https://corsproxy.io/?'+enc('https://www.youtube.com/results?search_query='+enc(q)),10000)).text();const re=/"videoId":"([\w-]{11})"/g;let m;while((m=re.exec(t))&&out.length<n*3)add(m[1])}catch(e){}}
+ return out.slice(0,n);
+}
+async function judulDari(id){try{const j=await(await fj('https://www.youtube.com/oembed?format=json&url='+enc('https://www.youtube.com/watch?v='+id),6000)).json();return j.title||''}catch(e){return ''}}
+
+/* ---------- pustaka pemutar resmi YouTube ---------- */
+let apiP=null;
+function loadAPI(){
+ if(window.YT&&window.YT.Player)return Promise.resolve();
+ if(apiP)return apiP;
+ apiP=new Promise((res,rej)=>{
+  const prev=window.onYouTubeIframeAPIReady;
+  window.onYouTubeIframeAPIReady=()=>{try{if(typeof prev==='function')prev()}catch(e){}res()};
+  const s=document.createElement('script');s.src='https://www.youtube.com/iframe_api';
+  s.onerror=()=>{apiP=null;rej(new Error('Pemutar YouTube tidak bisa dimuat. Cek koneksi internet.'))};
+  document.head.appendChild(s);
+  setTimeout(()=>{if(!(window.YT&&window.YT.Player)){apiP=null;rej(new Error('Pemutar YouTube terlalu lama dimuat. Coba lagi.'))}},15000);
+ });
+ return apiP;
+}
+
+/* ---------- tampilan kartu ---------- */
+const ICON={
+ prev:'<svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor"><path d="M6 5h2v14H6zM20 5v14L9.5 12z"/></svg>',
+ next:'<svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor"><path d="M16 5h2v14h-2zM4 5l10.5 7L4 19z"/></svg>',
+ play:'<svg viewBox="0 0 24 24" width="26" height="26" fill="currentColor"><path d="M7 4.5v15L19 12z"/></svg>',
+ pause:'<svg viewBox="0 0 24 24" width="26" height="26" fill="currentColor"><path d="M6 5h4v14H6zM14 5h4v14h-4z"/></svg>',
+ shuf:'<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h3c5 0 7 12 12 12h3M3 18h3c1.6 0 2.9-.9 4-2.2M14 8c1.2-1.3 2.4-2 4-2h3M18 3l3 3-3 3M18 15l3 3-3 3"/></svg>',
+ rep:'<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 2l4 4-4 4M3 11V9a3 3 0 013-3h15M7 22l-4-4 4-4M21 13v2a3 3 0 01-3 3H3"/></svg>',
+ list:'<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 6h16M4 12h16M4 18h10"/></svg>',
+ close:'<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>'
+};
+const st=document.createElement('style');
+st.textContent='#xmu{position:fixed;z-index:9400;right:10px;top:calc(env(safe-area-inset-top,0px) + 60px);width:min(236px,64vw);background:#161618;color:#fff;border:1px solid #2b2b2e;border-radius:16px;padding:8px;box-shadow:0 10px 30px #000a;font:13px/1.35 -apple-system,system-ui,sans-serif}#xmu[hidden]{display:none}.xmu-v{position:relative;width:100%;aspect-ratio:16/9;background:#000;border-radius:10px;overflow:hidden}.xmu-v iframe{position:absolute;inset:0;width:100%;height:100%;border:0}.xmu-t{margin:8px 2px 0;font-weight:600;font-size:13.5px;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow-wrap:anywhere}.xmu-s{margin:1px 2px 0;color:#8e8e93;font-size:12px}.xmu-n{margin:6px 2px 0;padding:7px 9px;border-radius:9px;background:#2a2410;color:#f2c96b;font-size:12px}.xmu-c{display:flex;align-items:center;justify-content:space-between;margin-top:6px}.xmu-c button{flex:1 1 0;min-width:0;height:40px;border:0;background:transparent;color:#fff;border-radius:10px;display:flex;align-items:center;justify-content:center;padding:0;cursor:pointer}.xmu-c button.act{color:#30d158}.xmu-c button:active{background:#2b2b2e}.xmu-c button:focus-visible,.xmu-x a:focus-visible,.xmu-l button:focus-visible{outline:2px solid #0a84ff;outline-offset:1px}.xmu-l{margin-top:6px;max-height:34vh;overflow:auto;border-top:1px solid #2b2b2e;padding-top:4px}.xmu-l button{display:block;width:100%;text-align:left;border:0;background:transparent;color:#d8d8dc;padding:7px 4px;border-radius:8px;font:12.5px/1.3 system-ui;overflow-wrap:anywhere;cursor:pointer}.xmu-l button.cur{color:#30d158;font-weight:600}.xmu-x{display:flex;gap:8px;margin-top:6px}.xmu-x a{flex:1;text-align:center;padding:8px 4px;border-radius:9px;background:#2b2b2e;color:#fff;text-decoration:none;font-size:12px}';
+document.head.appendChild(st);
+
+function kartu(){
+ if(S.card&&document.body.contains(S.card))return S.card;
+ const c=document.createElement('div');c.id='xmu';c.setAttribute('role','region');c.setAttribute('aria-label','Pemutar musik');
+ c.innerHTML='<div class="xmu-v"></div><div class="xmu-t" id="xmu-t"></div><div class="xmu-s" id="xmu-s"></div><div class="xmu-n" id="xmu-n" hidden></div>'
+ +'<div class="xmu-c"><button type="button" data-a="prev" aria-label="Lagu sebelumnya">'+ICON.prev+'</button><button type="button" data-a="pp" aria-label="Putar atau jeda" id="xmu-pp">'+ICON.play+'</button><button type="button" data-a="next" aria-label="Lagu berikutnya">'+ICON.next+'</button><button type="button" data-a="shuf" aria-label="Acak" id="xmu-sh">'+ICON.shuf+'</button><button type="button" data-a="rep" aria-label="Ulangi" id="xmu-rp">'+ICON.rep+'</button><button type="button" data-a="list" aria-label="Antrean">'+ICON.list+'</button><button type="button" data-a="close" aria-label="Tutup pemutar">'+ICON.close+'</button></div>'
+ +'<div class="xmu-l" id="xmu-l" hidden></div>'
+ +'<div class="xmu-x"><a id="xmu-ym" target="_blank" rel="noopener noreferrer">Buka di YT Music</a><a id="xmu-yt2" target="_blank" rel="noopener noreferrer">Buka di YouTube</a></div>';
+ c.addEventListener('click',e=>{const b=e.target.closest&&e.target.closest('button');if(!b)return;const a=b.dataset.a;
+  if(a==='prev')ctl('sebelumnya');else if(a==='next')ctl('lanjut');else if(a==='pp')ctl(S.playing?'jeda':'lanjutkan');
+  else if(a==='shuf'){S.shuffle=!S.shuffle;render()}else if(a==='rep'){S.rep=(S.rep+1)%3;render()}
+  else if(a==='list'){const l=$('xmu-l');l.hidden=!l.hidden;render()}else if(a==='close')tutup();
+  else if(b.dataset.k!=null){go(parseInt(b.dataset.k,10))}});
+ document.body.appendChild(c);S.card=c;return c;
+}
+const $=id=>document.getElementById(id);
+function render(){
+ const c=S.card;if(!c)return;const t=S.q[S.i];
+ $('xmu-t').textContent=t?(t.title||t.q||'Memuat judul…'):'Antrean kosong';
+ $('xmu-s').textContent=S.q.length?('Lagu '+(S.i+1)+' dari '+S.q.length):'';
+ $('xmu-pp').innerHTML=S.playing?ICON.pause:ICON.play;
+ $('xmu-sh').classList.toggle('act',S.shuffle);
+ const rp=$('xmu-rp');rp.classList.toggle('act',S.rep>0);rp.setAttribute('aria-label',S.rep===2?'Ulangi satu lagu':S.rep===1?'Ulangi semua':'Ulangi mati');
+ if(t){$('xmu-ym').href='https://music.youtube.com/watch?v='+t.id;$('xmu-yt2').href='https://www.youtube.com/watch?v='+t.id}
+ const l=$('xmu-l');
+ if(!l.hidden){l.textContent='';S.q.forEach((x,k)=>{const b=document.createElement('button');b.type='button';b.dataset.k=String(k);b.className=k===S.i?'cur':'';b.textContent=(k+1)+'. '+(x.title||x.q||x.id);l.appendChild(b)})}
+}
+function catatan(m){const n=$('xmu-n');if(!n)return;if(m){n.textContent=m;n.hidden=false}else n.hidden=true}
+
+/* ---------- Media Session (kontrol di layar kunci bila browser mengizinkan) ---------- */
+function ms(){try{
+ if(!('mediaSession' in navigator)||typeof MediaMetadata==='undefined')return;const t=S.q[S.i];if(!t)return;
+ navigator.mediaSession.metadata=new MediaMetadata({title:t.title||'YouTube',artist:'EdhyX',artwork:[{src:'https://i.ytimg.com/vi/'+t.id+'/hqdefault.jpg',sizes:'480x360',type:'image/jpeg'}]});
+ navigator.mediaSession.setActionHandler('nexttrack',()=>ctl('lanjut'));
+ navigator.mediaSession.setActionHandler('previoustrack',()=>ctl('sebelumnya'));
+}catch(e){}}
+
+/* ---------- pemutar ---------- */
+function nextIdx(){const n=S.q.length;if(!n)return -1;if(S.rep===2)return S.i;if(S.shuffle&&n>1){let k;do{k=Math.floor(Math.random()*n)}while(k===S.i);return k}if(S.i+1<n)return S.i+1;return S.rep===1?0:-1}
+function onState(e){
+ const P=window.YT&&window.YT.PlayerState||{ENDED:0,PLAYING:1,PAUSED:2};
+ if(e.data===P.PLAYING){S.playing=true;S.fails=0;catatan('');
+  try{const d=S.p.getVideoData&&S.p.getVideoData();const t=S.q[S.i];if(t&&d&&d.title&&t.title!==d.title)t.title=d.title}catch(x){}
+  render();ms()}
+ else if(e.data===P.PAUSED){S.playing=false;render()}
+ else if(e.data===P.ENDED){S.playing=false;const k=nextIdx();if(k<0){render();return}if(k===S.i){try{S.p.seekTo(0);S.p.playVideo()}catch(x){}return}go(k)}
+}
+function onErr(){
+ pesan('Lagu dilewati: tidak bisa diputar di sini');S.fails++;
+ if(S.fails>=Math.max(2,S.q.length)){S.playing=false;catatan('Beberapa lagu gagal diputar berturut-turut. Coba "Buka di YouTube".');render();return}
+ const k=nextIdx();if(k>=0&&k!==S.i)go(k);
+}
+async function muat(id){
+ const my=++S.tok;
+ await loadAPI();
+ if(my!==S.tok)return;
+ if(!S.p){
+  const host=S.card.querySelector('.xmu-v');host.textContent='';const d=document.createElement('div');d.id='xmu-yt';host.appendChild(d);
+  await new Promise((res,rej)=>{
+   const to=setTimeout(()=>rej(new Error('Pemutar tidak siap')),12000);
+   const pv={playsinline:1,rel:0,modestbranding:1,autoplay:1};
+   S.p=new window.YT.Player('xmu-yt',{width:'100%',height:'100%',videoId:id,playerVars:pv,events:{onReady:()=>{clearTimeout(to);res()},onStateChange:onState,onError:onErr,onAutoplayBlocked:()=>{if(!document.hidden)catatan('iPhone butuh satu ketukan: ketuk ▶ pada video untuk mulai. Setelah itu lagu berikutnya jalan otomatis.')}}});
+  });
+ }else{try{S.p.loadVideoById(id)}catch(e){}}
+ setTimeout(()=>{if(my===S.tok&&!S.playing&&!document.hidden&&S.card)catatan('iPhone butuh satu ketukan: ketuk ▶ pada video untuk mulai. Setelah itu lagu berikutnya jalan otomatis.')},2600);
+}
+function go(k){
+ if(k<0||k>=S.q.length)return Promise.resolve();
+ S.i=k;S.playing=false;S.err='';render();
+ return muat(S.q[k].id).catch(e=>{S.err=String(e&&e.message||e);catatan(S.err);render()});
+}
+function tutup(){
+ S.tok++;try{if(S.p&&S.p.destroy)S.p.destroy()}catch(e){}
+ S.p=null;S.playing=false;S.q=[];S.i=-1;S.fails=0;
+ if(S.card){S.card.remove();S.card=null}
+ try{if('mediaSession' in navigator)navigator.mediaSession.metadata=null}catch(e){}
+}
+function ctl(a){
+ if(!S.card||!S.q.length)throw new Error('Belum ada musik di pemutar. Putar lagu dulu dengan aksi "putar".');
+ if(a==='lanjut'){const k=S.shuffle?nextIdx():(S.i+1<S.q.length?S.i+1:(S.rep===1?0:-1));if(k<0){pesan('Sudah lagu terakhir');return 'Sudah lagu terakhir.'}go(k);return 'Lagu berikutnya.'}
+ if(a==='sebelumnya'){const k=S.i>0?S.i-1:(S.rep===1?S.q.length-1:0);go(k);return 'Lagu sebelumnya.'}
+ if(a==='jeda'){try{S.p.pauseVideo()}catch(e){}return 'Dijeda.'}
+ if(a==='lanjutkan'){try{S.p.playVideo()}catch(e){}return 'Dilanjutkan.'}
+ return '';
+}
+
+/* ---------- antrean ---------- */
+async function kumpul(a){
+ const items=[];
+ if(Array.isArray(a.lagu)&&a.lagu.length){
+  const names=a.lagu.map(x=>String(x||'').trim()).filter(Boolean).slice(0,MAXQ);const res=new Array(names.length);let nx=0;
+  await Promise.all([0,1,2].map(async()=>{while(nx<names.length){const k=nx++;try{res[k]=await cari(names[k],1)}catch(e){res[k]=[]}}}));
+  res.forEach((r,k)=>{if(r&&r[0])items.push({id:r[0].id,title:'',q:names[k]})});
+ }else if(a.id&&idOK(a.id)){items.push({id:String(a.id),title:'',q:''})}
+ else if(a.q){const r=await cari(String(a.q),a.jumlah||5);r.forEach(x=>items.push({id:x.id,title:x.title,q:String(a.q)}))}
+ return items;
+}
+function isiJudul(items){items.forEach(it=>{if(!it.title)judulDari(it.id).then(t=>{if(t){it.title=t;render()}})})}
+
+XT.musik=async(a={})=>{
+ if(!on())throw new Error('Fitur "Pemutar Musik" sedang dimatikan. Minta pengguna menyalakannya di Pengaturan (⚙️), bagian "Pemutar Musik".');
+ const ak=String(a.aksi||'putar').toLowerCase().trim();
+ if(ak==='putar'||ak==='tambah'){
+  const items=await kumpul(a);
+  if(!items.length)throw new Error('Lagu tidak ditemukan. Coba kata kunci lain, atau tulis judul dan nama artis.');
+  const seen=new Set();let baru=items.filter(x=>!seen.has(x.id)&&seen.add(x.id));
+  kartu();
+  if(ak==='tambah'&&S.q.length){
+   const ada=new Set(S.q.map(x=>x.id));baru=baru.filter(x=>!ada.has(x.id)).slice(0,Math.max(0,MAXQ*2-S.q.length));
+   S.q.push(...baru);isiJudul(baru);render();
+   return{ok:true,ditambah:baru.length,total:S.q.length,catatan:'Ditambahkan ke antrean.'};
+  }
+  S.q=baru.slice(0,MAXQ);S.fails=0;isiJudul(S.q);S.i=-1;
+  S.card.hidden=false;
+  await go(0);
+  if(S.err)return{ok:false,aviso:'Pemutar gagal dimuat: '+S.err+'. Sarankan pengguna memeriksa koneksi atau mengetuk "Buka di YouTube" pada kartu.',antrean:S.q.map(x=>x.title||x.q||x.id)};
+  return{ok:true,memutar:S.q[0].title||S.q[0].q||S.q[0].id,antrean:S.q.map(x=>x.title||x.q||x.id),catatan:'Kartu pemutar muncul di pojok kanan atas. Di iPhone pengguna perlu mengetuk ▶ pada video satu kali; setelah itu lagu berikutnya otomatis. Musik berhenti jika aplikasi ditutup atau layar terkunci. Untuk lanjut di latar belakang, pengguna bisa mengetuk "Buka di YT Music" (butuh YouTube Premium).'};
+ }
+ if(ak==='lanjut'||ak==='next'||ak==='skip')return{ok:true,catatan:ctl('lanjut')};
+ if(ak==='sebelumnya'||ak==='prev')return{ok:true,catatan:ctl('sebelumnya')};
+ if(ak==='jeda'||ak==='pause')return{ok:true,catatan:ctl('jeda')};
+ if(ak==='lanjutkan'||ak==='resume')return{ok:true,catatan:ctl('lanjutkan')};
+ if(ak==='berhenti'||ak==='stop'||ak==='tutup'){tutup();return{ok:true,catatan:'Pemutar ditutup.'}}
+ if(ak==='acak'){S.shuffle=a.nilai==null?!S.shuffle:!!a.nilai;render();return{ok:true,acak:S.shuffle}}
+ if(ak==='ulang'){const m=String(a.mode||'').toLowerCase();S.rep=m==='satu'?2:(m==='semua'?1:(m==='mati'?0:(S.rep+1)%3));render();return{ok:true,ulang:['mati','semua','satu'][S.rep]}}
+ if(ak==='status'){return{ok:true,ada:!!S.card,memutar:S.playing,urutan:S.i+1,total:S.q.length,judul:(S.q[S.i]&&(S.q[S.i].title||S.q[S.i].q))||null,antrean:S.q.map(x=>x.title||x.q||x.id)}}
+ throw new Error('Aksi tidak dikenal. Pilihan: putar, tambah, lanjut, sebelumnya, jeda, lanjutkan, berhenti, acak, ulang, status');
+};
+
+/* ---------- petunjuk untuk bot (hanya bila saklar menyala DAN pesan terakhir relevan) ---------- */
+const MK='[Pemutar musik]';
+const KW=/\b(putar(kan)?|memutar|lagu|lagunya|musik|playlist|dengar(kan)?|nyanyi|soundtrack|ost|album|dj|nonton klip|klip)\b/i;
+const KC=/\b(lanjut|next|skip|lewati|berikutnya|sebelumnya|jeda|pause|stop|berhenti|hentikan|ganti lagu|acak|shuffle|ulang(i)?|repeat|tutup pemutar)\b/i;
+const HINT=MK+' Kamu punya pemutar musik di dalam aplikasi. Kalau pengguna minta memutar lagu, musik, atau playlist, JANGAN pakai tag [video:]/[audio:]/[lagu:] dan JANGAN pakai alat buka_app. Panggil satu baris <tool>{"name":"musik","args":{...}}</tool> tanpa teks lain. Kartu pemutar muncul di layar dan lagu berikutnya otomatis.\n'
++'- musik {"aksi":"putar","lagu":["Judul - Artis","Judul lain - Artis lain"]} : untuk suasana atau permintaan umum ("lagu santai buat kerja"), pilih sendiri 5-10 lagu nyata yang cocok dan tulis dalam format "Judul - Artis"; antrean lama diganti.\n'
++'- musik {"aksi":"putar","q":"judul lagu artis","jumlah":1} : untuk satu lagu atau artis tertentu (jumlah = banyak hasil yang diantrekan, maksimal 15).\n'
++'- musik {"aksi":"tambah","lagu":["..."]} : tambah ke antrean yang sedang jalan\n'
++'- musik {"aksi":"lanjut|sebelumnya|jeda|lanjutkan|berhenti|status"} | {"aksi":"acak","nilai":true} | {"aksi":"ulang","mode":"mati|semua|satu"}\n'
++'Jangan mengarang lagu yang tidak kamu yakini ada. Setelah alat berhasil, jawab satu atau dua kalimat: sebut lagu pertama dan jumlah lagu. Ingatkan sekali bahwa di iPhone perlu mengetuk ▶ pada video satu kali, dan musik berhenti jika aplikasi ditutup atau layar terkunci; untuk lanjut di latar belakang pengguna bisa mengetuk "Buka di YT Music" (butuh YouTube Premium).';
+const prevG=window.galeriSysFor;
+window.galeriSysFor=function(b){
+ let s='';
+ try{s=typeof prevG==='function'?(prevG.apply(this,arguments)||''):''}catch(e){s=''}
+ try{
+  if(on()&&b&&!b.image_gen&&typeof b.system==='string'&&b.system.includes('[Info perangkat pengguna]')&&!String(s).includes(MK)){
+   const ms_=Array.isArray(b.messages)?b.messages:[];let u='';
+   for(let i=ms_.length-1;i>=0;i--)if(ms_[i]&&ms_[i].role==='user'){const c=ms_[i].content;u=typeof c==='string'?c:Array.isArray(c)?c.map(x=>(x&&x.text)||'').join(' '):'';break}
+   if(KW.test(u)||(S.card&&KC.test(u)))s=String(s)+'\n\n'+HINT;
+  }
+ }catch(e){}
+ return s;
+};
+
+/* ---------- saklar di Pengaturan ---------- */
+const st2=document.createElement('style');
+st2.textContent='#xmu-wrap{margin:18px 0 8px;padding:14px 16px;border-radius:16px;background:#161618;border:1px solid #2b2b2e}#xmu-wrap>b{display:block;font-size:15px;color:#fff;font-weight:600}#xmu-wrap>span{display:block;font-size:12.5px;color:#8e8e93;margin:2px 0 8px;line-height:1.35}.xmu-r{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:10px 0;border-top:1px solid #2b2b2e}.xmu-r b{display:block;font-size:14px;color:#fff;font-weight:500}.xmu-r span{display:block;font-size:12px;color:#8e8e93;margin-top:2px;line-height:1.35}.xmu-sw{flex:none;width:46px;height:28px;border-radius:14px;border:0;background:#3a3a3c;position:relative;cursor:pointer;padding:0}.xmu-sw::after{content:"";position:absolute;top:3px;left:3px;width:22px;height:22px;border-radius:50%;background:#fff;transition:transform .18s}.xmu-sw.on{background:#30d158}.xmu-sw.on::after{transform:translateX(18px)}';
+document.head.appendChild(st2);
+const pasang=()=>{
+ const sm=document.getElementById('sm');
+ if(!sm||sm.hidden||sm.querySelector('#xmu-wrap'))return;
+ const w=document.createElement('div');w.id='xmu-wrap';
+ const t=document.createElement('b');t.textContent='Pemutar Musik';
+ const s=document.createElement('span');s.textContent='Bot bisa memutar lagu dari YouTube di dalam aplikasi dengan antrean dan putar otomatis. Musik berhenti saat aplikasi ditutup atau layar terkunci; tombol "Buka di YT Music" melanjutkannya di aplikasi YouTube Music.';
+ w.append(t,s);
+ const r=document.createElement('div');r.className='xmu-r';
+ const d=document.createElement('div');const b=document.createElement('b');b.textContent='Aktifkan alat musik';const sp=document.createElement('span');sp.textContent='Mati: bot tidak diberi tahu alat ini.';d.append(b,sp);
+ const btn=document.createElement('button');btn.type='button';btn.className='xmu-sw'+(on()?' on':'');btn.setAttribute('aria-label','Pemutar Musik');btn.setAttribute('aria-pressed',on()?'true':'false');
+ btn.onclick=()=>{const v=!on();setOn(v);btn.classList.toggle('on',v);btn.setAttribute('aria-pressed',v?'true':'false')};
+ r.append(d,btn);w.appendChild(r);sm.appendChild(w);
+};
+const smEl=document.getElementById('sm');
+if(smEl)new MutationObserver(pasang).observe(smEl,{attributes:true,attributeFilter:['hidden']});
+setTimeout(pasang,800);
+window.__MUSIK={S,cari,kumpul,ctl,go,tutup,on,setOn,tools:['musik']};
+}catch(e){try{console.warn('Pemutar Musik tidak aktif:',e)}catch(_){}}
+})();
+</script>
+<!-- ===== AKHIR PEMUTAR MUSIK YOUTUBE ===== -->
+
 </body></html>
