@@ -5333,6 +5333,12 @@ window.galeriSysFor=function(b){
 .xs3m{position:absolute;inset:0}
 .xs3l{position:absolute;left:10px;top:10px;z-index:3;max-width:calc(100% - 140px);background:rgba(0,0,0,.55);-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);color:#fff;padding:8px 12px;border-radius:12px;font-size:14px;line-height:1.25;pointer-events:none;transition:opacity .3s}
 .xs3l small{display:block;opacity:.7;font-size:10px;letter-spacing:.09em;text-transform:uppercase;margin-bottom:2px}
+.xs3 .maplibregl-ctrl-bottom-right,.xs3 .maplibregl-ctrl-bottom-left{display:none!important}
+.xs3d{display:none!important}
+.xs3r{display:none!important}
+.xs3::after{content:'NASA | Geographics';position:absolute;left:24px;bottom:12px;z-index:3;color:#fff;opacity:.7;font-size:10px;line-height:12px;letter-spacing:.09em;pointer-events:none}
+.xs3::before{content:'';position:absolute;left:12px;bottom:15px;width:6px;height:6px;border-radius:50%;background:#ff3b30;box-shadow:0 0 6px #ff3b30aa;z-index:3;pointer-events:none;animation:xs3bl 1.2s ease-in-out infinite}
+@keyframes xs3bl{0%,100%{opacity:1}50%{opacity:.15}}
 .xs3d{position:absolute;left:12px;bottom:12px;z-index:3;display:flex;gap:6px;pointer-events:none}
 .xs3d i{width:7px;height:7px;border-radius:50%;background:rgba(255,255,255,.3);transition:background .3s,transform .3s}
 .xs3d i.on{background:#fff;transform:scale(1.3)}
@@ -5396,7 +5402,7 @@ const FK=['pagi','siang','sore','malam'];
 const faseNow=()=>{const h=new Date().getHours();return h>=4&&h<10?'pagi':h>=10&&h<15?'siang':h>=15&&h<18?'sore':'malam'};
 
 function build(w,q){
-  const P=q.split(','),lat=+P[0],lon=+P[1],acc=+P[2]>0?+P[2]:30;let pv=P[3]==='pv';
+  const P=q.split(','),lat=+P[0],lon=+P[1],acc=+P[2]>0?+P[2]:30;let pv=false;
   let fk=faseNow();
   const addr=(()=>{try{return typeof gpsAddr!=='undefined'&&gpsAddr?String(gpsAddr):''}catch(e){return''}})();
   const place=addr?addr.split(',').slice(0,2).map(s=>s.trim()).join(', '):lat.toFixed(5)+', '+lon.toFixed(5);
@@ -5425,7 +5431,7 @@ function build(w,q){
     stop();const my=token;const live=()=>my===token&&map;
     if(LIVE&&LIVE!==park2){try{LIVE()}catch(e){}}LIVE=park2;
     const F=FASE[fk];paintFase();
-    $('.xs3m').innerHTML='';dots(-1);lab('satelit','memuat peta…');
+    $('.xs3m').innerHTML='';dots(-1);lab('satelit','');
     try{await loadLib()}catch(e){return fail(e.message)}
     if(my!==token)return;
     const D=dayStr(),zUp=pv?(acc>200?14.5:16):1.0;
@@ -5462,7 +5468,7 @@ function build(w,q){
       info.kab=await nom(lat,lon,8)})();
 
     /* 1. bumi 3D, berputar pelan (berawan di siang hari, lampu kota di malam hari) */
-    dots(0);lab('bumi','dilihat dari luar angkasa');
+    dots(0);lab('bumi','');
     const t0=performance.now(),R=3200,lng0=map.getCenter().lng,tgt=inIdn(lat,lon)?118:lon;
     await new Promise(res=>{const tick=now=>{if(!live())return res();const p=Math.min(1,(now-t0)/R);
       try{map.jumpTo({center:[lng0+(tgt-lng0)*p,8-p*10]})}catch(e){}
@@ -5505,7 +5511,7 @@ function build(w,q){
   /* mulai otomatis saat kartu terlihat (agar riwayat lama tidak memutar semuanya sekaligus) */
   let started=false;
   const go=()=>{if(started)return;started=true;play()};
-  if('IntersectionObserver' in window){const io=new IntersectionObserver(es=>{if(es.some(e=>e.isIntersecting)){io.disconnect();go()}},{threshold:.5});io.observe(root)}else go();
+  if('IntersectionObserver' in window){const io=new IntersectionObserver(es=>{if(es.some(e=>e.isIntersecting)){io.disconnect();go()}},{threshold:.15});io.observe(root)}else go();
 }
 
 /* ---------- sambungan ke sistem media chat: tag [satelit: lat,lon,akurasi] ---------- */
@@ -5541,7 +5547,7 @@ window.fetch=function(input,init){
           let g=null,on=false;try{on=typeof gpsOn!=='undefined'&&gpsOn;g=typeof gps!=='undefined'?gps:null}catch(e){}
           if(!on||!g||!g.coords)return Promise.resolve(fake('GPS belum aktif. Buka menu (+) lalu pilih **Bagikan GPS**, setelah itu minta lagi ya.'));
           const c=g.coords;
-          return Promise.resolve(fake('Ini posisi Anda dari satelit. Ketuk ↻ untuk memutar ulang, atau pakai dua jari untuk menggeser peta.\n\n[satelit: '+c.latitude.toFixed(6)+','+c.longitude.toFixed(6)+','+Math.round(c.accuracy)+']'));
+          return Promise.resolve(fake('[satelit: '+c.latitude.toFixed(6)+','+c.longitude.toFixed(6)+','+Math.round(c.accuracy)+']'));
         }
         if(u.length<100&&LOCQ.test(u)&&!INTENT.test(u)){
           let on=false,g=null;try{on=typeof gpsOn!=='undefined'&&gpsOn;g=typeof gps!=='undefined'?gps:null}catch(e){}
