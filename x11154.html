@@ -2138,7 +2138,7 @@ document.addEventListener('click', async (e) => {
 
         try {
             if (type === 'video') {
-                const videoId = await cariYouTube(query);
+                let videoId = null; try { if (window.MP && window.MP.ytBest) videoId = await window.MP.ytBest(query); } catch(e) {} if (!videoId) videoId = await cariYouTube(query);
                 if (videoId) {
                     divBot.innerHTML = `<div style="margin-top:8px;max-width:320px"><iframe width="100%" style="aspect-ratio:16/9;border-radius:12px;border:none;background:#000" src="https://www.youtube.com/embed/${videoId}" allowfullscreen></iframe></div>`;
                 } else {
@@ -2200,6 +2200,17 @@ const miss=(it,e)=>`<div class="mpx">⚠️ ${LB[it.k]||'media'} “${E(it.q)}�
 const J=async(u,ms)=>{const c=new AbortController(),t=setTimeout(()=>c.abort(),ms||8000);try{const r=await fetch(u,{signal:c.signal});if(!r.ok)throw 0;return await r.json()}finally{clearTimeout(t)}};
 /* ===== FOTO STOK GRATIS: Pixabay, lalu Pexels (key di Pengaturan, kosong = dilewati). Video tetap sistem lama (YouTube). ===== */
 const JH=async(u,h,ms)=>{const c=new AbortController(),t=setTimeout(()=>c.abort(),ms||8000);try{const r=await fetch(u,{headers:h,signal:c.signal});if(!r.ok)throw 0;return await r.json()}finally{clearTimeout(t)}};
+/* ===== Cari video YouTube yang BENAR-BENAR bisa diputar: kumpulkan beberapa kandidat, cek lewat oEmbed, pakai yang pertama lolos ===== */
+async function ytBest(q){
+ const ids=[],seen=new Set();const add=id=>{id=String(id||'');if(/^[\w-]{11}$/.test(id)&&!seen.has(id)&&ids.length<8){seen.add(id);ids.push(id)}};
+ try{const wj=await J(SERVER_URL.replace(/\/$/,'')+'/yt-search?q='+encodeURIComponent(q),8000);const a=Array.isArray(wj)?wj:(wj&&wj.items)||[];a.forEach(x=>{if(typeof x==='string')add(x);else if(x)add(x.id||x.videoId)})}catch(e){}
+ if(ids.length<4){try{const c=new AbortController(),t=setTimeout(()=>c.abort(),10000);const r=await fetch('https://corsproxy.io/?'+encodeURIComponent('https://www.youtube.com/results?search_query='+encodeURIComponent(q)),{signal:c.signal});clearTimeout(t);const tx=await r.text();const re=/"videoId":"([\w-]{11})"/g;let m;while((m=re.exec(tx))&&ids.length<8)add(m[1])}catch(e){}}
+ if(!ids.length)return '';
+ const cek=async id=>{try{await J('https://www.youtube.com/oembed?format=json&url='+encodeURIComponent('https://www.youtube.com/watch?v='+id),5000);return true}catch(e){return false}};
+ const hasil=await Promise.all(ids.slice(0,6).map(cek));
+ const k=hasil.indexOf(true);
+ return k>=0?ids[k]:ids[0];
+}
 const rnd=a=>a.length?a[Math.floor(Math.random()*Math.min(a.length,10))]:null;
 const mk=()=>{try{return (typeof cfg!=='undefined'&&cfg&&cfg.media)||{}}catch(e){return {}}};
 async function pixabay(q,key){
@@ -2250,7 +2261,7 @@ async function resolve(it){const q=it.q;
   let n='';try{n=decodeURIComponent(q.split('#')[0].split('?')[0].split('/').pop()||'').replace(/\.\w+$/,'')}catch(e){}
   return audH(q,n)}
  if(it.k==='foto'){let sx=null;try{sx=await STK.find(q,'foto')}catch(e){}if(sx)return stkH(sx)}
- if(it.k!=='foto'){try{const wj=await J(SERVER_URL.replace(/\/$/,'')+'/yt-search?q='+encodeURIComponent(q),8000);const id=wj&&wj.items&&wj.items[0]&&wj.items[0].id;if(id)return ytH(id)}catch(e){}}
+ if(it.k!=='foto'){try{const id=await ytBest(q);if(id)return ytH(id)}catch(e){}}
  let r=null;
  if(it.k==='musik'){let net=0;try{r=await itn(q)}catch(e){net=e&&e.net?1:0}if(!r){try{const w=await wm(q,'audio');if(w)r={src:w.src,title:w.title,sub:'Wikimedia Commons'}}catch(e){}}if(!r){const e=new Error('x');e.net=net;throw e}return audH(r.src,r.title,r.sub,r.art)}
  try{r=await wm(q,it.k)}catch(e){}
@@ -2264,6 +2275,7 @@ const MP=window.MP={
  mount(box,items){const bt=box.querySelector('.bt');if(!bt||!items.length)return;const w=document.createElement('div');w.className='mp';bt.after(w);
   items.forEach(it=>{const s=document.createElement('div');s.className='mpl';s.textContent='⏳ mencari '+(LB[it.k]||'media')+'...';w.appendChild(s);
    resolve(it).then(h=>{s.outerHTML=h}).catch(e=>{s.outerHTML=miss(it,e)})})},
+ ytBest,
  async find(k,q){try{return '<div class="mp">'+await resolve({k,q})+'</div>'}catch(e){return '<div class="mp">'+miss({k,q},e)+'</div>'}},
  att(a,im){if(a&&a.k==='v')return `<div class="mp">${vidH(a.url)}</div>`;
   if(a&&a.k==='a')return `<div class="mp">${audH(a.url,String(a.name||'Audio').replace(/\.\w+$/,''),'Audio dari kamu')}</div>`;
@@ -12616,6 +12628,7 @@ var CMD=[
 ['pustaka','Pustaka dokumen','prefix','cari di pustaka: '],
 ['ruang-kerja','Ruang kerja berkas','prefix','ruang kerja: '],
 ['bot','Panel bot','prefix','panel bot: '],
+['musik','Pemutar musik','click','m_mu'],
 ['palet','Palet warna','open'],
 ['bantuan','Daftar semua perintah','help']
 ];
@@ -12950,6 +12963,86 @@ window.__URLS={on,setOn,rencana,tools:['buka_app']};
 </script>
 <!-- ===== AKHIR BUKA APLIKASI (URL SCHEME) ===== -->
 
+<!-- ===== PIP YOUTUBE / YT MUSIC: tombol PiP di video YouTube chat + pilihan di pemutar musik. Ekstensi terpisah; kode lama tidak diubah kecuali pipBuka dan aksi "pip"/"buka" milik pemutar musik. ===== -->
+<script>
+(()=>{try{
+if(window.__xpip)return;
+const ID=/^https:\/\/www\.youtube(?:-nocookie)?\.com\/embed\/([\w-]{11})/;
+const TM=new WeakMap();
+const css=document.createElement('style');
+css.textContent='.xpb{display:flex;gap:2px;margin:2px 0 0}.xpb button{width:30px;height:30px;border:0;background:transparent;padding:0;cursor:pointer;display:flex;align-items:center;justify-content:center;-webkit-tap-highlight-color:transparent}.xpb button::after{content:"";width:10px;height:10px;border-radius:50%;background:var(--c);box-shadow:0 0 6px var(--c);transition:transform .12s}.xpb button:active::after{transform:scale(.7)}'
++'#xpt{position:fixed;left:50%;bottom:120px;transform:translateX(-50%);max-width:86vw;background:#1c1c1e;color:#fff;border:1px solid #2b2b2e;border-radius:14px;padding:10px 16px;font:13px/1.35 -apple-system,system-ui,sans-serif;z-index:100002;box-shadow:0 8px 24px #000a;text-align:center}'
++'#xps{position:fixed;inset:0;z-index:100001;background:#0009;display:flex;align-items:flex-end;justify-content:center}#xps>div{width:min(100%,420px);background:#1c1c1e;border-radius:18px 18px 0 0;padding:16px 16px calc(env(safe-area-inset-bottom,0px) + 16px);display:flex;flex-direction:column;gap:10px;color:#fff;font:14px/1.4 -apple-system,system-ui,sans-serif}#xps b{font-size:15px}#xps span{color:#8e8e93;font-size:12.5px}#xps button{min-height:46px;border:0;border-radius:12px;background:#2c2c2e;color:#fff;font:600 15px -apple-system,system-ui,sans-serif;cursor:pointer}#xps button.p{background:#0a84ff}';
+document.head.appendChild(css);
+
+function toast(m){
+ try{const o=document.getElementById('xpt');if(o)o.remove();
+ const t=document.createElement('div');t.id='xpt';t.textContent=m;document.body.appendChild(t);setTimeout(()=>{try{t.remove()}catch(e){}},7000)}catch(e){}
+}
+function urlOf(id,mus,sec){
+ const u=(mus?'https://music.youtube.com/watch?v=':'https://www.youtube.com/watch?v=')+id;
+ return sec>1?u+'&t='+Math.floor(sec)+'s':u;
+}
+function bukaUrl(url,nama){
+ let w=null;
+ try{w=window.open(url,'_blank');if(w)w.opener=null}catch(e){}
+ if(!w){
+  try{const a=document.createElement('a');a.href=url;a.target='_blank';a.rel='noopener noreferrer';a.style.display='none';document.body.appendChild(a);a.click();setTimeout(()=>a.remove(),500)}catch(e){}
+ }
+ toast('Di '+nama+': ketuk layar penuh, lalu ikon PiP. Video lanjut dari posisi terakhir.');
+}
+function open(id,mus,sec){bukaUrl(urlOf(id,mus,sec),mus?'YT Music':'YouTube')}
+
+/* ---- video YouTube di chat: pantau posisi lewat API iframe ---- */
+function prep(f){
+ if(f.dataset.xpip)return;
+ const m=ID.exec(f.getAttribute('src')||'');if(!m||f.closest('#xmu'))return;
+ f.dataset.xpip=m[1];
+ try{const u=new URL(f.src);if(!u.searchParams.has('enablejsapi')){u.searchParams.set('enablejsapi','1');f.src=u.toString()}}catch(e){}
+ const bar=document.createElement('div');bar.className='xpb';
+ const mk=(label,mus,c)=>{const b=document.createElement('button');b.type='button';b.setAttribute('aria-label',label);b.title=label;b.style.setProperty('--c',c);b.onclick=()=>{
+   const s=(TM.get(f)||{}).t||0;
+   try{f.contentWindow.postMessage(JSON.stringify({event:'command',func:'pauseVideo',args:''}),'*')}catch(e){}
+   open(f.dataset.xpip,mus,s)};return b};
+ bar.append(mk('PiP di YouTube',false,'#ff3b30'),mk('PiP di YT Music',true,'#30d158'));
+ f.after(bar);
+}
+function listen(f){try{f.contentWindow.postMessage(JSON.stringify({event:'listening',id:1,channel:'widget'}),'*')}catch(e){}}
+document.addEventListener('load',e=>{const f=e.target;if(f&&f.tagName==='IFRAME'&&f.dataset&&f.dataset.xpip){listen(f);setTimeout(()=>listen(f),1500)}},true);
+window.addEventListener('message',e=>{
+ if(!/(^|\.)youtube(-nocookie)?\.com$/.test(String(e.origin).replace(/^https?:\/\//,'')))return;
+ let d=e.data;if(typeof d==='string'){try{d=JSON.parse(d)}catch(x){return}}
+ if(!d||typeof d!=='object')return;
+ if(d.event==='onReady'){document.querySelectorAll('iframe[data-xpip]').forEach(f=>{if(f.contentWindow===e.source)listen(f)});return}
+ if(d.event==='infoDelivery'&&d.info&&typeof d.info.currentTime==='number'){
+  document.querySelectorAll('iframe[data-xpip]').forEach(f=>{if(f.contentWindow===e.source)TM.set(f,{t:d.info.currentTime})});
+ }
+});
+let busy=0;
+function scan(){busy=0;document.querySelectorAll('iframe[src*="youtube"]').forEach(prep)}
+new MutationObserver(()=>{if(!busy){busy=1;requestAnimationFrame(scan)}}).observe(document.body,{childList:true,subtree:true});
+scan();
+
+/* ---- pilihan tujuan (dipakai pemutar musik) ---- */
+function pick(id,sec,judul){
+ const old=document.getElementById('xps');if(old)old.remove();
+ const o=document.createElement('div');o.id='xps';
+ const p=document.createElement('div');
+ const h=document.createElement('b');h.textContent='Picture-in-Picture';
+ const s=document.createElement('span');s.textContent=(judul?judul+'. ':'')+'iPhone hanya mengizinkan PiP dari halaman YouTube sendiri. Lagu akan dijeda di sini dan dilanjutkan di sana dari posisi terakhir.';
+ const b1=document.createElement('button');b1.type='button';b1.className='p';b1.textContent='Buka di YouTube (video + PiP)';
+ const b2=document.createElement('button');b2.type='button';b2.textContent='Buka di YT Music';
+ const b3=document.createElement('button');b3.type='button';b3.textContent='Batal';
+ const go=mus=>{o.remove();open(id,mus,sec)};
+ b1.onclick=()=>go(false);b2.onclick=()=>go(true);b3.onclick=()=>o.remove();
+ o.onclick=e=>{if(e.target===o)o.remove()};
+ p.append(h,s,b1,b2,b3);o.appendChild(p);document.body.appendChild(o);
+}
+window.__xpip={open,pick,urlOf,toast};
+}catch(e){try{console.warn('PiP tidak aktif:',e)}catch(_){}}})();
+</script>
+<!-- ===== AKHIR PIP YOUTUBE ===== -->
+
 <!-- ===== PEMUTAR MUSIK YOUTUBE: kartu pemutar, antrean, putar otomatis lagu berikutnya, alat "musik" untuk bot. Ekstensi terpisah di akhir file; kode lama tidak diubah. Saklar di Pengaturan (kunci localStorage xbot_musik, bawaan MENYALA). Pemutar resmi YouTube (IFrame API), tetap terlihat; berhenti saat aplikasi ke latar belakang (aturan YouTube/iOS). ===== -->
 <script>
 (()=>{try{
@@ -13005,20 +13098,23 @@ const ICON={
  close:'<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>'
 };
 const st=document.createElement('style');
-st.textContent='#xmu{position:fixed;z-index:9400;right:10px;top:calc(env(safe-area-inset-top,0px) + 60px);width:min(236px,64vw);background:#161618;color:#fff;border:1px solid #2b2b2e;border-radius:16px;padding:8px;box-shadow:0 10px 30px #000a;font:13px/1.35 -apple-system,system-ui,sans-serif}#xmu[hidden]{display:none}.xmu-v{position:relative;width:100%;aspect-ratio:16/9;background:#000;border-radius:10px;overflow:hidden}.xmu-v iframe{position:absolute;inset:0;width:100%;height:100%;border:0}.xmu-t{margin:8px 2px 0;font-weight:600;font-size:13.5px;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow-wrap:anywhere}.xmu-s{margin:1px 2px 0;color:#8e8e93;font-size:12px}.xmu-n{margin:6px 2px 0;padding:7px 9px;border-radius:9px;background:#2a2410;color:#f2c96b;font-size:12px}.xmu-c{display:flex;align-items:center;justify-content:space-between;margin-top:6px}.xmu-c button{flex:1 1 0;min-width:0;height:40px;border:0;background:transparent;color:#fff;border-radius:10px;display:flex;align-items:center;justify-content:center;padding:0;cursor:pointer}.xmu-c button.act{color:#30d158}.xmu-c button:active{background:#2b2b2e}.xmu-c button:focus-visible,.xmu-x a:focus-visible,.xmu-l button:focus-visible{outline:2px solid #0a84ff;outline-offset:1px}.xmu-l{margin-top:6px;max-height:34vh;overflow:auto;border-top:1px solid #2b2b2e;padding-top:4px}.xmu-l button{display:block;width:100%;text-align:left;border:0;background:transparent;color:#d8d8dc;padding:7px 4px;border-radius:8px;font:12.5px/1.3 system-ui;overflow-wrap:anywhere;cursor:pointer}.xmu-l button.cur{color:#30d158;font-weight:600}.xmu-x{display:flex;gap:8px;margin-top:6px}.xmu-x a{flex:1;text-align:center;padding:8px 4px;border-radius:9px;background:#2b2b2e;color:#fff;text-decoration:none;font-size:12px}';
+st.textContent='#xmu{position:fixed;z-index:9400;right:10px;top:calc(env(safe-area-inset-top,0px) + 60px);width:min(236px,64vw);background:#161618;color:#fff;border:1px solid #2b2b2e;border-radius:16px;padding:8px;box-shadow:0 10px 30px #000a;font:13px/1.35 -apple-system,system-ui,sans-serif}#xmu[hidden]{display:none}.xmu-v{position:relative;width:100%;aspect-ratio:16/9;background:#000;border-radius:10px;overflow:hidden}.xmu-v iframe{position:absolute;inset:0;width:100%;height:100%;border:0}.xmu-t{margin:8px 2px 0;font-weight:600;font-size:13.5px;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow-wrap:anywhere}.xmu-s{margin:1px 2px 0;color:#8e8e93;font-size:12px}.xmu-n{margin:6px 2px 0;padding:7px 9px;border-radius:9px;background:#2a2410;color:#f2c96b;font-size:12px}.xmu-c{display:flex;align-items:center;justify-content:space-between;margin-top:6px}.xmu-c button{flex:1 1 0;min-width:0;height:40px;border:0;background:transparent;color:#fff;border-radius:10px;display:flex;align-items:center;justify-content:center;padding:0;cursor:pointer}.xmu-c button.act{color:#30d158}.xmu-c button:active{background:#2b2b2e}.xmu-c button:focus-visible,.xmu-x a:focus-visible,.xmu-l button:focus-visible{outline:2px solid #0a84ff;outline-offset:1px}.xmu-l{margin-top:6px;max-height:34vh;overflow:auto;border-top:1px solid #2b2b2e;padding-top:4px}.xmu-l button{display:block;width:100%;text-align:left;border:0;background:transparent;color:#d8d8dc;padding:7px 4px;border-radius:8px;font:12.5px/1.3 system-ui;overflow-wrap:anywhere;cursor:pointer}.xmu-l button.cur{color:#30d158;font-weight:600}.xmu-x{display:none;gap:8px;margin-top:6px}.xmu-h{display:block;width:100%;height:18px;margin:-4px 0 2px;padding:0;border:0;background:transparent;cursor:pointer;position:relative}.xmu-h:after{content:"";position:absolute;left:50%;top:7px;width:36px;height:4px;margin-left:-18px;border-radius:2px;background:#5a5a5e}.xmu-m{display:none}#xmu.min{top:calc(env(safe-area-inset-top,0px) + 6px);left:50%;right:auto;transform:translateX(-50%);width:auto;max-width:58vw;padding:2px 4px 2px 6px;border-radius:20px;box-shadow:0 4px 14px #0008}#xmu.min>*{display:none}#xmu.min>.xmu-v{display:block;position:absolute;left:0;top:0;width:160px;height:90px;opacity:0;pointer-events:none;z-index:-1;aspect-ratio:auto}#xmu.min>.xmu-m{display:flex;align-items:center;gap:2px}.xmu-m button{flex:none;width:32px;height:32px;border:0;background:transparent;color:#fff;border-radius:16px;display:flex;align-items:center;justify-content:center;padding:0;cursor:pointer}.xmu-m .xmu-mt{width:auto;max-width:80px;padding:0 6px;font:600 12.5px/1 -apple-system,system-ui,sans-serif;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:block;line-height:32px;text-align:left}.xmu-m button:active{background:#2b2b2e}.xmu-pip{flex:none;display:flex;align-items:center;justify-content:center;padding:0;border:0;background:transparent;cursor:pointer;z-index:2}.xmu-pip i{display:block;width:9px;height:9px;border-radius:50%;background:#ff3b30;box-shadow:0 0 6px #ff3b30aa}.xmu-pip:active i{transform:scale(.8)}#xmu>.xmu-pk{position:absolute;right:8px;top:2px;width:30px;height:22px}.xmu-m .xmu-pip{width:18px;height:32px;border-radius:0}.xmu-bot{flex:none;display:block;width:20px;height:20px;margin-left:2px;transform-origin:50% 100%}#xmu.play .xmu-bot{animation:xmubob .6s ease-in-out infinite}@keyframes xmubob{0%,100%{transform:translateY(0) rotate(0)}50%{transform:translateY(1.5px) rotate(9deg)}}.xmu-bot .e{transform-box:fill-box;transform-origin:50% 50%}#xmu.play .xmu-bot .e{animation:xmueye 10s ease-in-out infinite}#xmu.play .xmu-bot .eg{animation:xmulook 10s ease-in-out infinite}@keyframes xmueye{0%,18%{transform:scaleY(1)}20%{transform:scaleY(.1)}22%,40%{transform:scaleY(1)}44%,56%{transform:scaleY(.4)}60%,70%{transform:scaleY(1)}72%{transform:scaleY(.1)}74%{transform:scaleY(1)}76%{transform:scaleY(.1)}78%,88%{transform:scaleY(1)}90%,95%{transform:scaleY(.08)}98%,100%{transform:scaleY(1)}}@keyframes xmulook{0%,24%{transform:translate(0,0)}28%,33%{transform:translate(-1px,0)}38%,42%{transform:translate(1px,0)}46%,56%{transform:translate(0,-.6px)}62%,100%{transform:translate(0,0)}}#xmu.min{animation:xmurgb 12s linear infinite;animation-play-state:paused}#xmu.min.play{animation-play-state:running}@keyframes xmurgb{0%{background-color:hsl(265,70%,38%);border-color:hsl(265,70%,56%);box-shadow:0 0 14px hsla(265,85%,55%,.55)}17%{background-color:hsl(325,70%,38%);border-color:hsl(325,70%,56%);box-shadow:0 0 14px hsla(325,85%,55%,.55)}33%{background-color:hsl(0,70%,38%);border-color:hsl(0,70%,56%);box-shadow:0 0 14px hsla(0,85%,55%,.55)}50%{background-color:hsl(38,85%,38%);border-color:hsl(38,85%,56%);box-shadow:0 0 14px hsla(38,85%,55%,.55)}67%{background-color:hsl(140,60%,30%);border-color:hsl(140,60%,48%);box-shadow:0 0 14px hsla(140,85%,55%,.55)}83%{background-color:hsl(200,70%,38%);border-color:hsl(200,70%,56%);box-shadow:0 0 14px hsla(200,85%,55%,.55)}100%{background-color:hsl(265,70%,38%);border-color:hsl(265,70%,56%);box-shadow:0 0 14px hsla(265,85%,55%,.55)}}@media (prefers-reduced-motion:reduce){#xmu.min,#xmu.play .xmu-bot,#xmu.play .xmu-bot .e,#xmu.play .xmu-bot .eg{animation:none}}.xmu-x a{flex:1;text-align:center;padding:8px 4px;border-radius:9px;background:#2b2b2e;color:#fff;text-decoration:none;font-size:12px}';
 document.head.appendChild(st);
 
 function kartu(){
  if(S.card&&document.body.contains(S.card))return S.card;
  const c=document.createElement('div');c.id='xmu';c.setAttribute('role','region');c.setAttribute('aria-label','Pemutar musik');
- c.innerHTML='<div class="xmu-v"></div><div class="xmu-t" id="xmu-t"></div><div class="xmu-s" id="xmu-s"></div><div class="xmu-n" id="xmu-n" hidden></div>'
+ c.innerHTML='<button type="button" class="xmu-pip xmu-pk" data-a="pip" aria-label="PiP: buka di YouTube" title="PiP"><i></i></button><button type="button" class="xmu-h" data-a="min" aria-label="Kecilkan pemutar"></button><div class="xmu-v"></div><div class="xmu-t" id="xmu-t"></div><div class="xmu-s" id="xmu-s"></div><div class="xmu-n" id="xmu-n" hidden></div>'
  +'<div class="xmu-c"><button type="button" data-a="prev" aria-label="Lagu sebelumnya">'+ICON.prev+'</button><button type="button" data-a="pp" aria-label="Putar atau jeda" id="xmu-pp">'+ICON.play+'</button><button type="button" data-a="next" aria-label="Lagu berikutnya">'+ICON.next+'</button><button type="button" data-a="shuf" aria-label="Acak" id="xmu-sh">'+ICON.shuf+'</button><button type="button" data-a="rep" aria-label="Ulangi" id="xmu-rp">'+ICON.rep+'</button><button type="button" data-a="list" aria-label="Antrean">'+ICON.list+'</button><button type="button" data-a="close" aria-label="Tutup pemutar">'+ICON.close+'</button></div>'
  +'<div class="xmu-l" id="xmu-l" hidden></div>'
- +'<div class="xmu-x"><a id="xmu-ym" target="_blank" rel="noopener noreferrer">Buka di YT Music</a><a id="xmu-yt2" target="_blank" rel="noopener noreferrer">Buka di YouTube</a></div>';
+ +'<div class="xmu-m"><span class="xmu-bot" aria-hidden="true"><svg viewBox="0 0 20 20" width="20" height="20" aria-hidden="true"><circle cx="10" cy="10" r="10" fill="#fff"/><g class="eg"><rect class="e" x="5.5" y="6.1" width="2.6" height="5.2" rx="1.3" fill="#000"/><rect class="e" x="11.9" y="6.1" width="2.6" height="5.2" rx="1.3" fill="#000"/></g></svg></span><button type="button" class="xmu-mt" id="xmu-mt" data-a="max" aria-label="Perbesar pemutar"></button><button type="button" id="xmu-mpp" data-a="pp" aria-label="Putar atau jeda"></button><button type="button" class="xmu-pip" data-a="pip" aria-label="PiP: buka di YouTube" title="PiP"><i></i></button></div>'
++'<div class="xmu-x"><a id="xmu-ym" target="_blank" rel="noopener noreferrer">Buka di YT Music</a><a id="xmu-yt2" target="_blank" rel="noopener noreferrer">Buka di YouTube</a></div>';
  c.addEventListener('click',e=>{const b=e.target.closest&&e.target.closest('button');if(!b)return;const a=b.dataset.a;
+  if(!S.q.length&&(a==='prev'||a==='next'||a==='pp')){pesan('Belum ada lagu. Minta lewat chat, misalnya: putarkan lagu ...');return}
   if(a==='prev')ctl('sebelumnya');else if(a==='next')ctl('lanjut');else if(a==='pp')ctl(S.playing?'jeda':'lanjutkan');
   else if(a==='shuf'){S.shuffle=!S.shuffle;render()}else if(a==='rep'){S.rep=(S.rep+1)%3;render()}
   else if(a==='list'){const l=$('xmu-l');l.hidden=!l.hidden;render()}else if(a==='close')tutup();
+  else if(a==='min'){c.classList.add('min');render()}else if(a==='max'){c.classList.remove('min');render()}else if(a==='pip'){pipBuka()}
   else if(b.dataset.k!=null){go(parseInt(b.dataset.k,10))}});
  document.body.appendChild(c);S.card=c;return c;
 }
@@ -13028,11 +13124,23 @@ function render(){
  $('xmu-t').textContent=t?(t.title||t.q||'Memuat judul…'):'Antrean kosong';
  $('xmu-s').textContent=S.q.length?('Lagu '+(S.i+1)+' dari '+S.q.length):'';
  $('xmu-pp').innerHTML=S.playing?ICON.pause:ICON.play;
+ const mpp=$('xmu-mpp');if(mpp)mpp.innerHTML=S.playing?ICON.pause:ICON.play;
+ c.classList.toggle('play',!!S.playing);
+ const mtt=$('xmu-mt');if(mtt)mtt.textContent=t?(t.title||t.q||'Memuat…'):'Pemutar';
  $('xmu-sh').classList.toggle('act',S.shuffle);
  const rp=$('xmu-rp');rp.classList.toggle('act',S.rep>0);rp.setAttribute('aria-label',S.rep===2?'Ulangi satu lagu':S.rep===1?'Ulangi semua':'Ulangi mati');
  if(t){$('xmu-ym').href='https://music.youtube.com/watch?v='+t.id;$('xmu-yt2').href='https://www.youtube.com/watch?v='+t.id}
  const l=$('xmu-l');
  if(!l.hidden){l.textContent='';S.q.forEach((x,k)=>{const b=document.createElement('button');b.type='button';b.dataset.k=String(k);b.className=k===S.i?'cur':'';b.textContent=(k+1)+'. '+(x.title||x.q||x.id);l.appendChild(b)})}
+}
+function pipBuka(){
+ const t=S.q[S.i];if(!t){pesan('Belum ada lagu. Minta lewat chat, misalnya: putarkan lagu ...');return}
+ let sec=0;try{sec=S.p&&S.p.getCurrentTime?S.p.getCurrentTime():0}catch(e){}
+ try{if(S.p&&S.p.pauseVideo)S.p.pauseVideo()}catch(e){}
+ if(window.__xpip){window.__xpip.pick(t.id,sec,t.title||t.q||'');return}
+ const a=document.createElement('a');a.href='https://www.youtube.com/watch?v='+t.id;a.target='_blank';a.rel='noopener';a.style.display='none';
+ document.body.appendChild(a);a.click();setTimeout(()=>a.remove(),500);
+ pesan('Di YouTube: ketuk layar penuh, lalu ikon PiP.');
 }
 function catatan(m){const n=$('xmu-n');if(!n)return;if(m){n.textContent=m;n.hidden=false}else n.hidden=true}
 
@@ -13056,7 +13164,7 @@ function onState(e){
 }
 function onErr(){
  pesan('Lagu dilewati: tidak bisa diputar di sini');S.fails++;
- if(S.fails>=Math.max(2,S.q.length)){S.playing=false;catatan('Beberapa lagu gagal diputar berturut-turut. Coba "Buka di YouTube".');render();return}
+ if(S.fails>=Math.max(2,S.q.length)){S.playing=false;catatan('Beberapa lagu gagal diputar berturut-turut. Tawarkan untuk membukanya di YouTube.');render();return}
  const k=nextIdx();if(k>=0&&k!==S.i)go(k);
 }
 async function muat(id){
@@ -13122,8 +13230,8 @@ XT.musik=async(a={})=>{
   S.q=baru.slice(0,MAXQ);S.fails=0;isiJudul(S.q);S.i=-1;
   S.card.hidden=false;
   await go(0);
-  if(S.err)return{ok:false,aviso:'Pemutar gagal dimuat: '+S.err+'. Sarankan pengguna memeriksa koneksi atau mengetuk "Buka di YouTube" pada kartu.',antrean:S.q.map(x=>x.title||x.q||x.id)};
-  return{ok:true,memutar:S.q[0].title||S.q[0].q||S.q[0].id,antrean:S.q.map(x=>x.title||x.q||x.id),catatan:'Kartu pemutar muncul di pojok kanan atas. Di iPhone pengguna perlu mengetuk ▶ pada video satu kali; setelah itu lagu berikutnya otomatis. Musik berhenti jika aplikasi ditutup atau layar terkunci. Untuk lanjut di latar belakang, pengguna bisa mengetuk "Buka di YT Music" (butuh YouTube Premium).'};
+  if(S.err)return{ok:false,aviso:'Pemutar gagal dimuat: '+S.err+'. Sarankan pengguna memeriksa koneksi atau menawarkan membuka lagunya di YouTube (aksi buka).',antrean:S.q.map(x=>x.title||x.q||x.id)};
+  return{ok:true,memutar:S.q[0].title||S.q[0].q||S.q[0].id,antrean:S.q.map(x=>x.title||x.q||x.id),catatan:'Kartu pemutar muncul di pojok kanan atas. Di iPhone pengguna perlu mengetuk ▶ pada video satu kali; setelah itu lagu berikutnya otomatis. Musik berhenti jika aplikasi ditutup atau layar terkunci. Untuk lanjut di latar belakang, pengguna cukup minta "buka di YT Music" (butuh YouTube Premium).'};
  }
  if(ak==='lanjut'||ak==='next'||ak==='skip')return{ok:true,catatan:ctl('lanjut')};
  if(ak==='sebelumnya'||ak==='prev')return{ok:true,catatan:ctl('sebelumnya')};
@@ -13132,20 +13240,41 @@ XT.musik=async(a={})=>{
  if(ak==='berhenti'||ak==='stop'||ak==='tutup'){tutup();return{ok:true,catatan:'Pemutar ditutup.'}}
  if(ak==='acak'){S.shuffle=a.nilai==null?!S.shuffle:!!a.nilai;render();return{ok:true,acak:S.shuffle}}
  if(ak==='ulang'){const m=String(a.mode||'').toLowerCase();S.rep=m==='satu'?2:(m==='semua'?1:(m==='mati'?0:(S.rep+1)%3));render();return{ok:true,ulang:['mati','semua','satu'][S.rep]}}
+ if(ak==='buka'||ak==='buka_yt'||ak==='ytmusic'||ak==='youtube'||ak==='pip'){
+  const t=S.q[S.i];if(!t)throw new Error('Belum ada lagu yang diputar. Putar lagu dulu.');
+  const tj=String(a.tujuan||((ak==='youtube'||ak==='pip')?'youtube':'ytmusic')).toLowerCase().replace(/[\s_-]/g,'');
+  const mus=tj!=='youtube'&&tj!=='yt';
+  let sec=0;try{sec=S.p&&S.p.getCurrentTime?S.p.getCurrentTime():0}catch(e){}
+  if(ak==='pip'){try{S.p.pauseVideo()}catch(e){}}
+  const url=(mus?'https://music.youtube.com/watch?v=':'https://www.youtube.com/watch?v=')+t.id+(sec>1?'&t='+Math.floor(sec)+'s':'');
+  const nama=mus?'YT Music':'YouTube';
+  let w=null;try{w=window.open(url,'_blank');if(w)w.opener=null}catch(e){}
+  if(!w){
+   const old=document.getElementById('xmu-go');if(old)old.remove();
+   const g=document.createElement('a');g.id='xmu-go';g.href=url;g.target='_blank';g.rel='noopener noreferrer';g.textContent='Ketuk untuk buka di '+nama;
+   g.style.cssText='position:fixed;left:50%;bottom:110px;transform:translateX(-50%);background:#0a84ff;color:#fff;padding:12px 22px;border-radius:24px;font:600 15px -apple-system,system-ui,sans-serif;text-decoration:none;z-index:100001;box-shadow:0 8px 24px #000a';
+   g.onclick=()=>setTimeout(()=>g.remove(),300);
+   document.body.appendChild(g);setTimeout(()=>{try{g.remove()}catch(e){}},20000);
+   return{ok:true,dibuka:nama,catatan:'Browser menahan pembukaan otomatis, jadi tombol "Ketuk untuk buka di '+nama+'" muncul di layar. Minta pengguna mengetuknya sekali.'};
+  }
+  return{ok:true,dibuka:nama,catatan:'Dibuka di '+nama+(ak==='pip'?'. Beri tahu pengguna: di halaman itu ketuk layar penuh, lalu ikon PiP (dua kotak) di pojok atas; lagu lanjut dari posisi terakhir.':'.')};
+ }
  if(ak==='status'){return{ok:true,ada:!!S.card,memutar:S.playing,urutan:S.i+1,total:S.q.length,judul:(S.q[S.i]&&(S.q[S.i].title||S.q[S.i].q))||null,antrean:S.q.map(x=>x.title||x.q||x.id)}}
- throw new Error('Aksi tidak dikenal. Pilihan: putar, tambah, lanjut, sebelumnya, jeda, lanjutkan, berhenti, acak, ulang, status');
+ throw new Error('Aksi tidak dikenal. Pilihan: putar, tambah, lanjut, sebelumnya, jeda, lanjutkan, berhenti, acak, ulang, buka, pip, status');
 };
 
 /* ---------- petunjuk untuk bot (hanya bila saklar menyala DAN pesan terakhir relevan) ---------- */
 const MK='[Pemutar musik]';
 const KW=/\b(putar(kan)?|memutar|lagu|lagunya|musik|playlist|dengar(kan)?|nyanyi|soundtrack|ost|album|dj|nonton klip|klip)\b/i;
-const KC=/\b(lanjut|next|skip|lewati|berikutnya|sebelumnya|jeda|pause|stop|berhenti|hentikan|ganti lagu|acak|shuffle|ulang(i)?|repeat|tutup pemutar)\b/i;
+const KC=/\b(buka(kan)?\s+(di\s+)?(yt|youtube|ytmusic)|pip|picture.in.picture|layar melayang|lanjut|next|skip|lewati|berikutnya|sebelumnya|jeda|pause|stop|berhenti|hentikan|ganti lagu|acak|shuffle|ulang(i)?|repeat|tutup pemutar)\b/i;
 const HINT=MK+' Kamu punya pemutar musik di dalam aplikasi. Kalau pengguna minta memutar lagu, musik, atau playlist, JANGAN pakai tag [video:]/[audio:]/[lagu:] dan JANGAN pakai alat buka_app. Panggil satu baris <tool>{"name":"musik","args":{...}}</tool> tanpa teks lain. Kartu pemutar muncul di layar dan lagu berikutnya otomatis.\n'
 +'- musik {"aksi":"putar","lagu":["Judul - Artis","Judul lain - Artis lain"]} : untuk suasana atau permintaan umum ("lagu santai buat kerja"), pilih sendiri 5-10 lagu nyata yang cocok dan tulis dalam format "Judul - Artis"; antrean lama diganti.\n'
 +'- musik {"aksi":"putar","q":"judul lagu artis","jumlah":1} : untuk satu lagu atau artis tertentu (jumlah = banyak hasil yang diantrekan, maksimal 15).\n'
 +'- musik {"aksi":"tambah","lagu":["..."]} : tambah ke antrean yang sedang jalan\n'
 +'- musik {"aksi":"lanjut|sebelumnya|jeda|lanjutkan|berhenti|status"} | {"aksi":"acak","nilai":true} | {"aksi":"ulang","mode":"mati|semua|satu"}\n'
-+'Jangan mengarang lagu yang tidak kamu yakini ada. Setelah alat berhasil, jawab satu atau dua kalimat: sebut lagu pertama dan jumlah lagu. Ingatkan sekali bahwa di iPhone perlu mengetuk ▶ pada video satu kali, dan musik berhenti jika aplikasi ditutup atau layar terkunci; untuk lanjut di latar belakang pengguna bisa mengetuk "Buka di YT Music" (butuh YouTube Premium).';
++'- musik {"aksi":"buka","tujuan":"ytmusic"} atau {"aksi":"buka","tujuan":"youtube"} : kalau pengguna minta membuka lagu yang sedang diputar di YT Music / YouTube. Langsung panggil, jangan tanya ulang.\n'
++'- musik {"aksi":"pip"} (atau {"aksi":"pip","tujuan":"ytmusic"}) : kalau pengguna minta PiP / Picture-in-Picture / video melayang saat keluar aplikasi. Lagu dijeda dan dibuka di YouTube pada posisi terakhir; jelaskan singkat bahwa pengguna lalu mengetuk layar penuh dan ikon PiP, karena iPhone hanya mengizinkan PiP dari halaman YouTube sendiri.\n'
++'Jangan mengarang lagu yang tidak kamu yakini ada. Setelah alat berhasil, jawab satu atau dua kalimat: sebut lagu pertama dan jumlah lagu. Ingatkan sekali bahwa di iPhone perlu mengetuk ▶ pada video satu kali, dan musik berhenti jika aplikasi ditutup atau layar terkunci; untuk lanjut di latar belakang pengguna cukup minta "buka di YT Music" (butuh YouTube Premium).';
 const prevG=window.galeriSysFor;
 window.galeriSysFor=function(b){
  let s='';
@@ -13169,7 +13298,7 @@ const pasang=()=>{
  if(!sm||sm.hidden||sm.querySelector('#xmu-wrap'))return;
  const w=document.createElement('div');w.id='xmu-wrap';
  const t=document.createElement('b');t.textContent='Pemutar Musik';
- const s=document.createElement('span');s.textContent='Bot bisa memutar lagu dari YouTube di dalam aplikasi dengan antrean dan putar otomatis. Musik berhenti saat aplikasi ditutup atau layar terkunci; tombol "Buka di YT Music" melanjutkannya di aplikasi YouTube Music.';
+ const s=document.createElement('span');s.textContent='Bot bisa memutar lagu dari YouTube di dalam aplikasi dengan antrean dan putar otomatis. Musik berhenti saat aplikasi ditutup atau layar terkunci; minta bot "buka di YT Music" untuk melanjutkannya di aplikasi YouTube Music.';
  w.append(t,s);
  const r=document.createElement('div');r.className='xmu-r';
  const d=document.createElement('div');const b=document.createElement('b');b.textContent='Aktifkan alat musik';const sp=document.createElement('span');sp.textContent='Mati: bot tidak diberi tahu alat ini.';d.append(b,sp);
@@ -13180,6 +13309,22 @@ const pasang=()=>{
 const smEl=document.getElementById('sm');
 if(smEl)new MutationObserver(pasang).observe(smEl,{attributes:true,attributeFilter:['hidden']});
 setTimeout(pasang,800);
+/* ---- menu "+": tombol Pemutar Musik (tampilkan kartu; cari lagu tetap lewat chat) ---- */
+try{
+ const pm=document.getElementById('pm');
+ if(pm&&!document.getElementById('m_mu')){
+  const b=document.createElement('button');b.id='m_mu';b.type='button';b.innerHTML='<span>Pemutar Musik</span>';
+  pm.appendChild(b);
+  const sync=()=>{b.hidden=!on()};sync();
+  const pl=document.getElementById('pl');if(pl)pl.addEventListener('click',sync,true);
+  b.onclick=()=>{
+   pm.hidden=true;
+   if(!on()){pesan('Pemutar Musik sedang dimatikan. Nyalakan di Pengaturan, bagian Pemutar Musik.');return}
+   const c=kartu();c.hidden=false;c.classList.remove('min');render();
+   if(!S.q.length)catatan('Minta lagu lewat chat, misalnya: putarkan lagu Second Civil.')
+  };
+ }
+}catch(e){}
 window.__MUSIK={S,cari,kumpul,ctl,go,tutup,on,setOn,tools:['musik']};
 }catch(e){try{console.warn('Pemutar Musik tidak aktif:',e)}catch(_){}}
 })();
